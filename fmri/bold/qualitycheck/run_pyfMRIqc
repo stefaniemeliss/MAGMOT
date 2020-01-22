@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# load anaconda - this is necessary to have all python libraries available
+module load anaconda3
+
+# define search and replace string: this is necessary to replace "nii" with "txt" in names of motion paramter file
+searchstring=".nii"
+replacestring=""
+DIR="/storage/shared/research/cinn/2018/MAGMOT/derivatives/pyfMRIqc"
+
+# change directory to where the to be checked files are saved
+cd /storage/shared/research/cinn/2018/MAGMOT/derivatives/pyfMRIqc/
+
+
+
+# define subjects based on folder names in the pyfMRIqc directory --> these have been created in the run_3dvolreg script
+# note: the subject directory is created in the motion correction spm script
+subjects=($(ls -d sub*))
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+	# change current directory into subject folder
+	cd ./${subject}/
+	# create filenames array with nifti files
+	filenames=($(ls "${subject}"* | grep .nii)) 
+	echo ${#filenames[@]} "files found in directory:" ${filenames[@]}
+
+	# change directory to fMRI_QG-master
+	cd /storage/shared/research/cinn/2018/MAGMOT/software/pyfMRIqc-master
+
+	#for each file in filenames array
+	for filename in "${filenames[@]}"; do
+		# this line of code runs fMRI_QC.py; input -n NIFTIFILE -m MOTIONPARAMETER -t THRESHOLD FOR MASKING
+		# note: for MOTIONPARAMETER, we are replacing nii with "" using search and replace string as defined above
+		python pyfMRIqc.py -n $DIR/"${subject}"/"${filename}" -m $DIR/"${subject}"/motion_"${filename/$searchstring/$replacestring}" -t 200;
+		# repeat the whole thing for the afni motion corrected nifti files
+		python pyfMRIqc.py -n $DIR/"${subject}"/volreg_"${filename}" -m $DIR/"${subject}"/motion_"${filename/$searchstring/$replacestring}" -t 200;
+
+	done
+	cd /storage/shared/research/cinn/2018/MAGMOT/derivatives/pyfMRIqc/ #go back to main QA directory
+done
+

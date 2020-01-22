@@ -1,0 +1,99 @@
+#!/bin/bash
+
+source ~/.bashrc
+
+#define path
+path="/storage/shared/research/cinn/2018/MAGMOT"
+
+# change directory to BIDS folder
+cd "$path"/MAGMOT_BIDS/
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+
+# define which subjects should be excluded
+subjects_excl=(sub-experimental016)
+subjects_excl=(sub-experimental000)
+
+# exclude subjects: compare the elements of subjects_excl and subjects
+# if they match, delete (i.e. unset) the element in subject 
+for e in ${!subjects_excl[@]}; do 
+	excl=${subjects_excl[$e]}
+	for i in ${!subjects[@]}; do
+	subj=${subjects[$i]}
+		if [[ "$excl" == "$subj" ]]; then
+			unset subjects[i]
+			subjects=( "${subjects[@]}" )
+		fi
+	done
+done
+
+#subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006) # script development
+#subjects=(sub-control039) # script development
+
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+	echo $subject
+
+	# define all necessary directories
+	fildirTASK=$path/derivatives/magictrickwatching/concat/$subject	
+	fildirREST=$path/MAGMOT_BIDS/$subject/func
+	fildirQC=$path/derivatives/pyfMRIqc/$subject	
+	mkdir $fildirQC
+
+	# copy task files
+	cd $fildirTASK
+	filesTASK=($(ls -d *magictrickwatching*concat.nii))
+	for fileTASK in "${filesTASK[@]}"; do
+		3dcopy $fildirTASK/$fileTASK $fildirQC/$fileTASK
+	done
+
+	# copy rest files
+	cd $fildirREST
+	filesREST=($(ls -d *rest*.nii.gz))
+	for fileREST in "${filesREST[@]}"; do
+		searchstring="nii.gz"
+		replacestring="nii"	
+		fileREST_new="${fileREST/$searchstring/$replacestring}"	
+		3dcopy $fildirREST/$fileREST $fildirQC/$fileREST_new
+	done
+
+	# cd into QC subject folder
+	cd $fildir
+
+	# define files
+	files=($(ls -d sub*.nii*))
+
+	# loop through the files
+	cd $fildirQC
+	files=($(ls -d sub*.nii*))
+	for file in "${files[@]}"; do
+
+		# define file prefix for motion corrected files
+		searchstring="sub"
+		replacestring_3d="volreg_sub"	
+		replacestring_1d="motion_sub"
+		replacestring_plot="plot_sub"
+		searchending=".nii"
+		replaceending=""
+		volreg_prefix="${file/$searchstring/$replacestring_3d}"	
+		file_suffix="${file/$searchending/$replaceending}" 
+		motionfile_prefix="${file_suffix/$searchstring/$replacestring_1d}"	
+		plot_prefix="${file_suffix/$searchstring/$replacestring_plot}"
+
+		# run motion correction
+		3dvolreg -verbose -prefix $volreg_prefix -1Dfile $motionfile_prefix  $file 
+
+		# look at the 1dplot
+		1dplot -volreg -sepsc1 -png $plot_prefix $motionfile_prefix &
+
+	done 
+
+done
+
+
+
+
+
+
