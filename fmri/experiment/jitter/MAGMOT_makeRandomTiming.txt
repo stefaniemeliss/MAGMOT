@@ -1,0 +1,2 @@
+cd ~/Dropbox/Reading/PhD/Magictricks/fmri_study/jitter/
+make_random_timing.py -num_stim 2 -num_runs 3 -run_time 648 -stim_dur 32 14 -num_reps 12 -prefix stimTiming -tr 2.0 -tr_locked -seed 1234 -stim_labels videos ratings -ordered_stimuli videos ratings -save_3dd_cmd 3dDeconvolveStimTiming -min_rest 2 -max_rest 8
