@@ -1,0 +1,18 @@
+# determine which of the iterations has the smallest norm.std.dev of h
+cd ~/Dropbox/Reading/PhD/Magictricks/fmri_study/jitter/
+sort -n stim_results/NSD_sums | head -1
+
+# define variable $iter
+set iter = 0703
+
+cd ~/Dropbox/Reading/PhD/Magictricks/fmri_study/jitter/stim_results
+
+# print information about best timing in terminal
+timing_tool.py -multi_timing stimes.${iter}_0*                  \
+                -run_len $run_lengths -multi_stim_dur $stim_durs \
+		-multi_show_isi_stats
+tcsh cmd.3dd.$iter
+
+# create graphs
+1dplot X.xmat.1D'[6..$]'
+1dplot sum_ideal.1D
