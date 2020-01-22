@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# load FreeSurfer
+module load freesurfer6.0.0
+source /usr/share/freesurfer/SetUpFreeSurfer.sh 
+
+# change dir
+export FREESURFER_HOME=/usr/share/freesurfer/
+export SUBJECTS_DIR=/storage/shared/research/cinn/2018/MAGMOT/MAGMOT_BIDS
+
+# change directory to the raw NIFI files
+cd /storage/shared/research/cinn/2018/MAGMOT/MAGMOT_BIDS/
+
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+#subjects=(sub-experimental005)
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+
+# define subject dir
+sub_dir=/storage/shared/research/cinn/2018/MAGMOT/derivatives/FreeSurfer/"${subject}"/
+cd $sub_dir
+
+#viewing volumes with Freeview
+freeview -v \
+mri/T1.mgz \
+mri/wm.mgz \
+mri/brainmask.mgz \
+mri/aseg.mgz:colormap=lut:opacity=0.2 \
+-f surf/lh.white:edgecolor=blue \
+surf/lh.pial:edgecolor=red \
+surf/rh.white:edgecolor=blue \
+surf/rh.pial:edgecolor=red \
+
+done
+
