@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source ~/.bashrc
+
+# execute with source /storage/shared/research/cinn/2018/MAGMOT/derivatives/magictrickwatching/Analyses/ISC_magictricktrickwatching/run_3dISC_magictrickwatching_masked.txt > /storage/shared/research/cinn/2018/MAGMOT/derivatives/magictrickwatching/Analyses/ISC_magictricktrickwatching/output_3dISC_magictrickwatching_masked.txt &
+# execute with source /Users/stefaniemeliss/Dropbox/Reading/PhD/Magictricks/fmri_study/derivatives/magictrickwatching/Analyses/ISC_magictricktrickwatching/run_3dISC_magictrickwatching_masked.txt > output_3dISC_magictrickwatching_masked.txt &
+
+module load afni19
+
+# Set directory
+topdir="/storage/shared/research/cinn/2018/MAGMOT/derivatives/magictrickwatching/analyses/ISC_magictricktrickwatching"
+#topdir="/Users/stefaniemeliss/Dropbox/Reading/PhD/Magictricks/fmri_study/derivatives/magictrickwatching/Analyses/ISC_magictricktrickwatching"
+cd $topdir
+echo $topdir
+
+# specify 3dISC command
+3dISC -prefix ISC_magictrickwatching_corrAboveAvgConf -jobs 4                       \
+      -model  'grp+corrAboveAvgConf+grpCorrAboveAvgConf+(1|Subj1)+(1|Subj2)'            \
+      -qVars   'grp,corrAboveAvgConf,grpCorrAboveAvgConf'                                 \
+      -qVarCenters   'corrAboveAvgConf,grpCorrAboveAvgConf'                                 \
+          -gltCode ave       '1   0  0  0'                \
+          -gltCode G11vG22   '0   1  0  0'                \
+          -gltCode G11       '1  0.5 0  0'                \
+          -gltCode G22       '1 -0.5 0  0'                \
+          -gltCode corrAboveAvgConf       '0   0  1  0'                \
+          -gltCode corrAboveAvgConf1vcorrAboveAvgConf2 '0   0  0  1'                \
+          -gltCode corrAboveAvgConf1      '0   0  1  0.5'              \
+          -gltCode corrAboveAvgConf2      '0   0  1 -0.5'              \
+	  -mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/MNI152_T1_2009c_Segsy/GM_mask_MNI152_T1_2009c_dilated_resampled.nii  \
+	  -dataTable @dataTable_magictrickwatching_memo.txt  \
+

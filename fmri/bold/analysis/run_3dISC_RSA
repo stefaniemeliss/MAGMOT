@@ -1,0 +1,60 @@
+#!/bin/bash
+
+module load afni19.3.03
+
+# this script runs the ISC-RSA analyses
+
+
+# define path
+path="/storage/shared/research/cinn/2018/MAGMOT"
+ISC_path="$path"/derivatives/magictrickwatching/ISC/
+ana_path="$path"/derivatives/magictrickwatching/analyses/ISC_magictrickwatching/
+mkdir $ana_path
+
+
+# change directory to ISC folder
+cd $ISC_path
+
+# get all files in an array
+input=*magictrickwatching_z.nii.gz
+
+
+
+array=(`find $ISC_path -name "${input}"`)
+length_array=${#array[@]}
+echo $length_array
+
+# change directory to analyses folder
+cd $ana_path
+
+# copy files
+for (( f=0; f<${length_array}; f++));
+    do
+
+	# define file_id
+    file_id=${array[$f]}
+	echo $file_id
+	# copy file
+	cp $file_id .
+
+done
+
+# execute ISC_magictrickwatchings
+source "$ana_path"run_3dISC_magictrickwatching > "$ana_path"output_3dISC_magictrickwatching.txt
+
+source "$ana_path"run_3dISC_magictrickwatching_corrAboveAvgConf > "$ana_path"output_3dISC_magictrickwatching_corrAboveAvgConf.txt 
+source "$ana_path"run_3dISC_magictrickwatching_corrHighConf > "$ana_path"output_3dISC_magictrickwatching_corrHighConf.txt 
+source "$ana_path"run_3dISC_magictrickwatching_corrAllConf > "$ana_path"output_3dISC_magictrickwatching_corrAllConf.txt 
+
+source "$ana_path"run_3dISC_magictrickwatching_corrCuriosity > "$ana_path"output_3dISC_magictrickwatching_corrCuriosity.txt 
+source "$ana_path"run_3dISC_magictrickwatching_corrConfidence > "$ana_path"output_3dISC_magictrickwatching_corrConfidence.txt 
+
+source "$ana_path"run_3dISC_magictrickwatching_cuBetaAllConf > "$ana_path"output_3dISC_magictrickwatching_cuBetaAllConf.txt
+source "$ana_path"run_3dISC_magictrickwatching_cuBetaHighConf > "$ana_path"output_3dISC_magictrickwatching_cuBetaHighConf.txt
+source "$ana_path"run_3dISC_magictrickwatching_cuBetaAboveAvgConf > "$ana_path"output_3dISC_magictrickwatching_cuBetaAboveAvgConf.txt
+
+source "$ana_path"run_3dISC_magictrickwatching_uniqueCurAboveAvgConf > "$ana_path"output_3dISC_magictrickwatching_uniqueCurAboveAvgConf.txt
+source "$ana_path"run_3dISC_magictrickwatching_uniqueMemAboveAvgConf > "$ana_path"output_3dISC_magictrickwatching_uniqueMemAboveAvgConf.txt
+source "$ana_path"run_3dISC_magictrickwatching_uniqueConfidence > "$ana_path"output_3dISC_magictrickwatching_uniqueConfidence.txt
+
+

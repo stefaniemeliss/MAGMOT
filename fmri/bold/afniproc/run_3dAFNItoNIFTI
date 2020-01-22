@@ -1,0 +1,73 @@
+#!/bin/bash
+source ~/.bashrc
+
+path="/storage/shared/research/cinn/2018/MAGMOT"
+#path="/Users/stefaniemeliss/Dropbox/Reading/PhD/Magic tricks/fmri_study/"
+
+module load afni19
+
+# change directory to BIDS folder
+cd "$path"/MAGMOT_BIDS/
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+#subjects=(sub-control001 sub-control002 sub-control003)
+
+# define which subjects should be excluded
+subjects_excl=(sub-control009 sub-control023 sub-control035 sub-control041 sub-control043 sub-control045 \
+sub-experimental008 sub-experimental032 sub-experimental044 sub-experimental046)
+subjects_excl=()
+
+# exclude subjects: compare the elements of subjects_excl and subjects
+# if they match, delete (i.e. unset) the element in subject 
+for e in ${!subjects_excl[@]}; do 
+	excl=${subjects_excl[$e]}
+	for i in ${!subjects[@]}; do
+	subj=${subjects[$i]}
+		if [[ "$excl" == "$subj" ]]; then
+			unset subjects[i]
+			subjects=( "${subjects[@]}" )
+		fi
+	done
+done
+
+#subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006) # script development
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+	echo $subject
+
+	# go to the $subject.magictrickwatching_perRun.results folder
+	fildir=$path/derivatives/magictrickwatching/afniproc/$subject.magictrickwatching_perRun.results
+
+	# cd into subject folder
+	cd $fildir
+
+	# define files: final preprocessing output is errts.$subjects.magictrickwatching_perRun.fanaticor
+	file=($(ls -d errts.$subject.magictrickwatching_perRun.fanaticor+tlrc*))
+
+	# define concat directory (output for 3dcopy
+	dirConcat=$path/derivatives/magictrickwatching/concat/$subject	
+
+	# define niifile
+#	niifile=errts.$subject.magictrickwatching_perRun.fanaticor.nii	
+	niifile_new=$subject"_task-magictrickwatching_afniproc.nii.gz"
+
+#	# define concat directory (output for 3dcopy
+#	dirConcat=$path/derivatives/magictrickwatching/concat/$subject	
+
+
+
+
+	# do the AFNI to .nii conversion
+	3dAFNItoNIFTI -prefix $dirConcat/$niifile_new $file
+
+
+#	# copy the newly created nii to concat dir
+#	3dcopy $fildir/$niifile 
+
+#	# remove .nii file in the $subject.magictrickwatching_perRun.results folder
+#	rm $niifile
+	
+done
+

@@ -1,0 +1,66 @@
+#!/bin/bash
+source ~/.bashrc
+
+path="/storage/shared/research/cinn/2018/MAGMOT"
+
+
+# change directory to BIDS folder
+cd "$path"/MAGMOT_BIDS/
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+#subjects=(sub-control007 sub-control009 sub-control011) # script development
+
+# get length of subjects
+num_subjects=${#subjects[@]}
+
+
+thresholds=(allConf aboveAvgConf highConf)
+num_thresholds=${#thresholds[@]}
+
+
+for (( s=0; s<${num_subjects}; s++));
+    do
+    # define variable subj_id
+    subj_id=${subjects[$s]}
+    
+    for (( t=s+1; t<${num_subjects}; t++));
+        do
+
+        # define variable subj_corr, change directory to where the bold data of subj_corr is saved and define file for subj_corr
+        subj_corr=${subjects[$t]}
+
+		# define pair
+		pair="$subj_id""$subj_corr"
+
+        # create folder and compute ISC for whole time courrse
+        ISC_dir="$path"/derivatives/magictrickwatching/ISC/$pair/
+        cd $ISC_dir
+
+		for (( c=0; c<${num_thresholds}; c++));
+			do
+			conf=${thresholds[$c]}
+
+			# define files
+        	forgotten=($(ls ISC_"$pair"_bothForgotten_"$conf"_SME_afniproc_bold_z.nii.gz))
+        	remembered=($(ls ISC_"$pair"_bothRemembered_"$conf"_SME_afniproc_bold_z.nii.gz))
+
+			# define output prefix
+			prefix="$path"/derivatives/magictrickwatching/analyses/ISC_SME_"$conf"/ISC_"$pair"_SME_"$conf".nii.gz
+
+			if [ ! -f "$prefix" ]; then
+			echo current pair $pair
+			# compute differnce images
+			3dcalc -a $remembered -b $forgotten -prefix "$prefix" -expr 'a-b'
+
+			# copy it to Analyses directory
+			#3dcopy $prefix "$path"/derivatives/magictrickwatching/analyses/ISC_SME_"$conf"/"$prefix"
+
+			fi
+		
+		done
+
+	done
+done
+
+cd "$path"/derivatives/magictrickwatching/ISC/scripts/

@@ -1,0 +1,111 @@
+#!/bin/tcsh
+source ~/.cshrc
+
+module load afni19.2.07
+
+# --------------------------------------------------------------------
+# Script: s.2016_ChenEtal_02_ap.tcsh
+#
+# From:
+# Chen GC, Taylor PA, Shin Y-W, Reynolds RC, Cox RW (2016). Untangling
+# the Relatedness among Correlations, Part II: Inter-Subject
+# Correlation Group Analysis through Linear Mixed-Effects
+# Modeling. Neuroimage (in press).
+#
+# Originally run using: AFNI_16.1.16
+# --------------------------------------------------------------------
+
+
+# FMRI processing script, ISC movie data.
+# Assumes previously run FS and SUMA commands, respectively: 
+# $ recon-all -all -subject $subj -i $anat
+# $ @SUMA_Make_Spec_FS -sid $subj -NIFTI
+
+# Set top level directory structure
+set topdir = /storage/shared/research/cinn/2018/MAGMOT #study folder
+echo $topdir
+set task = magictrickwatching
+set fsroot = $topdir/derivatives/FreeSurfer
+set outroot = $topdir/derivatives/$task/afniproc
+
+# define subject listecho $
+set BIDSdir = $topdir/MAGMOT_BIDS
+
+cd $BIDSdir
+set subjects	=(`ls -d sub*`) # this creates an array containing all subjects in the BIDS directory
+echo $subjects
+echo $#subjects
+
+echo $#subjects
+
+
+# for each subject in the subjects array
+#for subj in "${subjects[@]}"; do
+foreach subj ($subjects)
+
+
+	#set subj	= "sub-experimental005"
+	echo $subj
+
+
+	# define PWD in which the script should get saved
+	cd $topdir/derivatives/$task/afniproc
+
+	# Input directory: unprocessed FMRI data
+	set indir   = $topdir/derivatives/$task/concat/$subj
+	#indir=$topdir/derivatives/magictrickwatching/concat/$subj
+	# Input directory: FreeSurfer + @SUMA_MakeSpec_FS results
+	set fsindir = $fsroot/$subj/SUMA
+	#fsindir=$fsroot/$subj/SUMA
+
+	# Output directory: name for output
+	set outdir  = $outroot/$subj
+	#outdir=$outroot/$subj
+
+	# Input data: list of partitioned EPIs (movie clips)
+	set epi_dpattern = $indir"/"${subj}"_task-magictrickwatching*run-*_bold_concat.nii.gz"
+	echo $epi_dpattern
+
+	# Input data: FreeSurfer results (anatomy, ventricle and WM maps)
+	# all these files are in the ../derivatives/FreeSurfer/$SUBJ_ID/SUMA directory
+	set fsanat = ${subj}"_SurfVol.nii"
+	set fsvent = FSmask_vent.nii
+	set fswm   = FSmask_WM.nii
+
+echo 0000
+
+	# specify actual afni_proc.py
+	afni_proc.py -subj_id $subj.magictrickwatching_perRun					\
+	    -blocks despike tshift align tlrc volreg blur mask regress          \
+	    -copy_anat $fsindir/$fsanat                                         \
+	    -anat_follower_ROI aaseg  anat $fsindir/aparc.a2009s+aseg_rank.nii  \
+	    -anat_follower_ROI aeseg  epi  $fsindir/aparc.a2009s+aseg_rank.nii  \
+	    -anat_follower_ROI FSvent epi  $fsindir/$fsvent                     \
+	    -anat_follower_ROI FSWMe  epi  $fsindir/$fswm                       \
+	    -anat_follower_erode FSvent FSWMe                                   \
+	    -dsets $epi_dpattern                                                \
+	    -tcat_remove_first_trs 0                                            \
+	    -tlrc_base /usr/share/afni/atlases/MNI152_T1_2009c+tlrc             \
+	    -tlrc_NL_warp                                                       \
+	    -volreg_align_to MIN_OUTLIER                                        \
+	    -volreg_align_e2a                                                   \
+	    -volreg_tlrc_warp                                                   \
+	    -regress_ROI_PC FSvent 3                                            \
+	    -regress_make_corr_vols aeseg FSvent                                \
+	    -regress_anaticor_fast                                              \
+	    -regress_anaticor_label FSWMe                                       \
+	    -regress_censor_motion 0.3                                          \
+	    -regress_censor_outliers 0.1                                        \
+	    -regress_apply_mot_types demean deriv                               \
+	    -regress_est_blur_epits                                             \
+	    -regress_est_blur_errts                                             \
+	    -regress_run_clustsim no											\
+		-regress_polort 6 # was 3 previously, WRONG!						
+
+
+	# execute script
+	tcsh -xef proc.$subj.magictrickwatching_perRun |& tee output.proc.$subj.magictrickwatching_perRun
+
+							
+end
+#done
