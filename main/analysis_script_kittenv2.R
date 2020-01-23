@@ -43,25 +43,21 @@ dfLong <- read.xlsx("long_MagicBehavioural_kittenv2.xlsx", sheetName = "Sheet1")
 # Post1	It was fun to do the experiment.
 # Post2	It was boring to do the experiment. ### (R) note: post2_score is already recoded!
 # Post3	It was enjoyable to do the experiment.
-dfWide$intrinsicMotivation <- (dfWide$post1_score + dfWide$post2_score + dfWide$post3_score)/3
 
 ###task engagement items
 # Post4	I was totally absorbed in the experiment.
 # Post5	I lost track of time.
 # Post6	I concentrated on the experiment.
-dfWide$taskEngagement <- (dfWide$post4_score + dfWide$post5_score + dfWide$post6_score)/3
 
 ###interest items
 # Post7	The task was interesting.
 # Post8	I liked the experiment.
 # Post9	I found working on the task interesting.
-dfWide$interest <- (dfWide$post7_score + dfWide$post8_score + dfWide$post9_score)/3
 
 ###boredom items
 # Post10	The experiment bored me.
 # Post11	I found the experiment fairly dull.
 # Post12	I got bored.
-dfWide$boredom <- (dfWide$post10_score + dfWide$post11_score + dfWide$post12_score)/3
 
 ####effort/importance
 # Post13	I put a lot of effort into this.
@@ -69,7 +65,6 @@ dfWide$boredom <- (dfWide$post10_score + dfWide$post11_score + dfWide$post12_sco
 # Post15	I tried very hard on this activity.
 # Post16	It was important to me to do well at this task.
 # Post17	I didn't put much energy into this. ### (R) note: post17_score is already recoded!
-dfWide$effort <- (dfWide$post13_score + dfWide$post14_score + dfWide$post15_score + dfWide$post16_score + dfWide$post17_score)/5
 
 ###pressure/tension
 # Post18	I did not feel nervous at all while doing this. ### (R) note: post18_score is already recoded!
@@ -77,7 +72,6 @@ dfWide$effort <- (dfWide$post13_score + dfWide$post14_score + dfWide$post15_scor
 # Post20	I was very relaxed in doing this experiment. ### (R) note: post20_score is already recoded!
 # Post21	I was anxious while working on this task.
 # Post22	I felt pressured while doing this task.
-dfWide$pressure <- (dfWide$post18_score + dfWide$post19_score + dfWide$post20_score + dfWide$post21_score + dfWide$post22_score)/5
 
 ###others
 # Post23	I tried to find out how many people will be able to find the solution.

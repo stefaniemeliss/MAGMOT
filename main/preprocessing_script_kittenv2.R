@@ -465,6 +465,13 @@ for (l in seq_along(group)) {
     
     
 
+    # compute scales
+    postMain$intrinsicMotivation <- (postMain$post1_score + postMain$post2_score + postMain$post3_score)/3
+    postMain$taskEngagement <- (postMain$post4_score + postMain$post5_score + postMain$post6_score)/3
+    postMain$interest <- (postMain$post7_score + postMain$post8_score + postMain$post9_score)/3
+    postMain$boredom <- (postMain$post10_score + postMain$post11_score + postMain$post12_score)/3
+    postMain$effort <- (postMain$post13_score + postMain$post14_score + postMain$post15_score + postMain$post16_score + postMain$post17_score)/5
+    postMain$pressure <- (postMain$post18_score + postMain$post19_score + postMain$post20_score + postMain$post21_score + postMain$post22_score)/5
     
     
     
