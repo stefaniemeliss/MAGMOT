@@ -423,6 +423,38 @@ for (l in seq_along(group)) {
                          "post20", "post20_score", "post21", "post21_score", "post22", "post22_score", "post23", "post23_score", "post24", "post24_score",
                          "post25", "post25_score", "post_comment1", "post_comment2", "post_comment3", "post_comment4")
     
+    
+    # compute item scores
+    items <- c("post1", "post3", "post4", "post5", "post6", "post7", "post8", "post9", "post10", "post11", "post12", "post13", "post15", "post16", "post19", "post21", "post22", "post23", "post25")
+    itemsReversed <- c("post2", "post14", "post17", "post18", "post20")
+    
+    
+    for (item in items){
+      item_score <-  paste0(item, "_score")
+      postMain[,item_score] <- ifelse(postMain[,item] == "Strongly agree", 7, 
+                                      ifelse(postMain[,item] == "Somehow agree", 6, 
+                                             ifelse(postMain[,item] == "Slightly agree", 5, 
+                                                    ifelse(postMain[,item] == "Neither agree nor disagree", 4, 
+                                                           ifelse(postMain[,item] == "Slightly disagree", 3, 
+                                                                  ifelse(postMain[,item] == "Somehow disagree", 2, 
+                                                                         ifelse(postMain[,item] == "Strongly disagree", 1, NA)))))))
+      rm(item_score)
+    }
+    
+    for (item in itemsReversed){
+      item_score <-  paste0(item, "_score")
+      postMain[,item_score] <- ifelse(postMain[,item] == "Strongly agree", 1, 
+                                      ifelse(postMain[,item] == "Somehow agree", 2, 
+                                             ifelse(postMain[,item] == "Slightly agree", 3, 
+                                                    ifelse(postMain[,item] == "Neither agree nor disagree", 4, 
+                                                           ifelse(postMain[,item] == "Slightly disagree", 5, 
+                                                                  ifelse(postMain[,item] == "Somehow disagree", 6, 
+                                                                         ifelse(postMain[,item] == "Strongly disagree", 7, NA)))))))
+      rm(item_score)
+    }
+    
+    
+    
     # process task m questions collected during memory part
     postMemory <-subset(memory, Proc_comment == "questionnaire")
     # postMemory[1,] <- NA
