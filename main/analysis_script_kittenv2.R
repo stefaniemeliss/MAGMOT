@@ -38,45 +38,10 @@ dfLong <- read.xlsx("long_MagicBehavioural_kittenv2.xlsx", sheetName = "Sheet1")
 #### data set handling wide format ####
 
 # compute scale scores
-items <- c("post1", "post3", "post4", "post5", "post6", "post7", "post8", "post9", "post10", "post11", "post12", "post13", "post15", "post16", "post19", "post21", "post22", "post23", "post25", "post26", "post_bonus_effort")
-itemsReversed <- c("post2", "post14", "post17", "post18", "post20")
-
-
-for (item in items){
-  item_score <-  paste0(item, "_score")
-  dfWide[,item_score] <- ifelse(dfWide[,item] == "Strongly agree", 7, 
-                                    ifelse(dfWide[,item] == "Somehow agree", 6, 
-                                           ifelse(dfWide[,item] == "Slightly agree", 5, 
-                                                  ifelse(dfWide[,item] == "Neither agree nor disagree", 4, 
-                                                         ifelse(dfWide[,item] == "Slightly disagree", 3, 
-                                                                ifelse(dfWide[,item] == "Somehow disagree", 2, 
-                                                                       ifelse(dfWide[,item] == "Strongly disagree", 1, NA)))))))
-  rm(item_score)
-}
-
-for (item in itemsReversed){
-  item_score <-  paste0(item, "_score")
-  dfWide[,item_score] <- ifelse(dfWide[,item] == "Strongly agree", 1, 
-                                ifelse(dfWide[,item] == "Somehow agree", 2, 
-                                       ifelse(dfWide[,item] == "Slightly agree", 3, 
-                                              ifelse(dfWide[,item] == "Neither agree nor disagree", 4, 
-                                                     ifelse(dfWide[,item] == "Slightly disagree", 5, 
-                                                            ifelse(dfWide[,item] == "Somehow disagree", 6, 
-                                                                   ifelse(dfWide[,item] == "Strongly disagree", 7, NA)))))))
-  rm(item_score)
-}
-
-dfWide$post24_score <- ifelse(dfWide[,"post24"] == "Definitely too much ", 7, 
-                              ifelse(dfWide[,"post24"] == "Somehow too much", 6, 
-                                     ifelse(dfWide[,"post24"] == "Slightly too much", 5, 
-                                            ifelse(dfWide[,"post24"] == "Neither too much nor too less", 4, 
-                                                   ifelse(dfWide[,"post24"] == "Slightly too less", 3, 
-                                                          ifelse(dfWide[,"post24"] == "Somehow too less", 2, 
-                                                                 ifelse(dfWide[,"post24"] == "Definitely too less", 1, NA)))))))
 
 ###intrinsic motivation items
 # Post1	It was fun to do the experiment.
-# Post2	It was boring to do the experiment. ### (R)
+# Post2	It was boring to do the experiment. ### (R) note: post2_score is already recoded!
 # Post3	It was enjoyable to do the experiment.
 dfWide$intrinsicMotivation <- (dfWide$post1_score + dfWide$post2_score + dfWide$post3_score)/3
 
@@ -100,16 +65,16 @@ dfWide$boredom <- (dfWide$post10_score + dfWide$post11_score + dfWide$post12_sco
 
 ####effort/importance
 # Post13	I put a lot of effort into this.
-# Post14	I didn't try very hard to do well at this activity. ### (R)
+# Post14	I didn't try very hard to do well at this activity. ### (R) note: post14_score is already recoded!
 # Post15	I tried very hard on this activity.
 # Post16	It was important to me to do well at this task.
-# Post17	I didn't put much energy into this. ### (R)
+# Post17	I didn't put much energy into this. ### (R) note: post17_score is already recoded!
 dfWide$effort <- (dfWide$post13_score + dfWide$post14_score + dfWide$post15_score + dfWide$post16_score + dfWide$post17_score)/5
 
 ###pressure/tension
-# Post18	I did not feel nervous at all while doing this. ### (R)
+# Post18	I did not feel nervous at all while doing this. ### (R) note: post18_score is already recoded!
 # Post19 I felt very tense while doing this activity.
-# Post20	I was very relaxed in doing this experiment. ### (R)
+# Post20	I was very relaxed in doing this experiment. ### (R) note: post20_score is already recoded!
 # Post21	I was anxious while working on this task.
 # Post22	I felt pressured while doing this task.
 dfWide$pressure <- (dfWide$post18_score + dfWide$post19_score + dfWide$post20_score + dfWide$post21_score + dfWide$post22_score)/5
