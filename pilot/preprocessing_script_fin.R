@@ -635,33 +635,6 @@ for (n in seq_along(file_list)){
 }
 setwd(preprocessedDir)
 dataLong$confidenceCorrectTrials <- ifelse(dataLong$recognition == 1, dataLong$confidence, NA)
-# for (k in 1:6) { #confidence ranges from 1 to 6, potentially code can be made more flexible by using min(data$confidence) and max(data$confidence)
-#   dataLong[[paste0("recognitionConfLevel_", k)]] <- ifelse(dataLong$confidence == k, 1, 0)
-#   if (k == 1 || k == 3 || k == 5) {
-#     dataLong[[paste0("recognitionConfLevel_", k, "_", k+1)]] <- ifelse(dataLong$confidence == k | dataLong$confidence == k+1, 1, 0)
-#   }
-#   if (k == 1 || k == 4) {
-#     dataLong[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2)]] <- ifelse(dataLong$confidence == k | dataLong$confidence == k+1 | dataLong$confidence == k+2, 1, 0)
-#   }
-# }
-# for (k in 1:6) { #confidence ranges from 1 to 6, potentially code can be made more flexible by using min(data$confidence) and max(data$confidence)
-#   dataLong[[paste0("recognitionConfLevel_", k)]] <- ifelse(dataLong$confidence == k & dataLong$recognition == 1, 1, 0)
-#   if (k == 1 || k == 3 || k == 5) {
-#     dataLong[[paste0("recognitionConfLevel_", k, "_", k+1)]] <- ifelse(dataLong$confidence == k  & dataLong$recognition == 1 | dataLong$confidence == k+1  & dataLong$recognition == 1, 1, 0)
-#   }
-#   if (k == 1 || k == 4) {
-#     dataLong[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2)]] <- ifelse(dataLong$confidence == k  & dataLong$recognition == 1 | dataLong$confidence == k+1  & dataLong$recognition == 1 | dataLong$confidence == k+2  & dataLong$recognition == 1, 1, 0)
-#   }
-# }
-# 
-# dataLong <- dataLong[,c("Username", "stimID", "ID", "group", "groupEffectCoded", "length",
-#                         "meanCuriosityStandardisedAya", "mediansplitCuriosityAya", "meanCuriositySample", "meanCuriosityStandardisedSample", "mediansplitCuriositySample", "mediansplitCuriosityWithinSubject",
-#                         "trialMain",  "itemMain", "decision", "decisionRT",  "curiosity",  "curiosityGroupMeanCentered", "curiosityRT", "rewardByCuriosity",
-#                         "trialRecall", "itemRecall",  "description",  "cuedRecallStrict", "cuedRecallLenient",  "Flagging", "Comments",
-#                         "trialRecognition", "itemRecognition", "answer", "confidence", "confidenceGroupMeanCentered",  "recognition",
-#                         "confidenceCorrectTrials", "recognitionConfLevel_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3",
-#                         "recognitionConfLevel_2", "recognitionConfLevel_3", "recognitionConfLevel_3_4", 
-#                         "recognitionConfLevel_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6")]
 
 write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1", row.names = F) 
 
