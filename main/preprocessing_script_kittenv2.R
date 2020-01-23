@@ -77,10 +77,8 @@ for (l in seq_along(group)) {
     report <- read.csv(paste0("prolific_export_MagicBehavioural_", group[l], "_", version, "_", kittenversions[v], ".csv"), header = T)
     if (group[l] == "exp") {
       report <- subset(report, report$status == "AWAITING REVIEW") 
-      # subjects <- c("iz108223exp", "test_exp")
     } else {
       report <- subset(report, report$status == "AWAITING REVIEW") 
-      # subjects <- c("iz108223cont", "test_cont")
     }
 
     subjects_temp <-  report$participant_id # we are reading in data of all subjects and have fillers for the exp data + output that data does not exist
@@ -101,8 +99,7 @@ for (l in seq_along(group)) {
     dataset <- paste0("MagicBehavioural_", group[l], "_", version, "_", subjects[s], "_responses.csv")
     if (file.exists(dataset)){
       exp1 <- read.csv(paste0("MagicBehavioural_", group[l], "_", version, "_", subjects[s], "_responses.csv"), header = T)
-      # write.csv(exp1, file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/filler_mainExp.csv", row.names = F)
-      
+
       exp1$username <- gsub(" ", "", exp1$username) #replace any spaces in the file names
       if (exp1$username[1] != subjects[s]){
         print(paste("username on data set and prolific export do not match, overwrite participant", subjects[s]))
@@ -121,17 +118,6 @@ for (l in seq_along(group)) {
       exp1$ID <-  paste0(group[l],s)
     }
   
-    # # create filer file
-    # setwd(dataDir)
-    # test <- read.csv("magicmemory_kittenv2_test_memory.csv", header = T)
-    # trialTypeCol <- grep("trial.type", colnames(test))
-    # stimIDCol <- grep("stimid", colnames(test))
-    # numColTest <- as.numeric(dim(test)[2])
-    # numRowTest <- as.numeric(dim(test)[1])
-    # test <- test[,c(trialTypeCol,stimIDCol,1:trialTypeCol-1,(trialTypeCol+1):stimIDCol-1, (stimIDCol+1):numColTest)]
-    # test[1:numRowTest, 3:numColTest] <- NA
-    # write.csv(test, file.path(dataDir, paste0("filler_memory_", version, ".csv")), row.names = F)
-   
     # read in responses.csv files for memory part: check whether a file for a subject exists
     # uses a filler file in case there is no responses file for the memory test and prints into console 
     setwd(memoryDir)
@@ -211,7 +197,6 @@ for (l in seq_along(group)) {
                                                        ifelse(main$curiosity < median(main$curiosity), "below", "median"))
       # compute group-mean centered curiosity rating
       main$curiosityGroupMeanCentered <- main$curiosity - mean(main$curiosity, na.rm = T)
-      # print(paste(subjects[s], mean(main$curiosityGroupMeanCentered)))
       # compute reward by curiosity interaction
       main$rewardByCuriosity <- main$curiosityGroupMeanCentered * main$groupEffectCoded
     } else { # create NAs if no data
@@ -219,8 +204,6 @@ for (l in seq_along(group)) {
       main$curiosityGroupMeanCentered  <- NA
       main$rewardByCuriosity <- NA
       }
-    
-    # write.csv(exp1, file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_kittenv2/filler_main_kittenv.csv", row.names = F)
     
     # reduce main to relevant variables only
     main <- main[, c("username", "ID", "group", "groupEffectCoded", "stimID", "length", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya", 
@@ -482,9 +465,6 @@ for (l in seq_along(group)) {
     postMemory$Username <- subjects[s]
     postMemory$ID <-  paste0(group[l],s)
     
-    # postMemory[1,] <- NA
-    # write.csv(postMemory, file = "filler_postMemory.csv", row.names = F)
-    
     
     # select relevant columns of memory task questions data
     
@@ -503,7 +483,6 @@ for (l in seq_along(group)) {
     
     # check whether there is coded data from the memory test at all; if so compute sum scores for recall performance
     # if there is no data, NA will be added when rbinding all information across subjects
-    # ifelse(!dir.exists(file.path(memoryDir, "preprocessed")), dir.create(file.path(memoryDir, "preprocessed")), FALSE)
     setwd(codedDir)
     if (file.exists(f_coded)) {
       
@@ -578,7 +557,7 @@ for (l in seq_along(group)) {
     write.csv(subjectData, file = paste0(subjects[s], "_wide.csv"), row.names = F)
     
     # ´removing all variables created, comment out for debugging!
-    # rm(cuedRecall)
+    rm(cuedRecall)
     if (file.exists(file.path(codedDir, f_coded))) {
       rm(cuedRecall_coded)
     }

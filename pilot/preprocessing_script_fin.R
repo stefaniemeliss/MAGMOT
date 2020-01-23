@@ -45,7 +45,6 @@ info <- merge(info, info_old, by = "stimID")
 
 # define experimental groups
 group <- c("cont", "exp")
-#group <- c("exp")
 
 # define version 
 version <- "fin"
@@ -65,8 +64,7 @@ for (l in seq_along(group)) {
   
   subjects <-  report$participant_id # we are reading in data of all subjects and have fillers for the exp data + output that data does not exist
   subjects <- as.character(subjects)
-  # subjects <- "59ad1e6943c90b0001832bdc"
-  
+
   # start loop over subjects
   for (s in seq_along(subjects)){
     
@@ -76,8 +74,7 @@ for (l in seq_along(group)) {
     dataset <- paste0("MagicBehavioural_", group[l], "_", version, "_", subjects[s], "_responses.csv")
     if (file.exists(dataset)){
       exp1 <- read.csv(paste0("MagicBehavioural_", group[l], "_", version, "_", subjects[s], "_responses.csv"), header = T)
-      # write.csv(exp1, file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/filler_mainExp.csv", row.names = F)
-      
+
       exp1$Username <- gsub(" ", "", exp1$Username) #replace any spaces in the file names
       exp1$group <- group[l] #add group and ID
       exp1$groupEffectCoded <-ifelse(exp1$group == "exp", 1, -1) 
@@ -86,7 +83,6 @@ for (l in seq_along(group)) {
     else { # if file does not exist, print into console and use filler file to create NAs
       print(paste0("MagicBehavioural_", group[l], "_", version, "_", subjects[s], "_responses.csv does not exist"))
       
-      # write.csv(exp1, file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/filler_mainExp.csv", row.names = F)
       exp1 <- read.csv(file.path(dataDir, "filler_mainExp.csv"), header = T)
       exp1$group <- group[l]
       exp1$groupEffectCoded <-ifelse(exp1$group == "exp", 1, -1) 
@@ -98,8 +94,6 @@ for (l in seq_along(group)) {
       if (file.exists(dataset)){
         print(paste0("MagicBehavioural_", group[l], "_", version, "_", subjects[s], "_responses.csv is too short"))
       }
-      # exp1 <- read.csv(file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_cont/MagicBehavioural_cont_fin_5ba8354f0d24ad0001323a5e_responses.csv")
-      # write.csv(exp1, file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/filler_mainExp.csv", row.names = F)
       exp1 <- read.csv(file.path(dataDir, "filler_mainExp.csv"), header = T)
       exp1$group <- group[l]
       exp1$groupEffectCoded <-ifelse(exp1$group == "exp", 1, -1) 
@@ -114,7 +108,6 @@ for (l in seq_along(group)) {
     f_coded <- paste0(subjects[s], "_cuedRecall_CP.csv") # the suffix _SM indicated that I have coded the remaining answers in the recall task, suffix _CP means that Cristina has done it
     # note: this will have to be changed to _CP as Cristina is coded them now
     if (file.exists(f)){
-      # f <- "MagicBehavioural_memory_fin_5afed988c6cbf1000105cf3a_responses.csv"
       memory <- read.csv(f, header = T)
     }
     else { # if file does not exist, print into console and use filler file to create NAs
@@ -131,8 +124,6 @@ for (l in seq_along(group)) {
       if (file.exists(f)){
         print(paste0("MagicBehavioural_memory_", version, "_", subjects[s], "_responses.csv does not have recall and recognition data"))
       }
-      # exp1 <- read.csv(file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_cont/MagicBehavioural_cont_fin_5ba8354f0d24ad0001323a5e_responses.csv")
-      # write.csv(exp1, file = "~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/filler_mainExp.csv", row.names = F)
       memory <- read.csv(file.path(dataDir, "filler_memory.csv"), header = T)
       memory$group <- group[l]
       memory$groupEffectCoded <-ifelse(memory$group == "exp", 1, -1) 
@@ -196,7 +187,6 @@ for (l in seq_along(group)) {
                                                        ifelse(main$curiosity < median(main$curiosity), "below", "median"))
       # compute group-mean centered curiosity rating
       main$curiosityGroupMeanCentered <- main$curiosity - mean(main$curiosity, na.rm = T)
-      # print(paste(subjects[s], mean(main$curiosityGroupMeanCentered)))
       # compute reward by curiosity interaction
       main$rewardByCuriosity <- main$curiosityGroupMeanCentered * main$groupEffectCoded
     } else { # create NAs if no data
@@ -267,18 +257,7 @@ for (l in seq_along(group)) {
       
       if (file.exists(f_coded)) { #if the recall performance has already been coded, the recall df gets overwritten
         cuedRecall_coded <- read.csv(f_coded)
-        
         cuedRecall_coded <- cuedRecall_coded[1:nrow(info),] # reduce cuedRecall_coded to only those rows that relate to stimuli
-        
-        # for (j in 1:nrow(cuedRecall_coded)){ # Cristina has inserted some FALSE as coding, this will be replaced with NA to make sure that the script still runs
-        #   if (cuedRecall_coded$cuedRecallStrict[j] == "FALSE") {  
-        #     cuedRecall_coded$cuedRecallStrict[j] = NA
-        #     cuedRecall_coded$cuedRecallLenient[j] = NA
-        #   } else if (cuedRecall_coded$cuedRecallStrict[j] == "FALSE") {  
-        #     cuedRecall_coded$cuedRecallStrict[j] = NA
-        #     cuedRecall_coded$cuedRecallLenient[j] = NA
-        #   }
-        # }
         cuedRecall <- cuedRecall_coded # overwrite cuedRecall
         
       } else { # if there is no _cuedRecall_CP file ALTHOUGH there was a memory data file, print into console
@@ -286,7 +265,6 @@ for (l in seq_along(group)) {
           print(paste0(subjects[s], "_cuedRecall_CP.csv does not exist"))
         }
       }
-      
     }
     
     # process recognition memory data: select relevant rows and convert variables to characters
@@ -298,8 +276,6 @@ for (l in seq_along(group)) {
         print(paste0("MagicBehavioural_memory_", version, "_", subjects[s], "_responses.csv does not have recognition data"))
         
         recognition <- read.csv(file.path(dataDir, "filler_recognition.csv"), header = T)
-        # recognition <- subset(memory, memory$Proc_trial.type == "magic_recognition")
-        # write.csv(recognition, file = "filler_recognition.csv", row.names = F)
       }
     } else {
       recognition <- subset(memory, memory$Proc_trial.type == "magic_recognition")
@@ -464,8 +440,6 @@ for (l in seq_along(group)) {
     
     # process task m questions collected during memory part
     postMemory <-subset(memory, Proc_comment == "questionnaire")
-    # postMemory[1,] <- NA
-    # write.csv(postMemory, file = "filler_postMemory.csv", row.names = F)
     
     if (dim(postMemory)[1] == 0) { #if a participant has not completed the experiment, read in filler and print into console
       postMemory <- read.csv(file = file.path(dataDir, "filler_postMemory.csv"), header = T)
@@ -490,10 +464,6 @@ for (l in seq_along(group)) {
     subjectData <- merge(subjectData, postMemory, by = c("Username"))
     
     # ADD column for complete data: check data
-    # data$curiosity # checks wether there is video watching data for all 36 magic tricks
-    # data$description  # checks wether there is recall data for all 36 magic tricks
-    # data$confidence # checks wether there is recognition data for all 36 magic tricks
-    
     subjectData$completeData <- ifelse(is.na(subjectData$connection) == F, "completeDataset",
                                        ifelse(any(is.na(data$confidence)) == F, "completedRecognitionData",
                                               ifelse(any(is.na(data$description)) == F, "completedRecallData",
@@ -503,7 +473,6 @@ for (l in seq_along(group)) {
     
     # check whether there is coded data from the memory test at all; if so compute sum scores for recall performance
     # if there is no data, NA will be added when rbinding all information across subjects
-    # ifelse(!dir.exists(file.path(memoryDir, "preprocessed")), dir.create(file.path(memoryDir, "preprocessed")), FALSE)
     setwd(codedDir)
     if (file.exists(f_coded)) {
       
@@ -575,33 +544,21 @@ for (l in seq_along(group)) {
     }
     
     # save the file containing all information about demogs, task motivation / post memory test questions and memory performance
-    
     ifelse(!dir.exists(file.path(preprocessedDir, "wide")), dir.create(file.path(preprocessedDir, "wide")), FALSE)
     setwd(file.path(preprocessedDir, "wide"))
     write.csv(subjectData, file = paste0(subjects[s], "_wide.csv"), row.names = F)
     
     # ´removing all variables created, comment out for debugging!
-    # rm(cuedRecall)
+    rm(cuedRecall)
     if (file.exists(file.path(codedDir, f_coded))) {
       rm(cuedRecall_coded)
     }
-    rm(data)
-    rm(demogs)
-    rm(exp1)
-    rm(main)
-    rm(memory)
-    rm(postMain)
-    rm(postMemory)
-    rm(recall)
-    rm(recognition)
-    rm(subjectData)
+    rm(data,demogs,exp1,main,memory,postMain,postMemory,recall,recognition,subjectData)
   }
   
 }
 
 #### combine single _wide.csv files to one file ####
-
-# setwd("~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data/MagicBehavioural_preprocessed/wide/")
 setwd(file.path(preprocessedDir, "wide"))
 file_list <- list.files(pattern = "wide.csv")
 
