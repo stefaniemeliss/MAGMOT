@@ -800,23 +800,33 @@ for (s in seq_along(subjects)){
   }
   
   # save recall memory data if the participants initially participated in the memory part
-  if (file.exists(f)) { # f = magicmemory_fmri.csv
+  if (file.exists(file.path(dataMemoryDir, f))) { # f = magicmemory_fmri.csv
     # save recall file
     setwd(preprocessedMemoryDir)
     filenameRecall <- paste0(BIDSstring,"_cuedRecall.csv")
     write.table(cuedRecall, file = filenameRecall, sep = ",", row.names = F)
     
     # check whether a coded recall file exists; NOTE: THE STRING MIGHT CHANGE!
-    f_coded <- list.files(pattern = glob2rx("sub*cuedRecall_CP.tsv"))# the suffix _SM indicated that I have coded the remaining answers in the recall task
-    if (length(f_coded)!=0) { #if the recall performance has already been coded, the recall df gets overwritten
-      cuedRecall_coded <-read.table(file = f_coded, sep = '\t', header = TRUE)
-      cuedRecall_coded <- cuedRecall_coded[1:nrow(info),] # reduce cuedRecall_coded to only those rows that relate to stimuli
+    setwd(codedDir)
+    #f_coded <- list.files(pattern = glob2rx("sub*cuedRecall_CP.csv"))# the suffix _SM indicated that I have coded the remaining answers in the recall task
+    f_coded <-  paste0(BIDSstring,"_cuedRecall_CP.csv") # the suffix _SM indicated that I have coded the remaining answers in the recall task
+    if (file.exists(f_coded)) { #if the recall performance has already been coded, the recall df gets overwritten
+      cuedRecall_coded <- read.csv(f_coded, header = T)
+      cuedRecall_coded <- cuedRecall_coded[1:nrow(ptbdata),] # reduce cuedRecall_coded to only those rows that relate to stimuli
+      jj <- 0 #define a variable jj as zero to be used in the next statement
       for (j in 1:nrow(cuedRecall_coded)){ # Cristina has inserted some FALSE as coding, this will be replaced with NA to make sure that the script still runs
-        if (cuedRecall_coded$cuedRecallStrict[j] == "FALSE") {
+        if (is.na(cuedRecall_coded$cuedRecallStrict[j] == TRUE)) {
+          jj <- jj+1 #update jj
+          if(jj == 1){
+            print(paste(f_coded, "has NA in cuedRecallStrict"))
+          }
+        } else if(cuedRecall_coded$cuedRecallStrict[j] == "FALSE") {
           cuedRecall_coded$cuedRecallStrict[j] = NA
           cuedRecall_coded$cuedRecallLenient[j] = NA
         }
       }
+      names(cuedRecall_coded)[names(cuedRecall_coded)=="Username"] <- "ID" # change Username to ID
+      cuedRecall_coded$ID <- subjects[s]
       cuedRecall <- cuedRecall_coded # overwrite cuedRecall
     }
   } else { # if there is no _cuedRecall_CP file ALTHOUGH there was a memory data file, print into console
@@ -1131,11 +1141,7 @@ for (s in seq_along(subjects)){
   ########### add columns to postMemory data
   postMemory$BIDS <- BIDSstring
   if (file.exists(file.path(dataMemoryDir,f))) { # check whether there is  data from the memory test at all; if so compute sum scores for recognition performance
-    if (length(f_coded)!=0) {  # if there is no data, NA will be added when rbinding all information across subjects
-      postMemory$recallLenient <- sum(MEMO$cuedRecallLenient, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
-      postMemory$recallStrict <- sum(MEMO$cuedRecallStrict, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
-    }
-    
+
     # subset the data depending on block
     for (BLOCK in 1:(max(MEMO$block)+1)) {
       data_subset <- subset(MEMO, MEMO$block == BLOCK)
@@ -1145,6 +1151,15 @@ for (s in seq_along(subjects)){
       if (feedback == "yes"){
         print(paste("rows for each of the blocks:",nrow(data_subset)))
       }
+      
+      # sum up the scores for recall task
+      if (file.exists(file.path(codedDir,f_coded))) {  # if there is no data, NA will be added when rbinding all information across subjects
+        postMemory[[paste0("cuedRecallStrict", blockstring[BLOCK])]] <- sum(MEMO$cuedRecallStrict, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+        postMemory[[paste0("cuedRecallLenient", blockstring[BLOCK])]] <- sum(MEMO$cuedRecallLenient, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+      }
+      
+      
+      
       # sum up the scores for the recognition task, once in total and once seperated for the different levels of confidence
       postMemory[[paste0("responseCuriosity", blockstring[BLOCK])]] <- mean(data_subset$responseCuriosity, na.rm = T)
       postMemory[[paste0("curiosity", blockstring[BLOCK])]] <- mean(data_subset$curiosity, na.rm = T)
@@ -1217,7 +1232,7 @@ for (s in seq_along(subjects)){
     names(MAGMOT)[names(MAGMOT)=="TIME_end.y"] <- "endPost"
     
     # reduce MAGMOT data set to relevant variables
-    MAGMOT <- MAGMOT[c("ID", "BIDS", "fMRI", "group", "groupEffectCoded", "motivation",
+    MAGMOT_test <- MAGMOT[c("ID", "BIDS", "fMRI", "group", "groupEffectCoded", "motivation",
                        "preFile", "nbackFile", "corsiFile", "startPre", "endPre", "postFile", "startPost", "endPost", "memoryFile", "startMemory", "endMemory",
                        "eyetracking", "fieldmap", "preLearningRest", "taskBlock1", "taskBlock2", "taskBlock3", "postLearningRest", "T1w", "eyetrackingData", "taskData", "questionnaireData", "comments_experimenter.1",
                        "age", "gender", "ethnicity", "education", "yearsOfEducation", "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health.1", "neurodisorders.1", "screening_MRI",
@@ -1227,16 +1242,16 @@ for (s in seq_along(subjects)){
                        "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations", "comments_participant.1", "comments_participant.2", "comments_participant.3",
                        "sleepBeforeMemoryTest", "sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment",
                        
-                       "responseCuriosity_firstBlock", "curiosity_firstBlock", "recognition_firstBlock", "recognitionAboveMeanConf_firstBlock", "meanConfidence_firstBlock", "meanConfidenceCorrectTrials_firstBlock",
+                       "responseCuriosity_firstBlock", "curiosity_firstBlock", "cuedRecallStrict_firstBlock", "cuedRecallLenient_firstBlock", "recognition_firstBlock", "recognitionAboveMeanConf_firstBlock", "meanConfidence_firstBlock", "meanConfidenceCorrectTrials_firstBlock",
                        "recognitionConfLevel_1_firstBlock", "recognitionConfLevel_above_1_firstBlock", "recognitionConfLevel_1_2_firstBlock", "recognitionConfLevel_1_2_3_firstBlock", "recognitionConfLevel_2_firstBlock", "recognitionConfLevel_above_2_firstBlock", "recognitionConfLevel_3_firstBlock", "recognitionConfLevel_above_3_firstBlock", "recognitionConfLevel_3_4_firstBlock", "recognitionConfLevel_4_firstBlock", "recognitionConfLevel_above_4_firstBlock", "recognitionConfLevel_4_5_6_firstBlock", "recognitionConfLevel_5_firstBlock", "recognitionConfLevel_above_5_firstBlock", "recognitionConfLevel_5_6_firstBlock", "recognitionConfLevel_6_firstBlock", 
                        
-                       "responseCuriosity_secondBlock", "curiosity_secondBlock", "recognition_secondBlock", "recognitionAboveMeanConf_secondBlock", "meanConfidence_secondBlock", "meanConfidenceCorrectTrials_secondBlock",
+                       "responseCuriosity_secondBlock", "curiosity_secondBlock", "cuedRecallStrict_secondBlock", "cuedRecallLenient_secondBlock", "recognition_secondBlock", "recognitionAboveMeanConf_secondBlock", "meanConfidence_secondBlock", "meanConfidenceCorrectTrials_secondBlock",
                        "recognitionConfLevel_1_secondBlock", "recognitionConfLevel_above_1_secondBlock", "recognitionConfLevel_1_2_secondBlock", "recognitionConfLevel_1_2_3_secondBlock", "recognitionConfLevel_2_secondBlock", "recognitionConfLevel_above_2_secondBlock", "recognitionConfLevel_3_secondBlock", "recognitionConfLevel_above_3_secondBlock", "recognitionConfLevel_3_4_secondBlock", "recognitionConfLevel_4_secondBlock", "recognitionConfLevel_above_4_secondBlock", "recognitionConfLevel_4_5_6_secondBlock", "recognitionConfLevel_5_secondBlock", "recognitionConfLevel_above_5_secondBlock", "recognitionConfLevel_5_6_secondBlock", "recognitionConfLevel_6_secondBlock", 
                        
-                       "responseCuriosity_thirdBlock", "curiosity_thirdBlock", "recognition_thirdBlock", "recognitionAboveMeanConf_thirdBlock", "meanConfidence_thirdBlock", "meanConfidenceCorrectTrials_thirdBlock",
+                       "responseCuriosity_thirdBlock", "curiosity_thirdBlock", "cuedRecallStrict_thirdBlock", "cuedRecallLenient_thirdBlock", "recognition_thirdBlock", "recognitionAboveMeanConf_thirdBlock", "meanConfidence_thirdBlock", "meanConfidenceCorrectTrials_thirdBlock",
                        "recognitionConfLevel_1_thirdBlock", "recognitionConfLevel_above_1_thirdBlock", "recognitionConfLevel_1_2_thirdBlock", "recognitionConfLevel_1_2_3_thirdBlock", "recognitionConfLevel_2_thirdBlock", "recognitionConfLevel_above_2_thirdBlock", "recognitionConfLevel_3_thirdBlock", "recognitionConfLevel_above_3_thirdBlock", "recognitionConfLevel_3_4_thirdBlock", "recognitionConfLevel_4_thirdBlock", "recognitionConfLevel_above_4_thirdBlock", "recognitionConfLevel_4_5_6_thirdBlock", "recognitionConfLevel_5_thirdBlock", "recognitionConfLevel_above_5_thirdBlock", "recognitionConfLevel_5_6_thirdBlock", "recognitionConfLevel_6_thirdBlock", 
                        
-                       "responseCuriosity", "curiosity", "recognition", "recognitionAboveMeanConf", "meanConfidence", "meanConfidenceCorrectTrials",
+                       "responseCuriosity", "curiosity", "cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionAboveMeanConf", "meanConfidence", "meanConfidenceCorrectTrials",
                        "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2", "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6" 
     )]
     
