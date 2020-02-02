@@ -853,9 +853,9 @@ for (s in seq_along(subjects)){
   
   # compute scores of recognition performance
   recognition$confidenceCorrectTrials <- ifelse(recognition$recognition == 1, recognition$confidence, NA)
+  recognition$confidenceGroupMeanCenteredCorrectTrials <- ifelse(recognition$recognition == 1, recognition$confidenceGroupMeanCentered, NA)
   recognition$recognitionAboveMeanConf <- ifelse(recognition$recognition == 1 & recognition$confidenceGroupMeanCentered > 0, 1, 0)
-  recognition$recognitionContConf <- recognition$recognition * recognition$confidence
-  
+
   for (k in 1:6) { #confidence ranges from 1 to 6, potentially code can be made more flexible by using min(data$confidence) and max(data$confidence)
     recognition[[paste0("recognitionConfLevel_", k)]] <- ifelse(recognition$confidence == k & recognition$recognition == 1, 1, 0)
     if (k < 6) {
@@ -884,6 +884,22 @@ for (s in seq_along(subjects)){
   if (debug == 0){
     rm(cuedRecall, recognition, task)
   }
+  
+  # calculate curiosity-driven memory memory benefit (continouos)
+  MEMO$curiosityBenefit_cuedRecallStrict <- MEMO$curiosityGroupMeanCentered*MEMO$cuedRecallStrict
+  MEMO$curiosityBenefit_cuedRecallLenient <- MEMO$curiosityGroupMeanCentered*MEMO$cuedRecallLenient
+  MEMO$curiosityBenefit_allConf <- MEMO$curiosityGroupMeanCentered*MEMO$recognition
+  MEMO$curiosityBenefit_highConf <- MEMO$curiosityGroupMeanCentered*MEMO$recognitionConfLevel_4_5_6
+  MEMO$curiosityBenefit_aboveAvgConf <- MEMO$curiosityGroupMeanCentered*MEMO$recognitionAboveMeanConf
+
+  # calculate curiosity-driven memory memory benefit (dichotomous)
+  MEMO$curiosity_dichotom <- ifelse(MEMO$curiosityGroupMeanCentered > 0, 1,
+                                    ifelse(MEMO$curiosityGroupMeanCentered < 0, -1, NA))
+  MEMO$curiosityBenefit_cuedRecallStrict_dichotom <- MEMO$curiosity_dichotom*MEMO$cuedRecallStrict
+  MEMO$curiosityBenefit_cuedRecallLenient_dichotom <- MEMO$curiosity_dichotom*MEMO$cuedRecallLenient
+  MEMO$curiosityBenefit_allConf_dichotom <- MEMO$curiosity_dichotom*MEMO$recognition
+  MEMO$curiosityBenefit_highConf_dichotom <- MEMO$curiosity_dichotom*MEMO$recognitionConfLevel_4_5_6
+  MEMO$curiosityBenefit_aboveAvgConf_dichotom <- MEMO$curiosity_dichotom*MEMO$recognitionAboveMeanConf
   
   # save data in long format
   setwd(preprocessedLongDir)
@@ -1113,10 +1129,6 @@ for (s in seq_along(subjects)){
     }
   }
   
-  
-  
-  
-  
   # delete no longer needed variables
   if (debug == 0){
     rm(duration, onset, run, run_BIDS, BIDS, events_BIDS)
@@ -1201,6 +1213,20 @@ for (s in seq_along(subjects)){
     }
   }
   
+  # sum up curiosity-driven memory memory benefit (continouos) for subjects
+  postMemory$curiosityBenefit_cuedRecallStrict <-  sum(MEMO$curiosityBenefit_cuedRecallStrict, na.rm = T)
+  postMemory$curiosityBenefit_cuedRecallLenient <-  sum(MEMO$curiosityBenefit_cuedRecallLenient, na.rm = T)
+  postMemory$curiosityBenefit_allConf <-  sum(MEMO$curiosityBenefit_allConf, na.rm = T)
+  postMemory$curiosityBenefit_highConf <-  sum(MEMO$curiosityBenefit_highConf, na.rm = T)
+  postMemory$curiosityBenefit_aboveAvgConf <- sum(MEMO$curiosityBenefit_aboveAvgConf, na.rm = T)
+  
+  # sum up curiosity-driven memory memory benefit (dichotomous) for subjects
+  postMemory$curiosityBenefit_cuedRecallStrict_dichotom <-  sum(MEMO$curiosityBenefit_cuedRecallStrict_dichotom, na.rm = T)
+  postMemory$curiosityBenefit_cuedRecallLenient_dichotom <-  sum(MEMO$curiosityBenefit_cuedRecallLenient_dichotom, na.rm = T)
+  postMemory$curiosityBenefit_allConf_dichotom <-  sum(MEMO$curiosityBenefit_allConf_dichotom, na.rm = T)
+  postMemory$curiosityBenefit_highConf_dichotom <-  sum(MEMO$curiosityBenefit_highConf_dichotom, na.rm = T)
+  postMemory$curiosityBenefit_aboveAvgConf_dichotom <-  sum(MEMO$curiosityBenefit_aboveAvgConf_dichotom, na.rm = T)
+  
   # rbind the postMemory files of each subject to a data frame
   if(s == 1){
     postMemoryWide <- postMemory
@@ -1212,6 +1238,7 @@ for (s in seq_along(subjects)){
   if (debug == 0){
     rm(postMemory, memory)
   }
+  
   
   #################################################### at the end of the loop, merge data sets ####################################################
   if (s == length(subjects)){
@@ -1254,9 +1281,6 @@ for (s in seq_along(subjects)){
                        "responseCuriosity", "curiosity", "cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionAboveMeanConf", "meanConfidence", "meanConfidenceCorrectTrials",
                        "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2", "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6" 
     )]
-    
-    setwd(preprocessedDir)
-    xlsx::write.xlsx(MAGMOT, file="wide_MAGMOT.xlsx", sheetName = "Sheet1", row.names = F)
     
     # compute summary statistics for measurements of memory
     workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
@@ -1324,6 +1348,14 @@ for (s in seq_along(subjects)){
     
     # compute the glmer models to extract the slopes
     library(lme4)
+    LMEmodel_cuedRecallStrict <- glmer(cuedRecallStrict ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
+    MAGMOT$curiosityBeta_cuedRecallStrict <- coef(LMEmodel_cuedRecallStrict)$ID$curiosityGroupMeanCentered
+    MAGMOT$curiosityBeta_cuedRecallStrict <-  MAGMOT$curiosityBeta_cuedRecallStrict - mean(MAGMOT$curiosityBeta_cuedRecallStrict)   
+    
+    LMEmodel_cuedRecallLenient <- glmer(cuedRecallLenient ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
+    MAGMOT$curiosityBeta_cuedRecallLenient <- coef(LMEmodel_cuedRecallLenient)$ID$curiosityGroupMeanCentered
+    MAGMOT$curiosityBeta_cuedRecallLenient <-  MAGMOT$curiosityBeta_cuedRecallLenient - mean(MAGMOT$curiosityBeta_cuedRecallLenient)   
+    
     LMEmodel_recogAboveAvgConf <- glmer(recognitionAboveMeanConf ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
     MAGMOT$curiosityBeta_aboveAvgConf <- coef(LMEmodel_recogAboveAvgConf)$ID$curiosityGroupMeanCentered
     MAGMOT$curiosityBeta_aboveAvgConf <-  MAGMOT$curiosityBeta_aboveAvgConf - mean(MAGMOT$curiosityBeta_aboveAvgConf)
@@ -1336,16 +1368,13 @@ for (s in seq_along(subjects)){
     MAGMOT$curiosityBeta_allConf <- coef(LMEmodel_recogAllConf)$ID$curiosityGroupMeanCentered
     MAGMOT$curiosityBeta_allConf <-  MAGMOT$curiosityBeta_allConf - mean(MAGMOT$curiosityBeta_allConf)
     
-    LMEmodel_recogContConf <- glmer(recognitionContConf ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , data = dataLong)
-    MAGMOT$curiosityBeta_contConf <- coef(LMEmodel_recogContConf)$ID$curiosityGroupMeanCentered
-    MAGMOT$curiosityBeta_contConf <-  MAGMOT$curiosityBeta_contConf - mean(MAGMOT$curiosityBeta_contConf)
-    
     # par(mfrow=c(1,3))
     # boxplot(MAGMOT$curiosityBeta_aboveAvgConf, main = "curiosityBeta_aboveAvgConf")
     # boxplot(MAGMOT$curiosityBeta_highConf, main = "curiosityBeta_highConf")
     # boxplot(MAGMOT$curiosityBeta_allConf, main = "curiosityBeta_allConf")
     
-    
+    setwd(preprocessedDir)
+    xlsx::write.xlsx(MAGMOT, file="wide_MAGMOT.xlsx", sheetName = "Sheet1", row.names = F)
     
     
     #################### as a last step, create the files we need for concatenation ####################
@@ -1583,32 +1612,32 @@ for (s in seq_along(subjects)){
             # dataTable_ISC_dummy[x,29] <- dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
             
             #curiosity-driven memory benefit and curiosity-driven memory benefit interaction
-            #dataTable_ISC_dummy[x,30] <- 1-abs(MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,16] <- (MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,16] <- (MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,17] <- dataTable_ISC_dummy[x,16] * dataTable_ISC_dummy[x,3] 
-            # dataTable_ISC_dummy[x,32] <- 1-abs(MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,18] <- (MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,18] <- (MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,19] <- dataTable_ISC_dummy[x,18] * dataTable_ISC_dummy[x,3] 
-            # dataTable_ISC_dummy[x,34] <- 1-abs(MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,20] <- (MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            #dataTable_ISC_dummy[x,30] <- 1-abs(MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
+            dataTable_ISC_dummy[x,20] <- (MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,21] <- dataTable_ISC_dummy[x,20] * dataTable_ISC_dummy[x,3] 
-            # dataTable_ISC_dummy[x,36] <- 1-abs(MAGMOT$curiosityBeta_contConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_contConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_contConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_contConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
-            dataTable_ISC_dummy[x,23] <- dataTable_ISC_dummy[x,22] * dataTable_ISC_dummy[x,3]
-            
+            # dataTable_ISC_dummy[x,32] <- 1-abs(MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
+            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,23] <- dataTable_ISC_dummy[x,22] * dataTable_ISC_dummy[x,3] 
+            # dataTable_ISC_dummy[x,34] <- 1-abs(MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
+            dataTable_ISC_dummy[x,24] <- (MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,25] <- dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
             
             # # determine the unique contribution of curiosity, memory and confidence
-            dataTable_ISC_dummy[,24] <- NA #residuals(uniqueCurAboveAvgConf)
-            dataTable_ISC_dummy[,25] <-  NA #dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[,26] <- NA #residuals(uniqueMemAboveAvgConf)
-            dataTable_ISC_dummy[,27] <- NA #dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[,28] <- NA #residuals(uniqueConf)
-            dataTable_ISC_dummy[,29] <- NA #dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[,26] <- NA #residuals(uniqueCurAboveAvgConf)
+            dataTable_ISC_dummy[,27] <-  NA #dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[,28] <- NA #residuals(uniqueMemAboveAvgConf)
+            dataTable_ISC_dummy[,29] <- NA #dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[,30] <- NA #residuals(uniqueConf)
+            dataTable_ISC_dummy[,31] <- NA #dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
             
             
-            dataTable_ISC_dummy[x,30] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
+            dataTable_ISC_dummy[x,32] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
             if(x < N) {
-              dataTable_ISC_dummy[x,31] <- '\\' #add back slash at end of the row
+              dataTable_ISC_dummy[x,33] <- '\\' #add back slash at end of the row
             }
             
             # HERE DELETE ALL "_effectCoded" variables in events!!!!!!!!!!!!
@@ -1739,27 +1768,26 @@ for (s in seq_along(subjects)){
                                       "corrAllConf", "grpCorrAllConf", "corrHighConf", "grpCorrHighConf", "corrAboveAvgConf", "grpCorrAboveAvgConf", "corrContConf", "grpCorrContConf", 
                                       #"mecuAllConf", "grpMecuAllConf", "mecuHighConf", "grpMecuHighConf", "mecuAboveAvgConf", "grpMecuAboveAvgConf", "mecuContConf", "grpMecuContConf", 
                                       #"memoAllConf", "grpMemoAllConf", "memoHighConf", "grpMemoHighConf", "memoAboveAvgConf", "grpMemoAboveAvgConf", "memoContConf", "grpMemoContConf", 
-                                      "cuBetaAllConf", "grpCuBetaAllConf", "cuBetaHighConf", "grpCuBetaHighConf", "cuBetaAboveAvgConf", "grpCuBetaAboveAvgConf", "cuBetaContConf", "grpCuBetaContConf", 
+                                      "cuBetaRecallStrict", "grpCuBetaRecallStrict", "cuBetaRecallLenient", "grpCuBetaRecallLenient",
+                                      "cuBetaAllConf", "grpCuBetaAllConf", "cuBetaHighConf", "grpCuBetaHighConf", "cuBetaAboveAvgConf", "grpCuBetaAboveAvgConf", 
                                       "uniqueCurAboveAvgConf", "grpUniqueCurAboveAvgConf", "uniqueMemAboveAvgConf", "grpUniqueMemAboveAvgConf", "uniqueConfidence", "grpUniqueConfidence",
                                       "InputFile", "\\")
       
       # determine the unique contribution of curiosity, memory and confidence
       uniqueCurAboveAvgConf <- lm(dataTable_ISC_dummy$corrCuriosity ~ dataTable_ISC_dummy$corrAboveAvgConf)
       plot(predict(uniqueCurAboveAvgConf), rstandard(uniqueCurAboveAvgConf))
-      dataTable_ISC_dummy[,24] <- residuals(uniqueCurAboveAvgConf)
-      dataTable_ISC_dummy[,25] <- dataTable_ISC_dummy[,24] * dataTable_ISC_dummy[,3] 
+      dataTable_ISC_dummy[,26] <- residuals(uniqueCurAboveAvgConf)
+      dataTable_ISC_dummy[,27] <- dataTable_ISC_dummy[,24] * dataTable_ISC_dummy[,3] 
       
       uniqueMemAboveAvgConf <- lm(dataTable_ISC_dummy$corrAboveAvgConf ~ dataTable_ISC_dummy$corrCuriosity)
       plot(predict(uniqueMemAboveAvgConf), rstandard(uniqueMemAboveAvgConf))
-      dataTable_ISC_dummy[,26] <- residuals(uniqueMemAboveAvgConf)
-      dataTable_ISC_dummy[,27] <- dataTable_ISC_dummy[,26] * dataTable_ISC_dummy[,3] 
+      dataTable_ISC_dummy[,28] <- residuals(uniqueMemAboveAvgConf)
+      dataTable_ISC_dummy[,29] <- dataTable_ISC_dummy[,26] * dataTable_ISC_dummy[,3] 
       
       uniqueConf <- lm(dataTable_ISC_dummy$corrConfidence ~ dataTable_ISC_dummy$corrAllConf)
       plot(predict(uniqueConf), rstandard(uniqueConf))
-      dataTable_ISC_dummy[,28] <- residuals(uniqueConf)
-      dataTable_ISC_dummy[,29] <- dataTable_ISC_dummy[,28] * dataTable_ISC_dummy[,3] 
-      
-      
+      dataTable_ISC_dummy[,30] <- residuals(uniqueConf)
+      dataTable_ISC_dummy[,31] <- dataTable_ISC_dummy[,28] * dataTable_ISC_dummy[,3] 
 
       names(dataTable_aboveAvgConf) <- c("Subj1", "Subj2", "grp", "InputFile", "\\")
       names(dataTable_highConf) <- c("Subj1", "Subj2", "grp", "InputFile", "\\")
