@@ -1295,8 +1295,17 @@ for (s in seq_along(subjects)){
                        "recognitionConfLevel_1_thirdBlock", "recognitionConfLevel_above_1_thirdBlock", "recognitionConfLevel_1_2_thirdBlock", "recognitionConfLevel_1_2_3_thirdBlock", "recognitionConfLevel_2_thirdBlock", "recognitionConfLevel_above_2_thirdBlock", "recognitionConfLevel_3_thirdBlock", "recognitionConfLevel_above_3_thirdBlock", "recognitionConfLevel_3_4_thirdBlock", "recognitionConfLevel_4_thirdBlock", "recognitionConfLevel_above_4_thirdBlock", "recognitionConfLevel_4_5_6_thirdBlock", "recognitionConfLevel_5_thirdBlock", "recognitionConfLevel_above_5_thirdBlock", "recognitionConfLevel_5_6_thirdBlock", "recognitionConfLevel_6_thirdBlock", 
                        
                        "responseCuriosity", "curiosity", "cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionAboveMeanConf", "meanConfidence", "meanConfidenceCorrectTrials",
-                       "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2", "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6" 
+                       "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2", "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
+                       
+                       "curiosityBenefit_cuedRecallStrict",  "curiosityBenefit_cuedRecallStrict_dichotom", "curiosityBenefit_cuedRecallLenient", "curiosityBenefit_cuedRecallLenient_dichotom",
+                       "curiosityBenefit_allConf", "curiosityBenefit_allConf_dichotom", "curiosityBenefit_highConf", "curiosityBenefit_highConf_dichotom",  "curiosityBenefit_aboveAvgConf", "curiosityBenefit_aboveAvgConf_dichotom" 
     )]
+    
+    
+    # THEORETICALLY CODE WOULD BE WAY BETTER IF MAGMOT WAS REDUCED BEFORE COMPUTUNG BLOCK SCORES, LESS ERROR PROUN
+    # additonally, block wise memory benefits should be added as well
+    
+    
     
     # compute summary statistics for measurements of memory
     workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
@@ -1383,6 +1392,36 @@ for (s in seq_along(subjects)){
     LMEmodel_recogAllConf <- glmer(recognition ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
     MAGMOT$curiosityBeta_allConf <- coef(LMEmodel_recogAllConf)$ID$curiosityGroupMeanCentered
     MAGMOT$curiosityBeta_allConf <-  MAGMOT$curiosityBeta_allConf - mean(MAGMOT$curiosityBeta_allConf)
+    
+    # add RSFC estimates between HPC & VTA (Pearson)
+    setwd(brainDir)
+    RSFC <- read.delim2("RSFC_VTA-HPC.txt") # read in data
+    names(RSFC)[names(RSFC)=="RSFC_run.1"] <- "RSFC_VTAHPC_run1" # change col name
+    names(RSFC)[names(RSFC)=="RSFC_run.2"] <- "RSFC_VTAHPC_run2" # change col name
+    RSFC$RSFC_VTAHPC_run1 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1)) # change from factor to numeric
+    RSFC$RSFC_VTAHPC_run2 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run2)) # change from factor to numeric
+    
+    # fisher z transform correlations and compute RSFC change
+    RSFC$RSFC_VTAHPC_run1_z <- atanh(RSFC$RSFC_VTAHPC_run1) # fisher z transform correlations
+    RSFC$RSFC_VTAHPC_run2_z <- atanh(RSFC$RSFC_VTAHPC_run2) # fisher z transform correlations
+    RSFC$RSFC_VTAHPC_diff <- RSFC$RSFC_VTAHPC_run2_z - RSFC$RSFC_VTAHPC_run1_z
+    
+    MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
+    
+    # add RSFC estimates between HPC & VTA (Spearman)
+    RSFC <- read.delim2("RSFC_VTA-HPC_spearman.txt") # read in data
+    names(RSFC)[names(RSFC)=="RSFC_run.1_spearman"] <- "RSFC_VTAHPC_run1_spearman" # change col name
+    names(RSFC)[names(RSFC)=="RSFC_run.2_spearman"] <- "RSFC_VTAHPC_run2_spearman" # change col name
+    RSFC$RSFC_VTAHPC_run1_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1_spearman)) # change from factor to numeric
+    RSFC$RSFC_VTAHPC_run2_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run2_spearman)) # change from factor to numeric
+    
+    # fisher z transform correlations and compute RSFC change
+    RSFC$RSFC_VTAHPC_run1_z_spearman <- atanh(RSFC$RSFC_VTAHPC_run1_spearman) # fisher z transform correlations
+    RSFC$RSFC_VTAHPC_run2_z_spearman <- atanh(RSFC$RSFC_VTAHPC_run2_spearman) # fisher z transform correlations
+    RSFC$RSFC_VTAHPC_diff_spearman <- RSFC$RSFC_VTAHPC_run2_z_spearman - RSFC$RSFC_VTAHPC_run1_z_spearman
+    
+    MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
+    
     
     # par(mfrow=c(1,3))
     # boxplot(MAGMOT$curiosityBeta_aboveAvgConf, main = "curiosityBeta_aboveAvgConf")
