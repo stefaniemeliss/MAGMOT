@@ -142,6 +142,7 @@ feedback = "no"
 mainDir <- "~/Dropbox/Reading/PhD/Magictricks/fmri_study"
 preDir <- file.path(mainDir, "Data", "MAGMOT_pre")
 postDir <- file.path(mainDir, "Data", "MAGMOT_post")
+brainDir <- file.path(mainDir, "Data", "brain_activation")
 dataMemoryDir <- file.path(mainDir, "Data", "magicmemory_fmri", "decrypted")
 codedDir <- file.path(mainDir, "Data", "magicmemory_fmri", "coded")
 preprocessedDir <- file.path(mainDir, "Data", "preprocessed")
@@ -428,9 +429,9 @@ for (i in seq_along(nback_filelist)){
     nbackData[i, "nback_falsealarms_exclTooSlow"] <-  nrow(subset(nback, nback$V2 == 2 & nback$V5 > 1)) # wrong response when letter is not the same as 2-back
     
     # compute some SDT measures
-    nbackData[i, "nback_hitrate"] <-  nbackData[i, "nback_hits"] / nbackData[i, "NBacks"]  
-    nbackData[i, "nback_falsealarmrate"] <-  nbackData[i, "nback_falsealarms_exclTooSlow"] / nbackData[i, "nonNBacks"]
-    nbackData[i, "nback_accurary"] <-  nbackData[i, "nback_hitrate"] - nbackData[i, "nback_falsealarmrate"]
+    nbackData[i, "nback_hitrate"] <-  nbackData[i, "nback_hits"] / nbackData[i, "NBacks"]  # percentage hits in actual nBack trials
+    nbackData[i, "nback_falsealarmrate"] <-  nbackData[i, "nback_falsealarms_exclTooSlow"] / nbackData[i, "nonNBacks"] # percentage false alarms in actual no nBack trials
+    nbackData[i, "nback_accurary"] <-  nbackData[i, "nback_hitrate"] - nbackData[i, "nback_falsealarmrate"] # hit rate corrected for false alarms
     
     rm(nback)
   }
@@ -640,7 +641,6 @@ for (s in seq_along(subjects)){
   ptbdata$ID <- ifelse(nchar(ptbdata$ID)==1, paste0("0", ptbdata$ID), ptbdata$ID) # add a zeo if not present in front of one digit numbers
   ptbdata$BIDS <- BIDSstring
   ptbdata$groupEffectCoded <-  ifelse(ptbdata$group == "ext", 1, -1)
-  ptbdata$nback_accurary <- MAGMOT$nback_accurary[MAGMOT$ID == subjects[s]]
   
   
   # change stimID of respMatTask to match collector
@@ -923,19 +923,20 @@ for (s in seq_along(subjects)){
       
       # replace NAs with n/a
       run_acq$cuedRecallStrict <- ifelse(!is.na(run_acq$cuedRecallStrict), run_acq$cuedRecallStrict, "n/a")
+      run_acq$cuedRecallLenient <- ifelse(!is.na(run_acq$cuedRecallLenient), run_acq$cuedRecallLenient, "n/a")
       
       # pick relevant onset variables and create data in long format
       onset <- run_acq[,c("trial","vidFileName", "displayVidOnset", "mockOffset",  "displayVidOffset", "fixationPostVidOnset",
                           "displayAnswerOnset",  "responseAnswer", "timestampAnswer", "fixationPostAnswerOnset",
                           "displayCuriosityOnset", "responseCuriosity", "timestampCuriosity",  "fixationPostCuriosityOnset",
-                          "cuedRecallStrict", "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", "confidence")]
+                          "cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", "confidence")]
       onset$timestampVidOnset <- onset$displayVidOnset
       onset$timestampMockOffset <- onset$mockOffset
       onset$timestampPostVidFixation <- onset$fixationPostVidOnset
       # onset <- reshape2::melt(onset, id.vars=c("vidFileName", "trial", "mockOffset", "displayVidOffset", "timestampPostVidFixation", "vidDurCalc", "cuedRecallStrict",  "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
       #                                          "responseAnswer", "timestampAnswer", "responseCuriosity", "timestampCuriosity"), value.name = "onset")
       onset <- reshape2::melt(onset, id.vars=c("vidFileName", "trial", "timestampVidOnset", "timestampMockOffset", "displayVidOffset", "timestampPostVidFixation",
-                                               "cuedRecallStrict", "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",  "confidence",
+                                               "cuedRecallStrict",  "cuedRecallLenient", "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",  "confidence",
                                                "responseAnswer", "timestampAnswer", "responseCuriosity", "timestampCuriosity"), value.name = "onset")
       
       # recode variable (for later merging)
@@ -974,7 +975,8 @@ for (s in seq_along(subjects)){
       run_BIDS$highConfRecognition <- ifelse(run_BIDS$variable == "displayVid", run_BIDS$recognitionConfLevel_4_5_6, "not applicable")
       run_BIDS$aboveAverageConfRecognition <- ifelse(run_BIDS$variable == "displayVid", run_BIDS$recognitionAboveMeanConf, "not applicable")
       run_BIDS$confidence <- ifelse(run_BIDS$variable == "displayVid", run_BIDS$confidence, "not applicable")
-      run_BIDS$trial_type_cuedRecall <- ifelse(run_BIDS$variable == "displayVid", run_BIDS$cuedRecallStrict, "not applicable")
+      run_BIDS$cuedRecallStrict <- ifelse(run_BIDS$variable == "displayVid", run_BIDS$cuedRecallStrict, "not applicable")
+      run_BIDS$cuedRecallLenient <- ifelse(run_BIDS$variable == "displayVid", run_BIDS$cuedRecallLenient, "not applicable")
       # run_BIDS$trial_type <-  ifelse(run_BIDS$highConfRecognition == 1 | run_BIDS$cuedRecall == 1, "remembered",
       #                                ifelse(run_BIDS$highConfRecognition == 0 & run_BIDS$cuedRecall == 0, "forgotten",
       #                                       ifelse(run_BIDS$cuedRecall ==  "n/a" & run_BIDS$highConfRecognition == 0, "n/a",
@@ -982,7 +984,17 @@ for (s in seq_along(subjects)){
       #                                                     "undefined"))))
       
       # note: this has to change after machine learning, currently trial type is only based on recognition performance
-      run_BIDS$trial_type_allConfRecognition<-  ifelse(run_BIDS$allConfRecognition == 1, "remembered", 
+      run_BIDS$trial_type_cuedRecallStrict <-  ifelse(run_BIDS$cuedRecallStrict == 1, "remembered", 
+                                                       ifelse(run_BIDS$cuedRecallStrict == 0, "forgotten",
+                                                              ifelse(run_BIDS$cuedRecallStrict == "not applicable", "not applicable",
+                                                                     "undefined")))
+      
+      run_BIDS$trial_type_cuedRecallLenient <-  ifelse(run_BIDS$cuedRecallLenient == 1, "remembered", 
+                                                     ifelse(run_BIDS$cuedRecallLenient == 0, "forgotten",
+                                                            ifelse(run_BIDS$cuedRecallLenient == "not applicable", "not applicable",
+                                                                   "undefined")))
+
+      run_BIDS$trial_type_allConfRecognition <-  ifelse(run_BIDS$allConfRecognition == 1, "remembered", 
                                                        ifelse(run_BIDS$allConfRecognition == 0, "forgotten",
                                                               ifelse(run_BIDS$allConfRecognition == "not applicable", "not applicable",
                                                                      "undefined")))
@@ -1019,7 +1031,9 @@ for (s in seq_along(subjects)){
       run_BIDS$onset <- round(run_BIDS$onset, digits = 3)
       run_BIDS$duration <- round(run_BIDS$duration, digits = 3)
       
-      events_BIDS <- run_BIDS[, c("onset", "duration", "trial", "stim_file",  "event", "response", "response_timestamp",  "trial_type_cuedRecall", "trial_type_allConfRecognition", "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition")]
+      events_BIDS <- run_BIDS[, c("onset", "duration", "trial", "stim_file",  "event", "response", "response_timestamp",  
+                                  "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
+                                  "trial_type_allConfRecognition", "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition")]
       
       # save file for BIDS
       if (max(run$acq) > 1) { # include acq in filename if there was more than one acq in a run
@@ -1104,7 +1118,9 @@ for (s in seq_along(subjects)){
     BIDS_concat$duration_vid_withoutMock_postFixation <-as.numeric(BIDS_concat$timestampPostVidFixation)-as.numeric(BIDS_concat$mock_per_run)
     
     #names(BIDS_concat)
-    BIDS_concat <- BIDS_concat[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "duration_vid_withoutMock_postFixation", "avgVidDur_MAGMOT", "trial", "stim_file", "responseCuriosity", "trial_type_allConfRecognition", "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition",  "confidence",  "run", "acq")]
+    BIDS_concat <- BIDS_concat[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "duration_vid_withoutMock_postFixation", "avgVidDur_MAGMOT", "trial", "stim_file", "responseCuriosity", 
+                                  "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient", "trial_type_allConfRecognition", 
+                                  "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition",  "confidence",  "run", "acq")]
     
     if (feedback == "yes"){
       print(paste("total Duration is", sum(BIDS_concat$duration)))
@@ -1259,7 +1275,7 @@ for (s in seq_along(subjects)){
     names(MAGMOT)[names(MAGMOT)=="TIME_end.y"] <- "endPost"
     
     # reduce MAGMOT data set to relevant variables
-    MAGMOT_test <- MAGMOT[c("ID", "BIDS", "fMRI", "group", "groupEffectCoded", "motivation",
+    MAGMOT <- MAGMOT[c("ID", "BIDS", "fMRI", "group", "groupEffectCoded", "motivation",
                        "preFile", "nbackFile", "corsiFile", "startPre", "endPre", "postFile", "startPost", "endPost", "memoryFile", "startMemory", "endMemory",
                        "eyetracking", "fieldmap", "preLearningRest", "taskBlock1", "taskBlock2", "taskBlock3", "postLearningRest", "T1w", "eyetrackingData", "taskData", "questionnaireData", "comments_experimenter.1",
                        "age", "gender", "ethnicity", "education", "yearsOfEducation", "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health.1", "neurodisorders.1", "screening_MRI",
@@ -1429,7 +1445,9 @@ for (s in seq_along(subjects)){
           events_s <- read.delim(file = file_s, header = T, sep="\t", na = "n/a")
           
           # rename vars
-          events_s <- events_s[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "avgVidDur_MAGMOT", "stim_file", "responseCuriosity", "trial_type_allConfRecognition", "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition", "confidence")]
+          events_s <- events_s[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "avgVidDur_MAGMOT", "stim_file", "responseCuriosity", 
+                                  "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
+                                  "trial_type_allConfRecognition", "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition", "confidence")]
           events_s$responseCuriosity <- events_s$responseCuriosity - mean(events_s$responseCuriosity, na.rm = T) #mean center curiosity
           
           names(events_s)[names(events_s)=="vid"] <- paste0("onset_", subjectsCorr[s])
@@ -1437,6 +1455,8 @@ for (s in seq_along(subjects)){
           names(events_s)[names(events_s)=="mock"] <- paste0("mock_", subjectsCorr[s])
           names(events_s)[names(events_s)=="duration_vid_withoutMock"] <- paste0("duration_vid_withoutMock_", subjectsCorr[s])
           names(events_s)[names(events_s)=="responseCuriosity"] <- paste0("responseCuriosity_", subjectsCorr[s])
+          names(events_s)[names(events_s)=="trial_type_cuedRecallStrict"] <- paste0("trial_type_cuedRecallStrict_", subjectsCorr[s])
+          names(events_s)[names(events_s)=="trial_type_cuedRecallLenient"] <- paste0("trial_type_cuedRecallLenient_", subjectsCorr[s])
           names(events_s)[names(events_s)=="trial_type_allConfRecognition"] <- paste0("trial_type_allConfRecognition_", subjectsCorr[s])
           names(events_s)[names(events_s)=="trial_type_highConfRecognition"] <- paste0("trial_type_highConfRecognition_", subjectsCorr[s])
           names(events_s)[names(events_s)=="trial_type_aboveAverageConfRecognition"] <- paste0("trial_type_aboveAverageConfRecognition_", subjectsCorr[s])
@@ -1453,7 +1473,9 @@ for (s in seq_along(subjects)){
             events_ss <- read.delim(file = file_ss, header = T, sep="\t", na = "n/a")
             
             # rename vars
-            events_ss <- events_ss[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "avgVidDur_MAGMOT", "stim_file", "responseCuriosity", "trial_type_allConfRecognition", "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition", "confidence")]
+            events_ss <- events_ss[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "avgVidDur_MAGMOT", "stim_file", "responseCuriosity", 
+                                      "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
+                                      "trial_type_allConfRecognition", "trial_type_highConfRecognition", "trial_type_aboveAverageConfRecognition", "confidence")]
             events_ss$responseCuriosity <- events_ss$responseCuriosity - mean(events_ss$responseCuriosity, na.rm = T) #mean center curiosity
             
             names(events_ss)[names(events_ss)=="vid"] <- paste0("onset_", subjectsToCorrelate[ss])
@@ -1461,6 +1483,8 @@ for (s in seq_along(subjects)){
             names(events_ss)[names(events_ss)=="mock"] <- paste0("mock_", subjectsToCorrelate[ss])
             names(events_ss)[names(events_ss)=="duration_vid_withoutMock"] <- paste0("duration_vid_withoutMock_", subjectsToCorrelate[ss])
             names(events_ss)[names(events_ss)=="responseCuriosity"] <- paste0("responseCuriosity_", subjectsToCorrelate[ss])
+            names(events_ss)[names(events_ss)=="trial_type_cuedRecallStrict"] <- paste0("trial_type_cuedRecallStrict_", subjectsToCorrelate[ss])
+            names(events_ss)[names(events_ss)=="trial_type_cuedRecallLenient"] <- paste0("trial_type_cuedRecallLenient_", subjectsToCorrelate[ss])
             names(events_ss)[names(events_ss)=="trial_type_allConfRecognition"] <- paste0("trial_type_allConfRecognition_", subjectsToCorrelate[ss])
             names(events_ss)[names(events_ss)=="trial_type_highConfRecognition"] <- paste0("trial_type_highConfRecognition_", subjectsToCorrelate[ss])
             names(events_ss)[names(events_ss)=="trial_type_aboveAverageConfRecognition"] <- paste0("trial_type_aboveAverageConfRecognition_", subjectsToCorrelate[ss])
@@ -1471,9 +1495,16 @@ for (s in seq_along(subjects)){
             events <- merge(events_s, events_ss, by = c("stim_file", "avgVidDur_MAGMOT"))
             
             # define match in memory performance
+            events$behavParcel_cuedRecallStrict <- ifelse(events[[paste0("trial_type_cuedRecallStrict_",subjectsCorr[s])]] == "remembered" & events[[paste0("trial_type_cuedRecallStrict_",subjectsToCorrelate[ss])]] == "remembered", "bothRemembered",
+                                                 ifelse(events[[paste0("trial_type_cuedRecallStrict_",subjectsCorr[s])]] == "forgotten" & events[[paste0("trial_type_cuedRecallStrict_",subjectsToCorrelate[ss])]] == "forgotten", "bothForgotten",
+                                                        "differentResponses"))
+            events$behavParcel_cuedRecallLenient <- ifelse(events[[paste0("trial_type_cuedRecallLenient_",subjectsCorr[s])]] == "remembered" & events[[paste0("trial_type_cuedRecallLenient_",subjectsToCorrelate[ss])]] == "remembered", "bothRemembered",
+                                                 ifelse(events[[paste0("trial_type_cuedRecallLenient_",subjectsCorr[s])]] == "forgotten" & events[[paste0("trial_type_cuedRecallLenient_",subjectsToCorrelate[ss])]] == "forgotten", "bothForgotten",
+                                                        "differentResponses"))
             events$behavParcel_allConf <- ifelse(events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s])]] == "remembered" & events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss])]] == "remembered", "bothRemembered",
                                                  ifelse(events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s])]] == "forgotten" & events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss])]] == "forgotten", "bothForgotten",
                                                         "differentResponses"))
+
             events$behavParcel_highConf <- ifelse(events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s])]] == "remembered" & events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss])]] == "remembered", "bothRemembered",
                                                   ifelse(events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s])]] == "forgotten" & events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss])]] == "forgotten", "bothForgotten",
                                                          "differentResponses"))
@@ -1482,67 +1513,46 @@ for (s in seq_along(subjects)){
                                                              "differentResponses"))
             
             # create an effect coded memory variable
+            events[[paste0("trial_type_cuedRecallStrict_",subjectsCorr[s], "_effectCoded")]] <- ifelse( events[[paste0("trial_type_cuedRecallStrict_",subjectsCorr[s])]] == "remembered", 1, -1)
+            events[[paste0("trial_type_cuedRecallStrict_",subjectsToCorrelate[ss], "_effectCoded")]]  <- ifelse( events[[paste0("trial_type_cuedRecallStrict_",subjectsToCorrelate[ss])]] == "remembered", 1, -1)
+            events[[paste0("trial_type_cuedRecallLenient_",subjectsCorr[s], "_effectCoded")]] <- ifelse( events[[paste0("trial_type_cuedRecallLenient_",subjectsCorr[s])]] == "remembered", 1, -1)
+            events[[paste0("trial_type_cuedRecallLenient_",subjectsToCorrelate[ss], "_effectCoded")]]  <- ifelse( events[[paste0("trial_type_cuedRecallLenient_",subjectsToCorrelate[ss])]] == "remembered", 1, -1)
+            
             events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_effectCoded")]] <- ifelse( events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s])]] == "remembered", 1, -1)
             events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]]  <- ifelse( events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss])]] == "remembered", 1, -1)
             events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s], "_effectCoded")]] <- ifelse( events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s])]] == "remembered", 1, -1)
             events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]]  <- ifelse( events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss])]] == "remembered", 1, -1)
             events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsCorr[s], "_effectCoded")]] <- ifelse( events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsCorr[s])]] == "remembered", 1, -1)
             events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]]  <- ifelse( events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsToCorrelate[ss])]] == "remembered", 1, -1)
-            #
-            events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_dummyCoded")]] <- ifelse( events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s])]] == "remembered", 1, 0)
-            events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]]  <- ifelse( events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss])]] == "remembered", 1, 0)
-            events[[paste0("trial_type_contConfRecognition_",subjectsCorr[s], "_dummyCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_dummyCoded")]] * events[[ paste0("confidence_", subjectsCorr[s])]]
-            events[[paste0("trial_type_contConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]]  <- events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]] * events[[ paste0("confidence_",subjectsToCorrelate[ss])]]
+            # multiply memory and confidence
+            # events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_dummyCoded")]] <- ifelse( events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s])]] == "remembered", 1, 0)
+            # events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]]  <- ifelse( events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss])]] == "remembered", 1, 0)
+            # events[[paste0("trial_type_contConfRecognition_",subjectsCorr[s], "_dummyCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_dummyCoded")]] * events[[ paste0("confidence_", subjectsCorr[s])]]
+            # events[[paste0("trial_type_contConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]]  <- events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]] * events[[ paste0("confidence_",subjectsToCorrelate[ss])]]
             
             # create effect coded group variable
             events[[paste0("reward_",subjectsCorr[s], "_effectCoded")]] <- ifelse(grepl("cont", subjectsCorr[s]), -1, 1)
             events[[paste0("reward_",subjectsToCorrelate[ss], "_effectCoded")]] <- ifelse(grepl("cont", subjectsToCorrelate[ss]), -1, 1)
             
             # create curiosity-dependent memory variable --> product approach doesn't work
-            events[[paste0("mecu_allConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
-            events[[paste0("mecu_allConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("responseCuriosity_",subjectsToCorrelate[ss])]]
-            events[[paste0("mecu_highConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
-            events[[paste0("mecu_highConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsToCorrelate[ss])]]
-            events[[paste0("mecu_aboveAvgConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
-            events[[paste0("mecu_aboveAvgConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsToCorrelate[ss])]]
-            events[[paste0("mecu_contConf_",subjectsCorr[s], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsCorr[s], "_dummyCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
-            events[[paste0("mecu_contConf_",subjectsToCorrelate[ss], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]] * events[[ paste0("responseCuriosity_",subjectsToCorrelate[ss])]]
+            # events[[paste0("mecu_allConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
+            # events[[paste0("mecu_allConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("responseCuriosity_",subjectsToCorrelate[ss])]]
+            # events[[paste0("mecu_highConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
+            # events[[paste0("mecu_highConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsToCorrelate[ss])]]
+            # events[[paste0("mecu_aboveAvgConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
+            # events[[paste0("mecu_aboveAvgConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("responseCuriosity_", subjectsToCorrelate[ss])]]
+            # events[[paste0("mecu_contConf_",subjectsCorr[s], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsCorr[s], "_dummyCoded")]] * events[[ paste0("responseCuriosity_", subjectsCorr[s])]]
+            # events[[paste0("mecu_contConf_",subjectsToCorrelate[ss], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]] * events[[ paste0("responseCuriosity_",subjectsToCorrelate[ss])]]
             
             # create reward-dependent memory variable --> product approach doesn't work
-            events[[paste0("memo_allConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
-            events[[paste0("memo_allConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("reward_",subjectsToCorrelate[ss], "_effectCoded")]]
-            events[[paste0("memo_highConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
-            events[[paste0("memo_highConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("reward_", subjectsToCorrelate[ss], "_effectCoded")]]
-            events[[paste0("memo_aboveAvgConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
-            events[[paste0("memo_aboveAvgConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("reward_", subjectsToCorrelate[ss], "_effectCoded")]]
-            events[[paste0("memo_contConf_",subjectsCorr[s], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsCorr[s], "_dummyCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
-            events[[paste0("memo_contConf_",subjectsToCorrelate[ss], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]] * events[[ paste0("reward_",subjectsToCorrelate[ss], "_effectCoded")]]
-            
-            # # Q: when to mean center??
-            # events$cur <- events$`responseCuriosity_sub-experimental048`
-            # events$cur_mc <- events$`responseCuriosity_sub-experimental048` -  mean(events$`responseCuriosity_sub-experimental048`)
-            # events$recog_e <- events$`trial_type_allConfRecognition_sub-experimental048_effectCoded`
-            # events$recog_d <- events$`trial_type_allConfRecognition_sub-experimental048_dummyCoded`
-            # events$recog_e_cur_mc <- events$cur_mc * events$recog_e #this is what we did
-            # events$recog_d_cur_mc <- events$cur_mc * events$recog_d #this is what we did
-            # 
-            # events$recog_e_cur <- events$cur * events$recog_e #this is what we did
-            # events$recog_d_cur <- events$cur * events$recog_d #this is what we did
-            # 
-            # events$recog_e_cur_mc_new <- events$recog_e_cur_mc - mean(events$recog_e_cur_mc) # mean centering at the end
-            # events$recog_d_cur_mc_new <- events$recog_d_cur_mc - mean(events$recog_d_cur_mc) # mean centering at the end
-            # 
-            # require(ggplot2)
-            # data_spag_e <- events[,c("stim_file", "recog_e_cur_mc", "recog_e_cur_mc_new")]
-            # data_spag_e_long <- reshape2::melt(data_spag_e, id.vars= "stim_file", value.name = "mecu")
-            # p_e <- ggplot(data = data_spag_e_long, aes(x = variable, y = mecu, group = stim_file, col = stim_file))
-            # p_e + geom_line()
-            # 
-            # data_spag_d <- events[,c("stim_file", "recog_d_cur_mc", "recog_d_cur_mc_new")]
-            # data_spag_d_long <- reshape2::melt(data_spag_d, id.vars= "stim_file", value.name = "mecu")
-            # p_d <- ggplot(data = data_spag_d_long, aes(x = variable, y = mecu, group = stim_file, col = stim_file))
-            # p_d + geom_line()
-            
+            # events[[paste0("memo_allConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
+            # events[[paste0("memo_allConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_allConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("reward_",subjectsToCorrelate[ss], "_effectCoded")]]
+            # events[[paste0("memo_highConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
+            # events[[paste0("memo_highConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_highConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("reward_", subjectsToCorrelate[ss], "_effectCoded")]]
+            # events[[paste0("memo_aboveAvgConf_",subjectsCorr[s], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsCorr[s], "_effectCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
+            # events[[paste0("memo_aboveAvgConf_",subjectsToCorrelate[ss], "_effectCoded")]] <- events[[paste0("trial_type_aboveAverageConfRecognition_",subjectsToCorrelate[ss], "_effectCoded")]] * events[[ paste0("reward_", subjectsToCorrelate[ss], "_effectCoded")]]
+            # events[[paste0("memo_contConf_",subjectsCorr[s], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsCorr[s], "_dummyCoded")]] * events[[ paste0("reward_", subjectsCorr[s], "_effectCoded")]]
+            # events[[paste0("memo_contConf_",subjectsToCorrelate[ss], "_dummyCoded")]] <- events[[paste0("trial_type_contConfRecognition_",subjectsToCorrelate[ss], "_dummyCoded")]] * events[[ paste0("reward_",subjectsToCorrelate[ss], "_effectCoded")]]
             
             ### here we start a loop for each member of the pair
             pair <- c(subjectsCorr[s], subjectsToCorrelate[ss])
@@ -1582,14 +1592,19 @@ for (s in seq_along(subjects)){
             dataTable_ISC_dummy[x,7] <- dataTable_ISC_dummy[x,6] * dataTable_ISC_dummy[x,3] 
             
             #memory and reward-memory interaction
-            dataTable_ISC_dummy[x,8] <- cor(events[, paste0("trial_type_allConfRecognition_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_allConfRecognition_", subjectsToCorrelate[ss], "_effectCoded")])
+            dataTable_ISC_dummy[x,8] <- cor(events[, paste0("trial_type_cuedRecallStrict_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_cuedRecallStrict_", subjectsToCorrelate[ss], "_effectCoded")])
             dataTable_ISC_dummy[x,9] <- dataTable_ISC_dummy[x,8] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,10] <- cor(events[, paste0("trial_type_highConfRecognition_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_highConfRecognition_", subjectsToCorrelate[ss], "_effectCoded")])
+            dataTable_ISC_dummy[x,10] <- cor(events[, paste0("trial_type_cuedRecallLenient_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_cuedRecallLenient_", subjectsToCorrelate[ss], "_effectCoded")])
             dataTable_ISC_dummy[x,11] <- dataTable_ISC_dummy[x,10] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,12] <- cor(events[, paste0("trial_type_aboveAverageConfRecognition_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_aboveAverageConfRecognition_", subjectsToCorrelate[ss], "_effectCoded")])
-            dataTable_ISC_dummy[x,13] <- dataTable_ISC_dummy[x,12] * dataTable_ISC_dummy[x,3]
-            dataTable_ISC_dummy[x,14] <- cor(events[, paste0("trial_type_contConfRecognition_", subjectsCorr[s], "_dummyCoded")], events[, paste0("trial_type_contConfRecognition_", subjectsToCorrelate[ss], "_dummyCoded")])
-            dataTable_ISC_dummy[x,15] <- dataTable_ISC_dummy[x,14] * dataTable_ISC_dummy[x,3]
+            
+            dataTable_ISC_dummy[x,12] <- cor(events[, paste0("trial_type_allConfRecognition_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_allConfRecognition_", subjectsToCorrelate[ss], "_effectCoded")])
+            dataTable_ISC_dummy[x,13] <- dataTable_ISC_dummy[x,12] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[x,14] <- cor(events[, paste0("trial_type_highConfRecognition_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_highConfRecognition_", subjectsToCorrelate[ss], "_effectCoded")])
+            dataTable_ISC_dummy[x,15] <- dataTable_ISC_dummy[x,14] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[x,16] <- cor(events[, paste0("trial_type_aboveAverageConfRecognition_", subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_aboveAverageConfRecognition_", subjectsToCorrelate[ss], "_effectCoded")])
+            dataTable_ISC_dummy[x,17] <- dataTable_ISC_dummy[x,16] * dataTable_ISC_dummy[x,3]
+            # dataTable_ISC_dummy[x,14] <- cor(events[, paste0("trial_type_contConfRecognition_", subjectsCorr[s], "_dummyCoded")], events[, paste0("trial_type_contConfRecognition_", subjectsToCorrelate[ss], "_dummyCoded")])
+            # dataTable_ISC_dummy[x,15] <- dataTable_ISC_dummy[x,14] * dataTable_ISC_dummy[x,3]
             
             # #curiosity-dependent memory and curiosity-dependent memory interaction  --> product approach doesn't work
             # dataTable_ISC_dummy[x,14] <- cor(events[, paste0("mecu_allConf_", subjectsCorr[s], "_effectCoded")], events[, paste0("mecu_allConf_", subjectsToCorrelate[ss], "_effectCoded")])
@@ -1612,32 +1627,32 @@ for (s in seq_along(subjects)){
             # dataTable_ISC_dummy[x,29] <- dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
             
             #curiosity-driven memory benefit and curiosity-driven memory benefit interaction
-            dataTable_ISC_dummy[x,16] <- (MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
-            dataTable_ISC_dummy[x,17] <- dataTable_ISC_dummy[x,16] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,18] <- (MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,18] <- (MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,19] <- dataTable_ISC_dummy[x,18] * dataTable_ISC_dummy[x,3] 
-            #dataTable_ISC_dummy[x,30] <- 1-abs(MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,20] <- (MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,20] <- (MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,21] <- dataTable_ISC_dummy[x,20] * dataTable_ISC_dummy[x,3] 
-            # dataTable_ISC_dummy[x,32] <- 1-abs(MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            #dataTable_ISC_dummy[x,30] <- 1-abs(MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
+            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,23] <- dataTable_ISC_dummy[x,22] * dataTable_ISC_dummy[x,3] 
-            # dataTable_ISC_dummy[x,34] <- 1-abs(MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,24] <- (MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            # dataTable_ISC_dummy[x,32] <- 1-abs(MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
+            dataTable_ISC_dummy[x,24] <- (MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,25] <- dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
+            # dataTable_ISC_dummy[x,34] <- 1-abs(MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
+            dataTable_ISC_dummy[x,26] <- (MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,27] <- dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
             
             # # determine the unique contribution of curiosity, memory and confidence
-            dataTable_ISC_dummy[,26] <- NA #residuals(uniqueCurAboveAvgConf)
-            dataTable_ISC_dummy[,27] <-  NA #dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[,28] <- NA #residuals(uniqueMemAboveAvgConf)
-            dataTable_ISC_dummy[,29] <- NA #dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[,30] <- NA #residuals(uniqueConf)
-            dataTable_ISC_dummy[,31] <- NA #dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[,28] <- NA #residuals(uniqueCurAboveAvgConf)
+            dataTable_ISC_dummy[,29] <-  NA #dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[,30] <- NA #residuals(uniqueMemAboveAvgConf)
+            dataTable_ISC_dummy[,31] <- NA #dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
+            dataTable_ISC_dummy[,32] <- NA #residuals(uniqueConf)
+            dataTable_ISC_dummy[,33] <- NA #dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
             
             
-            dataTable_ISC_dummy[x,32] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
+            dataTable_ISC_dummy[x,34] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
             if(x < N) {
-              dataTable_ISC_dummy[x,33] <- '\\' #add back slash at end of the row
+              dataTable_ISC_dummy[x,35] <- '\\' #add back slash at end of the row
             }
             
             # HERE DELETE ALL "_effectCoded" variables in events!!!!!!!!!!!!
@@ -1764,8 +1779,9 @@ for (s in seq_along(subjects)){
       
       names(dataTable_ISC) <- c("Subj1", "Subj2", "grp", "InputFile", "\\")
       
-      names(dataTable_ISC_dummy) <- c("Subj1", "Subj2", "grp", "corrCuriosity", "grpCorrCuriosity", "corrConfidence", "grpCorrConfidence", 
-                                      "corrAllConf", "grpCorrAllConf", "corrHighConf", "grpCorrHighConf", "corrAboveAvgConf", "grpCorrAboveAvgConf", "corrContConf", "grpCorrContConf", 
+      names(dataTable_ISC_dummy) <- c("Subj1", "Subj2", "grp", "corrCuriosity", "grpCorrCuriosity", "corrConfidence", "grpCorrConfidence",
+                                      "corrRecallStrict", "grpCorrRecallStrict", "corrRecallLenient", "grpCorrRecallLenient",
+                                      "corrAllConf", "grpCorrAllConf", "corrHighConf", "grpCorrHighConf", "corrAboveAvgConf", "grpCorrAboveAvgConf", #"corrContConf", "grpCorrContConf", 
                                       #"mecuAllConf", "grpMecuAllConf", "mecuHighConf", "grpMecuHighConf", "mecuAboveAvgConf", "grpMecuAboveAvgConf", "mecuContConf", "grpMecuContConf", 
                                       #"memoAllConf", "grpMemoAllConf", "memoHighConf", "grpMemoHighConf", "memoAboveAvgConf", "grpMemoAboveAvgConf", "memoContConf", "grpMemoContConf", 
                                       "cuBetaRecallStrict", "grpCuBetaRecallStrict", "cuBetaRecallLenient", "grpCuBetaRecallLenient",
@@ -1776,18 +1792,18 @@ for (s in seq_along(subjects)){
       # determine the unique contribution of curiosity, memory and confidence
       uniqueCurAboveAvgConf <- lm(dataTable_ISC_dummy$corrCuriosity ~ dataTable_ISC_dummy$corrAboveAvgConf)
       plot(predict(uniqueCurAboveAvgConf), rstandard(uniqueCurAboveAvgConf))
-      dataTable_ISC_dummy[,26] <- residuals(uniqueCurAboveAvgConf)
-      dataTable_ISC_dummy[,27] <- dataTable_ISC_dummy[,24] * dataTable_ISC_dummy[,3] 
+      dataTable_ISC_dummy[,28] <- residuals(uniqueCurAboveAvgConf)
+      dataTable_ISC_dummy[,29] <- dataTable_ISC_dummy[,24] * dataTable_ISC_dummy[,3] 
       
       uniqueMemAboveAvgConf <- lm(dataTable_ISC_dummy$corrAboveAvgConf ~ dataTable_ISC_dummy$corrCuriosity)
       plot(predict(uniqueMemAboveAvgConf), rstandard(uniqueMemAboveAvgConf))
-      dataTable_ISC_dummy[,28] <- residuals(uniqueMemAboveAvgConf)
-      dataTable_ISC_dummy[,29] <- dataTable_ISC_dummy[,26] * dataTable_ISC_dummy[,3] 
+      dataTable_ISC_dummy[,30] <- residuals(uniqueMemAboveAvgConf)
+      dataTable_ISC_dummy[,31] <- dataTable_ISC_dummy[,26] * dataTable_ISC_dummy[,3] 
       
       uniqueConf <- lm(dataTable_ISC_dummy$corrConfidence ~ dataTable_ISC_dummy$corrAllConf)
       plot(predict(uniqueConf), rstandard(uniqueConf))
-      dataTable_ISC_dummy[,30] <- residuals(uniqueConf)
-      dataTable_ISC_dummy[,31] <- dataTable_ISC_dummy[,28] * dataTable_ISC_dummy[,3] 
+      dataTable_ISC_dummy[,32] <- residuals(uniqueConf)
+      dataTable_ISC_dummy[,33] <- dataTable_ISC_dummy[,28] * dataTable_ISC_dummy[,3] 
 
       names(dataTable_aboveAvgConf) <- c("Subj1", "Subj2", "grp", "InputFile", "\\")
       names(dataTable_highConf) <- c("Subj1", "Subj2", "grp", "InputFile", "\\")
