@@ -885,12 +885,19 @@ for (s in seq_along(subjects)){
     rm(cuedRecall, recognition, task)
   }
   
+  # compute whether a trick has been remembered based on Hasson et al. (2008).  
+  # They classified an event to be remembered if there was a correct answer using either recall or high confidence recognition.
+  MEMO$rememberedStrict <- ifelse(MEMO$cuedRecallStrict == 1 | MEMO$recognitionAboveMeanConf == 1, 1, 0)
+  MEMO$rememberedLenient <- ifelse(MEMO$cuedRecallLenient == 1 | MEMO$recognitionAboveMeanConf == 1, 1, 0)
+  
   # calculate curiosity-driven memory memory benefit (continouos)
   MEMO$curiosityBenefit_cuedRecallStrict <- MEMO$curiosityGroupMeanCentered*MEMO$cuedRecallStrict
   MEMO$curiosityBenefit_cuedRecallLenient <- MEMO$curiosityGroupMeanCentered*MEMO$cuedRecallLenient
   MEMO$curiosityBenefit_allConf <- MEMO$curiosityGroupMeanCentered*MEMO$recognition
   MEMO$curiosityBenefit_highConf <- MEMO$curiosityGroupMeanCentered*MEMO$recognitionConfLevel_4_5_6
   MEMO$curiosityBenefit_aboveAvgConf <- MEMO$curiosityGroupMeanCentered*MEMO$recognitionAboveMeanConf
+  MEMO$curiosityBenefit_rememberedStrict <- MEMO$curiosityGroupMeanCentered*MEMO$rememberedStrict
+  MEMO$curiosityBenefit_rememberedLenient <- MEMO$curiosityGroupMeanCentered*MEMO$rememberedLenient
 
   # calculate curiosity-driven memory memory benefit (dichotomous)
   MEMO$curiosity_dichotom <- ifelse(MEMO$curiosityGroupMeanCentered > 0, 1,
@@ -900,6 +907,8 @@ for (s in seq_along(subjects)){
   MEMO$curiosityBenefit_allConf_dichotom <- MEMO$curiosity_dichotom*MEMO$recognition
   MEMO$curiosityBenefit_highConf_dichotom <- MEMO$curiosity_dichotom*MEMO$recognitionConfLevel_4_5_6
   MEMO$curiosityBenefit_aboveAvgConf_dichotom <- MEMO$curiosity_dichotom*MEMO$recognitionAboveMeanConf
+  MEMO$curiosityBenefit_rememberedStrict_dichotom <- MEMO$curiosity_dichotom*MEMO$rememberedStrict
+  MEMO$curiosityBenefit_rememberedLenient_dichotom <- MEMO$curiosity_dichotom*MEMO$rememberedLenient
   
   # save data in long format
   setwd(preprocessedLongDir)
@@ -1235,6 +1244,8 @@ for (s in seq_along(subjects)){
   postMemory$curiosityBenefit_allConf <-  sum(MEMO$curiosityBenefit_allConf, na.rm = T)
   postMemory$curiosityBenefit_highConf <-  sum(MEMO$curiosityBenefit_highConf, na.rm = T)
   postMemory$curiosityBenefit_aboveAvgConf <- sum(MEMO$curiosityBenefit_aboveAvgConf, na.rm = T)
+  postMemory$curiosityBenefit_rememberedStrict <- sum(MEMO$curiosityBenefit_rememberedStrict, na.rm = T)
+  postMemory$curiosityBenefit_rememberedLenient <- sum(MEMO$curiosityBenefit_rememberedLenient, na.rm = T)
   
   # sum up curiosity-driven memory memory benefit (dichotomous) for subjects
   postMemory$curiosityBenefit_cuedRecallStrict_dichotom <-  sum(MEMO$curiosityBenefit_cuedRecallStrict_dichotom, na.rm = T)
@@ -1242,6 +1253,8 @@ for (s in seq_along(subjects)){
   postMemory$curiosityBenefit_allConf_dichotom <-  sum(MEMO$curiosityBenefit_allConf_dichotom, na.rm = T)
   postMemory$curiosityBenefit_highConf_dichotom <-  sum(MEMO$curiosityBenefit_highConf_dichotom, na.rm = T)
   postMemory$curiosityBenefit_aboveAvgConf_dichotom <-  sum(MEMO$curiosityBenefit_aboveAvgConf_dichotom, na.rm = T)
+  postMemory$curiosityBenefit_rememberedStrict_dichotom <- sum(MEMO$curiosityBenefit_rememberedStrict_dichotom, na.rm = T)
+  postMemory$curiosityBenefit_rememberedLenient_dichotom <- sum(MEMO$curiosityBenefit_rememberedLenient_dichotom, na.rm = T)
   
   # rbind the postMemory files of each subject to a data frame
   if(s == 1){
@@ -1375,23 +1388,34 @@ for (s in seq_along(subjects)){
     library(lme4)
     LMEmodel_cuedRecallStrict <- glmer(cuedRecallStrict ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
     MAGMOT$curiosityBeta_cuedRecallStrict <- coef(LMEmodel_cuedRecallStrict)$ID$curiosityGroupMeanCentered
-    MAGMOT$curiosityBeta_cuedRecallStrict <-  MAGMOT$curiosityBeta_cuedRecallStrict - mean(MAGMOT$curiosityBeta_cuedRecallStrict)   
+    MAGMOT$curiosityBeta_cuedRecallStrict_c <-  MAGMOT$curiosityBeta_cuedRecallStrict - mean(MAGMOT$curiosityBeta_cuedRecallStrict)   
     
     LMEmodel_cuedRecallLenient <- glmer(cuedRecallLenient ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
     MAGMOT$curiosityBeta_cuedRecallLenient <- coef(LMEmodel_cuedRecallLenient)$ID$curiosityGroupMeanCentered
-    MAGMOT$curiosityBeta_cuedRecallLenient <-  MAGMOT$curiosityBeta_cuedRecallLenient - mean(MAGMOT$curiosityBeta_cuedRecallLenient)   
+    MAGMOT$curiosityBeta_cuedRecallLenient_c <-  MAGMOT$curiosityBeta_cuedRecallLenient - mean(MAGMOT$curiosityBeta_cuedRecallLenient)   
     
     LMEmodel_recogAboveAvgConf <- glmer(recognitionAboveMeanConf ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
     MAGMOT$curiosityBeta_aboveAvgConf <- coef(LMEmodel_recogAboveAvgConf)$ID$curiosityGroupMeanCentered
-    MAGMOT$curiosityBeta_aboveAvgConf <-  MAGMOT$curiosityBeta_aboveAvgConf - mean(MAGMOT$curiosityBeta_aboveAvgConf)
+    MAGMOT$curiosityBeta_aboveAvgConf_c <-  MAGMOT$curiosityBeta_aboveAvgConf - mean(MAGMOT$curiosityBeta_aboveAvgConf)
     
     LMEmodel_recogHighConf <- lme4::glmer(recognitionConfLevel_4_5_6 ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
     MAGMOT$curiosityBeta_highConf <- coef(LMEmodel_recogHighConf)$ID$curiosityGroupMeanCentered
-    MAGMOT$curiosityBeta_highConf <-  MAGMOT$curiosityBeta_highConf - mean(MAGMOT$curiosityBeta_highConf)
+    MAGMOT$curiosityBeta_highConf_c <-  MAGMOT$curiosityBeta_highConf - mean(MAGMOT$curiosityBeta_highConf)
     
     LMEmodel_recogAllConf <- glmer(recognition ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
     MAGMOT$curiosityBeta_allConf <- coef(LMEmodel_recogAllConf)$ID$curiosityGroupMeanCentered
-    MAGMOT$curiosityBeta_allConf <-  MAGMOT$curiosityBeta_allConf - mean(MAGMOT$curiosityBeta_allConf)
+    MAGMOT$curiosityBeta_allConf_c <-  MAGMOT$curiosityBeta_allConf - mean(MAGMOT$curiosityBeta_allConf)
+    
+    LMEmodel_rememberedStrict <- glmer(rememberedStrict ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
+    print(summary(LMEmodel_rememberedStrict))
+    MAGMOT$curiosityBeta_rememberedStrict <- coef(LMEmodel_rememberedStrict)$ID$curiosityGroupMeanCentered
+    MAGMOT$curiosityBeta_rememberedStrict_c <-  MAGMOT$curiosityBeta_rememberedStrict - mean(MAGMOT$curiosityBeta_rememberedStrict)
+    
+    LMEmodel_rememberedLenient <- glmer(rememberedLenient ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID) , family = "binomial"(link = 'logit'), data = dataLong)
+    print(summary(LMEmodel_rememberedLenient))
+    MAGMOT$curiosityBeta_rememberedLenient <- coef(LMEmodel_rememberedLenient)$ID$curiosityGroupMeanCentered
+    MAGMOT$curiosityBeta_rememberedLenient_c <-  MAGMOT$curiosityBeta_rememberedLenient - mean(MAGMOT$curiosityBeta_rememberedLenient)
+    
     
     # add RSFC estimates between HPC & VTA (Pearson)
     setwd(brainDir)
@@ -1666,18 +1690,18 @@ for (s in seq_along(subjects)){
             # dataTable_ISC_dummy[x,29] <- dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
             
             #curiosity-driven memory benefit and curiosity-driven memory benefit interaction
-            dataTable_ISC_dummy[x,18] <- (MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallStrict[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,18] <- (MAGMOT$curiosityBeta_cuedRecallStrict_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallStrict_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,19] <- dataTable_ISC_dummy[x,18] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,20] <- (MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallLenient[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,20] <- (MAGMOT$curiosityBeta_cuedRecallLenient_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallLenient_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,21] <- dataTable_ISC_dummy[x,20] * dataTable_ISC_dummy[x,3] 
             #dataTable_ISC_dummy[x,30] <- 1-abs(MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_allConf_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,23] <- dataTable_ISC_dummy[x,22] * dataTable_ISC_dummy[x,3] 
             # dataTable_ISC_dummy[x,32] <- 1-abs(MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,24] <- (MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,24] <- (MAGMOT$curiosityBeta_highConf_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,25] <- dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
             # dataTable_ISC_dummy[x,34] <- 1-abs(MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,26] <- (MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,26] <- (MAGMOT$curiosityBeta_aboveAvgConf_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,27] <- dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
             
             # # determine the unique contribution of curiosity, memory and confidence
