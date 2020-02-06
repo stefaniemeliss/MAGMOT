@@ -1253,6 +1253,10 @@ for (s in seq_along(subjects)){
         rm(temp_data)
       }
       
+      # sum up the scores for "remembered" task
+      postMemory[[paste0("rememberedStrict", blockstring[BLOCK])]] <- sum(MEMO$rememberedStrict, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+      postMemory[[paste0("rememberedLenient", blockstring[BLOCK])]] <- sum(MEMO$rememberedLenient, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+      
       # sum up curiosity-driven memory memory benefit (continouos) for subjects
       postMemory[[paste0("curiosityBenefit_cuedRecallStrict", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallStrict, na.rm = T)
       postMemory[[paste0("curiosityBenefit_cuedRecallLenient", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallLenient, na.rm = T)
@@ -1329,6 +1333,7 @@ for (s in seq_along(subjects)){
     descriptivesRecognitionPerformance <- merge(mean, sd, by = "recognitionPerformanceVars")
     descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, min, by = "recognitionPerformanceVars")
     descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, max, by = "recognitionPerformanceVars")
+    rm(mean, sd, min, max)
     
     names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
     
