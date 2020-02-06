@@ -2,7 +2,7 @@
 rm(list=ls())
 
 compareDataCollections <- 0
-doISCprep <- 1
+doISCprep <- 0
 debug <- 1
 
 ####################################################################################################################################
@@ -276,6 +276,13 @@ names(MAGMOT_pre)[names(MAGMOT_pre)=="age.1"] <- "age"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="education_years.1"] <- "yearsOfEducation"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="student_subject.1"] <- "studySubject"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="english_age.1"] <- "AgeEnglishAcquisition"
+names(MAGMOT_pre)[names(MAGMOT_pre)=="health.1"] <- "health"
+names(MAGMOT_pre)[names(MAGMOT_pre)=="neurodisorders.1"] <- "neurodisorders"
+names(MAGMOT_pre)[names(MAGMOT_pre)=="participant"] <- "preFile"
+names(MAGMOT_pre)[names(MAGMOT_pre)=="TIME_start"] <- "startPre"
+names(MAGMOT_pre)[names(MAGMOT_pre)=="TIME_end"] <- "endPre"
+names(MAGMOT_pre)[names(MAGMOT_pre)=="DOB.1"] <- "DOB"
+
 
 #### MRI screening: any yes?
 items <- c("screening_MRI.1", "screening_MRI.2", "screening_MRI.3", "screening_MRI.4", "screening_MRI.5", "screening_MRI.6", "screening_MRI.7", "screening_MRI.8", "screening_MRI.9", "screening_MRI.10",
@@ -353,6 +360,12 @@ MAGMOT_pre$AvoidanceTemperament <-  MAGMOT_pre$ApproachAndAvoidanceTemperament.1
 MAGMOT_pre$TraitCuriosity <- MAGMOT_pre$TraitCuriosity.1 + MAGMOT_pre$TraitCuriosity.2 + MAGMOT_pre$TraitCuriosity.3 + MAGMOT_pre$TraitCuriosity.4 + MAGMOT_pre$TraitCuriosity.5 + MAGMOT_pre$TraitCuriosity.6 + MAGMOT_pre$TraitCuriosity.7 +
   MAGMOT_pre$TraitCuriosity.8 + MAGMOT_pre$TraitCuriosity.9 + MAGMOT_pre$TraitCuriosity.10 + MAGMOT_pre$TraitCuriosity.11 + MAGMOT_pre$TraitCuriosity.12 + MAGMOT_pre$TraitCuriosity.13 + MAGMOT_pre$TraitCuriosity.14 +
   MAGMOT_pre$TraitCuriosity.15 + MAGMOT_pre$TraitCuriosity.16 + MAGMOT_pre$TraitCuriosity.17 + MAGMOT_pre$TraitCuriosity.18 + MAGMOT_pre$TraitCuriosity.19 + MAGMOT_pre$TraitCuriosity.20
+
+### reduce MAGMOT_pre to relevant variables
+MAGMOT_pre <- MAGMOT_pre[, c("ID", "preFile", "startPre", "endPre", "corsi.1", "X2nback.1", "age", "DOB",   "gender", "ethnicity", "education", "yearsOfEducation", 
+                             "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health", "neurodisorders", "screening_MRI",
+                             "BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity")]
+
 
 #################################################### get CORSI data ####################################################
 # check whether there are any files missing
@@ -444,6 +457,14 @@ nbackData <- na.omit(nbackData)
 MAGMOT <- merge(MAGMOT, nbackData, by = "X2nback.1", all.x = T)
 rm(nbackData, nback_filelist, MAGMOT_pre,i)
 
+# rename corsi and nback
+names(MAGMOT)[names(MAGMOT)=="X2nback.1"] <- "nbackFile"
+names(MAGMOT)[names(MAGMOT)=="corsi.1"] <- "corsiFile"
+
+# reorder MAGMOT
+MAGMOT <- MAGMOT[,c(grep("ID", colnames(MAGMOT)), grep("corsiFile", colnames(MAGMOT)), grep("nbackFile", colnames(MAGMOT)), 4:ncol(MAGMOT))]
+
+
 #################################################### read in MAGMOT_post ####################################################
 setwd(postDir)
 MAGMOT_post <- xlsx::read.xlsx("data.xlsx", sheetName="data")
@@ -494,11 +515,28 @@ names(MAGMOT_post)[names(MAGMOT_post)=="sleep_average.1"] <- "sleepAverage"
 names(MAGMOT_post)[names(MAGMOT_post)=="alcohol_amount.1"] <- "alcoholAmount"
 names(MAGMOT_post)[names(MAGMOT_post)=="rewardEffort.1"] <- "rewardEffort"
 names(MAGMOT_post)[names(MAGMOT_post)=="rewardExpectations.1"] <- "rewardExpectations"
+names(MAGMOT_post)[names(MAGMOT_post)=="TIME_start"] <- "startPost"
+names(MAGMOT_post)[names(MAGMOT_post)=="TIME_end"] <- "endPost"
+names(MAGMOT_post)[names(MAGMOT_post)=="participant"] <- "postFile"
+names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.1"] <- "comment_ppt1"
+names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.2"] <- "comment_ppt2"
+names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.3"] <- "comment_ppt3"
+names(MAGMOT_post)[names(MAGMOT_post)=="comments_experimenter.1"] <- "comment_exp"
 
 ### State Curiosity: compute scale
 MAGMOT_post$StateCuriosity <- MAGMOT_post$StateCuriosity.1 + MAGMOT_post$StateCuriosity.2 + MAGMOT_post$StateCuriosity.3 + MAGMOT_post$StateCuriosity.4 + MAGMOT_post$StateCuriosity.5 + MAGMOT_post$StateCuriosity.6 + MAGMOT_post$StateCuriosity.7 +
   MAGMOT_post$StateCuriosity.8 + MAGMOT_post$StateCuriosity.9 + MAGMOT_post$StateCuriosity.10 + MAGMOT_post$StateCuriosity.11 + MAGMOT_post$StateCuriosity.12 + MAGMOT_post$StateCuriosity.13 + MAGMOT_post$StateCuriosity.14 +
   MAGMOT_post$StateCuriosity.15 + MAGMOT_post$StateCuriosity.16 + MAGMOT_post$StateCuriosity.17 + MAGMOT_post$StateCuriosity.18 + MAGMOT_post$StateCuriosity.19 + MAGMOT_post$StateCuriosity.20
+
+# select relevant rows from MAGMOT_post
+MAGMOT_post <- MAGMOT_post[,c("ID", "postFile", "startPost", "endPost", 
+               "group", "groupEffectCoded", "StateCuriosity", 
+               "sleepLastNight", "sleepAverage", 
+               "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations", 
+               "comment_ppt1", "comment_ppt2", "comment_ppt3", "comment_exp",
+               "eyetracking", "fieldmap", "preLearningRest", "taskBlock1", "taskBlock2", "taskBlock3", "postLearningRest", "T1w",
+               "eyetrackingData", "taskData", "questionnaireData" 
+               )]
 
 # merge data from MAGMOT (= MAGMOT_pre, corsi, nback) and MAGMOT_post
 MAGMOT <- merge(MAGMOT, MAGMOT_post, by = "ID", all = T)
@@ -509,19 +547,6 @@ rm(MAGMOT_post)
 ####################################################  PROCESS THE DATA SUBJECTWISE  ####################################################
 ########################################################################################################################################
 subjects  <- as.character(MAGMOT$ID)
-
-#subjects <- c("12", "32")
-# noMemoryYet <- c("09", "50", "46", "48")
-# 
-# 
-# 
-# subjects <- subjects[!(subjects %in% problematicSubjects)] 
-#subjects <- subjects[!(subjects %in% notCollectedYet)]
-# subjects <- subjects[!(subjects %in% noMemoryYet)]
-#subjects <- "01"
-
-# DEBUG: only do problematic subjects
-#subjects <- problematicSubjects
 
 for (s in seq_along(subjects)){
   
@@ -728,9 +753,6 @@ for (s in seq_along(subjects)){
   
   #################################################### read in memory data  ####################################################
   setwd(dataMemoryDir)
-  #subjects  <- as.character(MAGMOT$ID)
-  
-  #s <- 41
   
   f <- paste0("magicmemory_", version, "_", subjects[s], ".csv")
   if (file.exists(f)){
@@ -1277,42 +1299,32 @@ for (s in seq_along(subjects)){
       rm(postMemoryWide, questDataWide)
     }
     
-    # change variable names
-    names(MAGMOT)[names(MAGMOT)=="participant.x"] <- "preFile"
-    names(MAGMOT)[names(MAGMOT)=="participant.y"] <- "postFile"
-    names(MAGMOT)[names(MAGMOT)=="corsi.1"] <- "corsiFile"
-    names(MAGMOT)[names(MAGMOT)=="X2nback.1"] <- "nbackFile"
-    names(MAGMOT)[names(MAGMOT)=="TIME_start.x"] <- "startPre"
-    names(MAGMOT)[names(MAGMOT)=="TIME_end.x"] <- "endPre"
-    names(MAGMOT)[names(MAGMOT)=="TIME_start.y"] <- "startPost"
-    names(MAGMOT)[names(MAGMOT)=="TIME_end.y"] <- "endPost"
-    
-    # reduce MAGMOT data set to relevant variables
-    MAGMOT <- MAGMOT[c("ID", "BIDS", "fMRI", "group", "groupEffectCoded", "motivation",
-                       "preFile", "nbackFile", "corsiFile", "startPre", "endPre", "postFile", "startPost", "endPost", "memoryFile", "startMemory", "endMemory",
-                       "eyetracking", "fieldmap", "preLearningRest", "taskBlock1", "taskBlock2", "taskBlock3", "postLearningRest", "T1w", "eyetrackingData", "taskData", "questionnaireData", "comments_experimenter.1",
-                       "age", "gender", "ethnicity", "education", "yearsOfEducation", "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health.1", "neurodisorders.1", "screening_MRI",
-                       "BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity", "StateCuriosity",
-                       "intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure", "post23",  "post24", "curiosityNAs",
-                       "corsiSpan", "NBacks", "nonNBacks", "nback_hits", "nback_misses_inclTooSlow", "nback_misses_exclTooSlow", "nback_correctrejections", "nback_falsealarms_inclTooSlow", "nback_falsealarms_exclTooSlow", "nback_hitrate", "nback_falsealarmrate", "nback_accurary",
-                       "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations", "comments_participant.1", "comments_participant.2", "comments_participant.3",
-                       "sleepBeforeMemoryTest", "sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment",
-                       
-                       "responseCuriosity_firstBlock", "curiosity_firstBlock", "cuedRecallStrict_firstBlock", "cuedRecallLenient_firstBlock", "recognition_firstBlock", "recognitionAboveMeanConf_firstBlock", "meanConfidence_firstBlock", "meanConfidenceCorrectTrials_firstBlock",
-                       "recognitionConfLevel_1_firstBlock", "recognitionConfLevel_above_1_firstBlock", "recognitionConfLevel_1_2_firstBlock", "recognitionConfLevel_1_2_3_firstBlock", "recognitionConfLevel_2_firstBlock", "recognitionConfLevel_above_2_firstBlock", "recognitionConfLevel_3_firstBlock", "recognitionConfLevel_above_3_firstBlock", "recognitionConfLevel_3_4_firstBlock", "recognitionConfLevel_4_firstBlock", "recognitionConfLevel_above_4_firstBlock", "recognitionConfLevel_4_5_6_firstBlock", "recognitionConfLevel_5_firstBlock", "recognitionConfLevel_above_5_firstBlock", "recognitionConfLevel_5_6_firstBlock", "recognitionConfLevel_6_firstBlock", 
-                       
-                       "responseCuriosity_secondBlock", "curiosity_secondBlock", "cuedRecallStrict_secondBlock", "cuedRecallLenient_secondBlock", "recognition_secondBlock", "recognitionAboveMeanConf_secondBlock", "meanConfidence_secondBlock", "meanConfidenceCorrectTrials_secondBlock",
-                       "recognitionConfLevel_1_secondBlock", "recognitionConfLevel_above_1_secondBlock", "recognitionConfLevel_1_2_secondBlock", "recognitionConfLevel_1_2_3_secondBlock", "recognitionConfLevel_2_secondBlock", "recognitionConfLevel_above_2_secondBlock", "recognitionConfLevel_3_secondBlock", "recognitionConfLevel_above_3_secondBlock", "recognitionConfLevel_3_4_secondBlock", "recognitionConfLevel_4_secondBlock", "recognitionConfLevel_above_4_secondBlock", "recognitionConfLevel_4_5_6_secondBlock", "recognitionConfLevel_5_secondBlock", "recognitionConfLevel_above_5_secondBlock", "recognitionConfLevel_5_6_secondBlock", "recognitionConfLevel_6_secondBlock", 
-                       
-                       "responseCuriosity_thirdBlock", "curiosity_thirdBlock", "cuedRecallStrict_thirdBlock", "cuedRecallLenient_thirdBlock", "recognition_thirdBlock", "recognitionAboveMeanConf_thirdBlock", "meanConfidence_thirdBlock", "meanConfidenceCorrectTrials_thirdBlock",
-                       "recognitionConfLevel_1_thirdBlock", "recognitionConfLevel_above_1_thirdBlock", "recognitionConfLevel_1_2_thirdBlock", "recognitionConfLevel_1_2_3_thirdBlock", "recognitionConfLevel_2_thirdBlock", "recognitionConfLevel_above_2_thirdBlock", "recognitionConfLevel_3_thirdBlock", "recognitionConfLevel_above_3_thirdBlock", "recognitionConfLevel_3_4_thirdBlock", "recognitionConfLevel_4_thirdBlock", "recognitionConfLevel_above_4_thirdBlock", "recognitionConfLevel_4_5_6_thirdBlock", "recognitionConfLevel_5_thirdBlock", "recognitionConfLevel_above_5_thirdBlock", "recognitionConfLevel_5_6_thirdBlock", "recognitionConfLevel_6_thirdBlock", 
-                       
-                       "responseCuriosity", "curiosity", "cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionAboveMeanConf", "meanConfidence", "meanConfidenceCorrectTrials",
-                       "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2", "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
-                       
-                       "curiosityBenefit_cuedRecallStrict",  "curiosityBenefit_cuedRecallStrict_dichotom", "curiosityBenefit_cuedRecallLenient", "curiosityBenefit_cuedRecallLenient_dichotom",
-                       "curiosityBenefit_allConf", "curiosityBenefit_allConf_dichotom", "curiosityBenefit_highConf", "curiosityBenefit_highConf_dichotom",  "curiosityBenefit_aboveAvgConf", "curiosityBenefit_aboveAvgConf_dichotom" 
-    )]
+    # # reduce MAGMOT data set to relevant variables
+    # MAGMOT_test <- MAGMOT[c("ID", "BIDS", "fMRI", "group", "groupEffectCoded", "motivation",
+    #                    "preFile", "nbackFile", "corsiFile", "startPre", "endPre", "postFile", "startPost", "endPost", "memoryFile", "startMemory", "endMemory",
+    #                    "eyetracking", "fieldmap", "preLearningRest", "taskBlock1", "taskBlock2", "taskBlock3", "postLearningRest", "T1w", "eyetrackingData", "taskData", "questionnaireData", "comments_experimenter.1",
+    #                    "age", "gender", "ethnicity", "education", "yearsOfEducation", "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health.1", "neurodisorders.1", "screening_MRI",
+    #                    "BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity", "StateCuriosity",
+    #                    "intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure", "post23",  "post24", "curiosityNAs",
+    #                    "corsiSpan", "NBacks", "nonNBacks", "nback_hits", "nback_misses_inclTooSlow", "nback_misses_exclTooSlow", "nback_correctrejections", "nback_falsealarms_inclTooSlow", "nback_falsealarms_exclTooSlow", "nback_hitrate", "nback_falsealarmrate", "nback_accurary",
+    #                    "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations", "comments_participant.1", "comments_participant.2", "comments_participant.3",
+    #                    "sleepBeforeMemoryTest", "sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment",
+    #                    
+    #                    "responseCuriosity_firstBlock", "curiosity_firstBlock", "cuedRecallStrict_firstBlock", "cuedRecallLenient_firstBlock", "recognition_firstBlock", "recognitionAboveMeanConf_firstBlock", "meanConfidence_firstBlock", "meanConfidenceCorrectTrials_firstBlock",
+    #                    "recognitionConfLevel_1_firstBlock", "recognitionConfLevel_above_1_firstBlock", "recognitionConfLevel_1_2_firstBlock", "recognitionConfLevel_1_2_3_firstBlock", "recognitionConfLevel_2_firstBlock", "recognitionConfLevel_above_2_firstBlock", "recognitionConfLevel_3_firstBlock", "recognitionConfLevel_above_3_firstBlock", "recognitionConfLevel_3_4_firstBlock", "recognitionConfLevel_4_firstBlock", "recognitionConfLevel_above_4_firstBlock", "recognitionConfLevel_4_5_6_firstBlock", "recognitionConfLevel_5_firstBlock", "recognitionConfLevel_above_5_firstBlock", "recognitionConfLevel_5_6_firstBlock", "recognitionConfLevel_6_firstBlock", 
+    #                    
+    #                    "responseCuriosity_secondBlock", "curiosity_secondBlock", "cuedRecallStrict_secondBlock", "cuedRecallLenient_secondBlock", "recognition_secondBlock", "recognitionAboveMeanConf_secondBlock", "meanConfidence_secondBlock", "meanConfidenceCorrectTrials_secondBlock",
+    #                    "recognitionConfLevel_1_secondBlock", "recognitionConfLevel_above_1_secondBlock", "recognitionConfLevel_1_2_secondBlock", "recognitionConfLevel_1_2_3_secondBlock", "recognitionConfLevel_2_secondBlock", "recognitionConfLevel_above_2_secondBlock", "recognitionConfLevel_3_secondBlock", "recognitionConfLevel_above_3_secondBlock", "recognitionConfLevel_3_4_secondBlock", "recognitionConfLevel_4_secondBlock", "recognitionConfLevel_above_4_secondBlock", "recognitionConfLevel_4_5_6_secondBlock", "recognitionConfLevel_5_secondBlock", "recognitionConfLevel_above_5_secondBlock", "recognitionConfLevel_5_6_secondBlock", "recognitionConfLevel_6_secondBlock", 
+    #                    
+    #                    "responseCuriosity_thirdBlock", "curiosity_thirdBlock", "cuedRecallStrict_thirdBlock", "cuedRecallLenient_thirdBlock", "recognition_thirdBlock", "recognitionAboveMeanConf_thirdBlock", "meanConfidence_thirdBlock", "meanConfidenceCorrectTrials_thirdBlock",
+    #                    "recognitionConfLevel_1_thirdBlock", "recognitionConfLevel_above_1_thirdBlock", "recognitionConfLevel_1_2_thirdBlock", "recognitionConfLevel_1_2_3_thirdBlock", "recognitionConfLevel_2_thirdBlock", "recognitionConfLevel_above_2_thirdBlock", "recognitionConfLevel_3_thirdBlock", "recognitionConfLevel_above_3_thirdBlock", "recognitionConfLevel_3_4_thirdBlock", "recognitionConfLevel_4_thirdBlock", "recognitionConfLevel_above_4_thirdBlock", "recognitionConfLevel_4_5_6_thirdBlock", "recognitionConfLevel_5_thirdBlock", "recognitionConfLevel_above_5_thirdBlock", "recognitionConfLevel_5_6_thirdBlock", "recognitionConfLevel_6_thirdBlock", 
+    #                    
+    #                    "responseCuriosity", "curiosity", "cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionAboveMeanConf", "meanConfidence", "meanConfidenceCorrectTrials",
+    #                    "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2", "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
+    #                    
+    #                    "curiosityBenefit_cuedRecallStrict",  "curiosityBenefit_cuedRecallStrict_dichotom", "curiosityBenefit_cuedRecallLenient", "curiosityBenefit_cuedRecallLenient_dichotom",
+    #                    "curiosityBenefit_allConf", "curiosityBenefit_allConf_dichotom", "curiosityBenefit_highConf", "curiosityBenefit_highConf_dichotom",  "curiosityBenefit_aboveAvgConf", "curiosityBenefit_aboveAvgConf_dichotom" 
+    # )]
     
     
     # THEORETICALLY CODE WOULD BE WAY BETTER IF MAGMOT WAS REDUCED BEFORE COMPUTUNG BLOCK SCORES, LESS ERROR PROUN
@@ -1881,8 +1893,6 @@ for (s in seq_along(subjects)){
           dataTable_ISC_dummy[names(dataTable_ISC_dummy)==currentCol] <- round(dataTable_ISC_dummy[names(dataTable_ISC_dummy)==currentCol], digits = 1)
         }
       }
-      
-      
       
       #save files
       setwd(preprocessedEventsRootDir)
