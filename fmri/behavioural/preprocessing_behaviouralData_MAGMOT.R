@@ -1217,8 +1217,6 @@ for (s in seq_along(subjects)){
         postMemory[[paste0("cuedRecallLenient", blockstring[BLOCK])]] <- sum(MEMO$cuedRecallLenient, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
       }
       
-      
-      
       # sum up the scores for the recognition task, once in total and once seperated for the different levels of confidence
       postMemory[[paste0("responseCuriosity", blockstring[BLOCK])]] <- mean(data_subset$responseCuriosity, na.rm = T)
       postMemory[[paste0("curiosity", blockstring[BLOCK])]] <- mean(data_subset$curiosity, na.rm = T)
@@ -1277,6 +1275,15 @@ for (s in seq_along(subjects)){
   postMemory$curiosityBenefit_aboveAvgConf_dichotom <-  sum(MEMO$curiosityBenefit_aboveAvgConf_dichotom, na.rm = T)
   postMemory$curiosityBenefit_rememberedStrict_dichotom <- sum(MEMO$curiosityBenefit_rememberedStrict_dichotom, na.rm = T)
   postMemory$curiosityBenefit_rememberedLenient_dichotom <- sum(MEMO$curiosityBenefit_rememberedLenient_dichotom, na.rm = T)
+  
+  # calculate correlation between curiosity and memory
+  postMemory$curiosityCorrelation_cuedRecallStrict <- cor(MEMO$curiosityGroupMeanCentered, MEMO$cuedRecallStrict, use = "pairwise.complete.obs") 
+  postMemory$curiosityCorrelation_cuedRecallLenient <- cor(MEMO$curiosityGroupMeanCentered, MEMO$cuedRecallLenient, use = "pairwise.complete.obs")
+  postMemory$curiosityCorrelation_allConf <- cor(MEMO$curiosityGroupMeanCentered, MEMO$recognition, use = "pairwise.complete.obs")
+  postMemory$curiosityCorrelation_highConf <- cor(MEMO$curiosityGroupMeanCentered, MEMO$recognitionConfLevel_4_5_6, use = "pairwise.complete.obs")
+  postMemory$curiosityCorrelation_aboveAvgConf <- cor(MEMO$curiosityGroupMeanCentered, MEMO$recognitionAboveMeanConf, use = "pairwise.complete.obs")
+  postMemory$curiosityCorrelation_rememberedStrict <- cor(MEMO$curiosityGroupMeanCentered, MEMO$rememberedStrict, use = "pairwise.complete.obs")
+  postMemory$curiosityCorrelation_rememberedLenient <- cor(MEMO$curiosityGroupMeanCentered, MEMO$rememberedLenient, use = "pairwise.complete.obs")
   
   # rbind the postMemory files of each subject to a data frame
   if(s == 1){
