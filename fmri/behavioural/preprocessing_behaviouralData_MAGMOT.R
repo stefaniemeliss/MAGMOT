@@ -1252,38 +1252,40 @@ for (s in seq_along(subjects)){
         }
         rm(temp_data)
       }
-    }
+      
+      # sum up curiosity-driven memory memory benefit (continouos) for subjects
+      postMemory[[paste0("curiosityBenefit_cuedRecallStrict", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallStrict, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_cuedRecallLenient", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallLenient, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_allConf", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_allConf, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_highConf", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_highConf, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_aboveAvgConf", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_aboveAvgConf, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedStrict", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedStrict, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedLenient", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedLenient, na.rm = T)
+      
+      # sum up curiosity-driven memory memory benefit (dichotomous) for subjects
+      postMemory[[paste0("curiosityBenefit_cuedRecallStrict_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallStrict_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_cuedRecallLenient_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallLenient_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_allConf_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_allConf_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_highConf_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_highConf_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_aboveAvgConf_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_aboveAvgConf_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedStrict_dichotom", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedStrict_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedLenient_dichotom", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedLenient_dichotom, na.rm = T)
+      
+      # calculate correlation between curiosity and memory
+      postMemory[[paste0("curiosityCorrelation_cuedRecallStrict", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$cuedRecallStrict, use = "pairwise.complete.obs") 
+      postMemory[[paste0("curiosityCorrelation_cuedRecallLenient", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$cuedRecallLenient, use = "pairwise.complete.obs")
+      postMemory[[paste0("curiosityCorrelation_allConf", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$recognition, use = "pairwise.complete.obs")
+      postMemory[[paste0("curiosityCorrelation_highConf", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$recognitionConfLevel_4_5_6, use = "pairwise.complete.obs")
+      postMemory[[paste0("curiosityCorrelation_aboveAvgConf", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$recognitionAboveMeanConf, use = "pairwise.complete.obs")
+      postMemory[[paste0("curiosityCorrelation_rememberedStrict", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$rememberedStrict, use = "pairwise.complete.obs")
+      postMemory[[paste0("curiosityCorrelation_rememberedLenient", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$rememberedLenient, use = "pairwise.complete.obs")
+      
+    } # end of loop over blockString
+    
     if (debug == 0){
       rm(data_subset)
     }
   }
-  
-  # sum up curiosity-driven memory memory benefit (continouos) for subjects
-  postMemory$curiosityBenefit_cuedRecallStrict <-  sum(MEMO$curiosityBenefit_cuedRecallStrict, na.rm = T)
-  postMemory$curiosityBenefit_cuedRecallLenient <-  sum(MEMO$curiosityBenefit_cuedRecallLenient, na.rm = T)
-  postMemory$curiosityBenefit_allConf <-  sum(MEMO$curiosityBenefit_allConf, na.rm = T)
-  postMemory$curiosityBenefit_highConf <-  sum(MEMO$curiosityBenefit_highConf, na.rm = T)
-  postMemory$curiosityBenefit_aboveAvgConf <- sum(MEMO$curiosityBenefit_aboveAvgConf, na.rm = T)
-  postMemory$curiosityBenefit_rememberedStrict <- sum(MEMO$curiosityBenefit_rememberedStrict, na.rm = T)
-  postMemory$curiosityBenefit_rememberedLenient <- sum(MEMO$curiosityBenefit_rememberedLenient, na.rm = T)
-  
-  # sum up curiosity-driven memory memory benefit (dichotomous) for subjects
-  postMemory$curiosityBenefit_cuedRecallStrict_dichotom <-  sum(MEMO$curiosityBenefit_cuedRecallStrict_dichotom, na.rm = T)
-  postMemory$curiosityBenefit_cuedRecallLenient_dichotom <-  sum(MEMO$curiosityBenefit_cuedRecallLenient_dichotom, na.rm = T)
-  postMemory$curiosityBenefit_allConf_dichotom <-  sum(MEMO$curiosityBenefit_allConf_dichotom, na.rm = T)
-  postMemory$curiosityBenefit_highConf_dichotom <-  sum(MEMO$curiosityBenefit_highConf_dichotom, na.rm = T)
-  postMemory$curiosityBenefit_aboveAvgConf_dichotom <-  sum(MEMO$curiosityBenefit_aboveAvgConf_dichotom, na.rm = T)
-  postMemory$curiosityBenefit_rememberedStrict_dichotom <- sum(MEMO$curiosityBenefit_rememberedStrict_dichotom, na.rm = T)
-  postMemory$curiosityBenefit_rememberedLenient_dichotom <- sum(MEMO$curiosityBenefit_rememberedLenient_dichotom, na.rm = T)
-  
-  # calculate correlation between curiosity and memory
-  postMemory$curiosityCorrelation_cuedRecallStrict <- cor(MEMO$curiosityGroupMeanCentered, MEMO$cuedRecallStrict, use = "pairwise.complete.obs") 
-  postMemory$curiosityCorrelation_cuedRecallLenient <- cor(MEMO$curiosityGroupMeanCentered, MEMO$cuedRecallLenient, use = "pairwise.complete.obs")
-  postMemory$curiosityCorrelation_allConf <- cor(MEMO$curiosityGroupMeanCentered, MEMO$recognition, use = "pairwise.complete.obs")
-  postMemory$curiosityCorrelation_highConf <- cor(MEMO$curiosityGroupMeanCentered, MEMO$recognitionConfLevel_4_5_6, use = "pairwise.complete.obs")
-  postMemory$curiosityCorrelation_aboveAvgConf <- cor(MEMO$curiosityGroupMeanCentered, MEMO$recognitionAboveMeanConf, use = "pairwise.complete.obs")
-  postMemory$curiosityCorrelation_rememberedStrict <- cor(MEMO$curiosityGroupMeanCentered, MEMO$rememberedStrict, use = "pairwise.complete.obs")
-  postMemory$curiosityCorrelation_rememberedLenient <- cor(MEMO$curiosityGroupMeanCentered, MEMO$rememberedLenient, use = "pairwise.complete.obs")
   
   # rbind the postMemory files of each subject to a data frame
   if(s == 1){
