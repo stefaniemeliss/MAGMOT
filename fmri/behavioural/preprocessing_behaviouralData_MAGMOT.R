@@ -1299,39 +1299,6 @@ for (s in seq_along(subjects)){
       rm(postMemoryWide, questDataWide)
     }
     
-    # # reduce MAGMOT data set to relevant variables
-    # MAGMOT_test <- MAGMOT[c("ID", "BIDS", "fMRI", "group", "groupEffectCoded", "motivation",
-    #                    "preFile", "nbackFile", "corsiFile", "startPre", "endPre", "postFile", "startPost", "endPost", "memoryFile", "startMemory", "endMemory",
-    #                    "eyetracking", "fieldmap", "preLearningRest", "taskBlock1", "taskBlock2", "taskBlock3", "postLearningRest", "T1w", "eyetrackingData", "taskData", "questionnaireData", "comments_experimenter.1",
-    #                    "age", "gender", "ethnicity", "education", "yearsOfEducation", "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health.1", "neurodisorders.1", "screening_MRI",
-    #                    "BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity", "StateCuriosity",
-    #                    "intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure", "post23",  "post24", "curiosityNAs",
-    #                    "corsiSpan", "NBacks", "nonNBacks", "nback_hits", "nback_misses_inclTooSlow", "nback_misses_exclTooSlow", "nback_correctrejections", "nback_falsealarms_inclTooSlow", "nback_falsealarms_exclTooSlow", "nback_hitrate", "nback_falsealarmrate", "nback_accurary",
-    #                    "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations", "comments_participant.1", "comments_participant.2", "comments_participant.3",
-    #                    "sleepBeforeMemoryTest", "sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment",
-    #                    
-    #                    "responseCuriosity_firstBlock", "curiosity_firstBlock", "cuedRecallStrict_firstBlock", "cuedRecallLenient_firstBlock", "recognition_firstBlock", "recognitionAboveMeanConf_firstBlock", "meanConfidence_firstBlock", "meanConfidenceCorrectTrials_firstBlock",
-    #                    "recognitionConfLevel_1_firstBlock", "recognitionConfLevel_above_1_firstBlock", "recognitionConfLevel_1_2_firstBlock", "recognitionConfLevel_1_2_3_firstBlock", "recognitionConfLevel_2_firstBlock", "recognitionConfLevel_above_2_firstBlock", "recognitionConfLevel_3_firstBlock", "recognitionConfLevel_above_3_firstBlock", "recognitionConfLevel_3_4_firstBlock", "recognitionConfLevel_4_firstBlock", "recognitionConfLevel_above_4_firstBlock", "recognitionConfLevel_4_5_6_firstBlock", "recognitionConfLevel_5_firstBlock", "recognitionConfLevel_above_5_firstBlock", "recognitionConfLevel_5_6_firstBlock", "recognitionConfLevel_6_firstBlock", 
-    #                    
-    #                    "responseCuriosity_secondBlock", "curiosity_secondBlock", "cuedRecallStrict_secondBlock", "cuedRecallLenient_secondBlock", "recognition_secondBlock", "recognitionAboveMeanConf_secondBlock", "meanConfidence_secondBlock", "meanConfidenceCorrectTrials_secondBlock",
-    #                    "recognitionConfLevel_1_secondBlock", "recognitionConfLevel_above_1_secondBlock", "recognitionConfLevel_1_2_secondBlock", "recognitionConfLevel_1_2_3_secondBlock", "recognitionConfLevel_2_secondBlock", "recognitionConfLevel_above_2_secondBlock", "recognitionConfLevel_3_secondBlock", "recognitionConfLevel_above_3_secondBlock", "recognitionConfLevel_3_4_secondBlock", "recognitionConfLevel_4_secondBlock", "recognitionConfLevel_above_4_secondBlock", "recognitionConfLevel_4_5_6_secondBlock", "recognitionConfLevel_5_secondBlock", "recognitionConfLevel_above_5_secondBlock", "recognitionConfLevel_5_6_secondBlock", "recognitionConfLevel_6_secondBlock", 
-    #                    
-    #                    "responseCuriosity_thirdBlock", "curiosity_thirdBlock", "cuedRecallStrict_thirdBlock", "cuedRecallLenient_thirdBlock", "recognition_thirdBlock", "recognitionAboveMeanConf_thirdBlock", "meanConfidence_thirdBlock", "meanConfidenceCorrectTrials_thirdBlock",
-    #                    "recognitionConfLevel_1_thirdBlock", "recognitionConfLevel_above_1_thirdBlock", "recognitionConfLevel_1_2_thirdBlock", "recognitionConfLevel_1_2_3_thirdBlock", "recognitionConfLevel_2_thirdBlock", "recognitionConfLevel_above_2_thirdBlock", "recognitionConfLevel_3_thirdBlock", "recognitionConfLevel_above_3_thirdBlock", "recognitionConfLevel_3_4_thirdBlock", "recognitionConfLevel_4_thirdBlock", "recognitionConfLevel_above_4_thirdBlock", "recognitionConfLevel_4_5_6_thirdBlock", "recognitionConfLevel_5_thirdBlock", "recognitionConfLevel_above_5_thirdBlock", "recognitionConfLevel_5_6_thirdBlock", "recognitionConfLevel_6_thirdBlock", 
-    #                    
-    #                    "responseCuriosity", "curiosity", "cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionAboveMeanConf", "meanConfidence", "meanConfidenceCorrectTrials",
-    #                    "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2", "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4", "recognitionConfLevel_4_5_6", "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
-    #                    
-    #                    "curiosityBenefit_cuedRecallStrict",  "curiosityBenefit_cuedRecallStrict_dichotom", "curiosityBenefit_cuedRecallLenient", "curiosityBenefit_cuedRecallLenient_dichotom",
-    #                    "curiosityBenefit_allConf", "curiosityBenefit_allConf_dichotom", "curiosityBenefit_highConf", "curiosityBenefit_highConf_dichotom",  "curiosityBenefit_aboveAvgConf", "curiosityBenefit_aboveAvgConf_dichotom" 
-    # )]
-    
-    
-    # THEORETICALLY CODE WOULD BE WAY BETTER IF MAGMOT WAS REDUCED BEFORE COMPUTUNG BLOCK SCORES, LESS ERROR PROUN
-    # additonally, block wise memory benefits should be added as well
-    
-    
-    
     # compute summary statistics for measurements of memory
     workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
     if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
