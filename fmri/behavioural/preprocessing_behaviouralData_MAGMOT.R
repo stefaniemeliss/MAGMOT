@@ -508,6 +508,7 @@ for (item in seq_along(items)){
 }
 rm(item, items, itemsRenamed)
 
+
 ### rename variables
 names(MAGMOT_post)[names(MAGMOT_post)=="id.1"] <- "ID"
 names(MAGMOT_post)[names(MAGMOT_post)=="sleep_lastnight.1"] <- "sleepLastNight"
@@ -640,6 +641,7 @@ for (s in seq_along(subjects)){
     rm(temp_questDataWide)
   }
   if (s == length(subjects)){
+    # compute IMI scores
     questDataWide[,grep("post", colnames(questDataWide))] <- as.numeric(unlist(questDataWide[,grep("post", colnames(questDataWide))])) # make sure the scores are numeric
     questDataWide$intrinsicMotivation <- (questDataWide$post1 + questDataWide$post2 + questDataWide$post3)/3 ###intrinsic motivation items
     questDataWide$taskEngagement <- (questDataWide$post4 + questDataWide$post5 + questDataWide$post6)/3 ###task engagement items
@@ -647,6 +649,10 @@ for (s in seq_along(subjects)){
     questDataWide$boredom <- (questDataWide$post10 + questDataWide$post11 + questDataWide$post12)/3 ###boredom items
     questDataWide$effort <- (questDataWide$post13 + questDataWide$post14 + questDataWide$post15 + questDataWide$post16 + questDataWide$post17)/5 ####effort/importance
     questDataWide$pressure <- (questDataWide$post18 + questDataWide$post19 + questDataWide$post20 + questDataWide$post21 + questDataWide$post22)/5 ###pressure/tension
+    
+    # rename two variables
+    names(questDataWide) [names(questDataWide) == "post23"] <- "compliance"
+    names(questDataWide) [names(questDataWide) == "post24"] <- "ableToSee"
   }
   
   # remove unneccsary values and data
@@ -1209,6 +1215,15 @@ for (s in seq_along(subjects)){
   names(postMemory) <- c("ID", "startMemory", "endMemory", "memoryFile",
                          "sleepBeforeMemoryTest","sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment")
   
+  # recode rewardBelief
+  postMemory$rewardBelief_score <- ifelse(postMemory$rewardBelief == "Not applicable", NA,
+                                      ifelse(postMemory$rewardBelief == "Definitely agree ", 6,
+                                             ifelse(postMemory$rewardBelief == "Somehow agree", 5,
+                                                    ifelse(postMemory$rewardBelief == "Slightly agree", 4,
+                                                           ifelse(postMemory$rewardBelief == "Slightly disagree", 3,
+                                                                  ifelse(postMemory$rewardBelief == "Somehow disagree", 2,
+                                                                         ifelse(postMemory$rewardBelief == "Definitely disagree", 1, 0)))))))
+  
   # add curiosity NAs to the data set in wide format
   postMemory$curiosityNAs <- curiosityNAs
   
@@ -1749,6 +1764,8 @@ for (s in seq_along(subjects)){
             dataTable_ISC_dummy[x,33] <- dataTable_ISC_dummy[x,32] * dataTable_ISC_dummy[x,3] 
             dataTable_ISC_dummy[x,34] <- (MAGMOT$curiosityBeta_rememberedLenient_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_rememberedLenient_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,35] <- dataTable_ISC_dummy[x,34] * dataTable_ISC_dummy[x,3] 
+            
+            # add curiosity benefit (dichotom or continuous)
             
             # # determine the unique contribution of curiosity, memory and confidence
             dataTable_ISC_dummy[,36] <- NA #residuals(uniqueCurAboveAvgConf)
