@@ -1245,15 +1245,34 @@ for (s in seq_along(subjects)){
       # sum up the scores for recall task
       if (file.exists(file.path(codedDir,f_coded))) {  # if there is no data, NA will be added when rbinding all information across subjects
         postMemory[[paste0("cuedRecallStrict", blockstring[BLOCK])]] <- sum(data_subset$cuedRecallStrict, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+        postMemory[[paste0("cuedRecallStrict_perc", blockstring[BLOCK])]] <- sum(data_subset$cuedRecallStrict, na.rm = T) / dim(data_subset)[1]
         postMemory[[paste0("cuedRecallLenient", blockstring[BLOCK])]] <- sum(data_subset$cuedRecallLenient, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+        postMemory[[paste0("cuedRecallLenient_perc", blockstring[BLOCK])]] <- sum(data_subset$cuedRecallLenient, na.rm = T) / dim(data_subset)[1]
       }
       
-      # sum up the scores for the recognition task, once in total and once seperated for the different levels of confidence
+      # average curiosity
       postMemory[[paste0("responseCuriosity", blockstring[BLOCK])]] <- mean(data_subset$responseCuriosity, na.rm = T)
       postMemory[[paste0("curiosity", blockstring[BLOCK])]] <- mean(data_subset$curiosity, na.rm = T)
+      
+      # # sum up mean centered curiosity (continous) over trials 
+      # postMemory[[paste0("highCuriosityTrials", blockstring[BLOCK])]] <- sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T) # sum up amount of tricks that are subject-wise high curiosity tricks
+      # postMemory[[paste0("highCuriosityTrials_perc", blockstring[BLOCK])]] <- sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T) / dim(data_subset)[1] # percentage og high curiosity trials
+      # postMemory[[paste0("lowCuriosityTrials", blockstring[BLOCK])]] <- sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T) # sum up amount of tricks that are subject-wise high curiosity tricks
+      # postMemory[[paste0("lowCuriosityTrials_perc", blockstring[BLOCK])]] <- sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T) / dim(data_subset)[1] # percentage og high curiosity trials
+      # 
+      # # sum up mean centered curiosity (dichotomuous) over trials
+      # postMemory[[paste0("highCuriosityTrials_dichotom", blockstring[BLOCK])]] <- sum(data_subset$curiosity_dichotom > 0, na.rm = T) # sum up amount of tricks that are subject-wise high curiosity tricks
+      # postMemory[[paste0("highCuriosityTrials_dichotom_perc", blockstring[BLOCK])]] <- sum(data_subset$curiosity_dichotom > 0, na.rm = T) / dim(data_subset)[1] # percentage og high curiosity trials
+      # postMemory[[paste0("lowCuriosityTrials_dichotom", blockstring[BLOCK])]] <- sum(data_subset$curiosity_dichotom < 0, na.rm = T) # sum up amount of tricks that are subject-wise high curiosity tricks
+      # postMemory[[paste0("lowCuriosityTrials_dichotom_perc", blockstring[BLOCK])]] <- sum(data_subset$curiosity_dichotom < 0, na.rm = T) / dim(data_subset)[1] # percentage og high curiosity trials
+       
+      # sum up the scores for the recognition task, once in total and once seperated for the different levels of confidence
       postMemory[[paste0("recognition", blockstring[BLOCK])]] <- sum(data_subset$recognition, na.rm = T)
+      postMemory[[paste0("recognition_perc", blockstring[BLOCK])]] <- sum(data_subset$recognition, na.rm = T) / dim(data_subset)[1]
       postMemory[[paste0("recognitionAboveMeanConf", blockstring[BLOCK])]] <- sum(data_subset$recognitionAboveMeanConf, na.rm = T)
-
+      postMemory[[paste0("recognitionAboveMeanConf_perc", blockstring[BLOCK])]] <- sum(data_subset$recognitionAboveMeanConf, na.rm = T)  / dim(data_subset)[1]
+      
+      # average mean confidence
       postMemory[[paste0("meanConfidence", blockstring[BLOCK])]]  <- mean(data_subset$confidence, na.rm = T)
       temp_data <- subset(data_subset, data_subset$recognition == 1)
       postMemory[[paste0("meanConfidenceCorrectTrials", blockstring[BLOCK])]]   <- mean(temp_data$confidence, na.rm = T)
@@ -1261,9 +1280,11 @@ for (s in seq_along(subjects)){
       for (k in 1:6) { #confidence ranges from 1 to 6, potentially code can be made more flexible by using min(data$confidence) and max(data$confidence)
         temp_data <- subset(data_subset, data_subset$confidence == k)
         postMemory[[paste0("recognitionConfLevel_", k, blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T)
+        postMemory[[paste0("recognitionConfLevel_", k, "_perc", blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T) / dim(data_subset)[1]
         if (k < 6) {
           temp_data_above <- subset(data_subset, data_subset$confidence > k)
-          postMemory[[paste0("recognitionConfLevel_above_", k, blockstring[BLOCK])]] <-sum(temp_data_above$recognition, na.rm = T) 
+          postMemory[[paste0("recognitionConfLevel_above_", k, blockstring[BLOCK])]] <-sum(temp_data_above$recognition, na.rm = T)
+          postMemory[[paste0("recognitionConfLevel_above_", k, "_perc", blockstring[BLOCK])]] <-sum(temp_data_above$recognition, na.rm = T) / dim(data_subset)[1]
           rm(temp_data_above)
         }
         
@@ -1271,12 +1292,14 @@ for (s in seq_along(subjects)){
         if (k == 1 || k == 3 || k == 5) {
           temp_data_plus1 <- subset(data_subset, data_subset$confidence == (k+1))
           postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T)
+          postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, "_perc", blockstring[BLOCK])]] <- (sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T))  / dim(data_subset)[1]
           rm(temp_data_plus1)
         }
         if (k == 1 || k == 4) {
           temp_data_plus1 <- subset(data_subset, data_subset$confidence == (k+1))
           temp_data_plus2 <- subset(data_subset, data_subset$confidence == (k+2))
           postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2, blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T) + sum(temp_data_plus2$recognition, na.rm = T)
+          postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2, "_perc", blockstring[BLOCK])]] <- (sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T) + sum(temp_data_plus2$recognition, na.rm = T))  / dim(data_subset)[1]
           rm(temp_data_plus1)
           rm(temp_data_plus2)
         }
@@ -1285,25 +1308,41 @@ for (s in seq_along(subjects)){
       
       # sum up the scores for "remembered" task
       postMemory[[paste0("rememberedStrict", blockstring[BLOCK])]] <- sum(data_subset$rememberedStrict, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+      postMemory[[paste0("rememberedStrict_perc", blockstring[BLOCK])]] <- sum(data_subset$rememberedStrict, na.rm = T) / dim(data_subset)[1]
       postMemory[[paste0("rememberedLenient", blockstring[BLOCK])]] <- sum(data_subset$rememberedLenient, na.rm = T) #please note that this needs to be changed as it is not looking at any form of coded data
+      postMemory[[paste0("rememberedLenient_perc", blockstring[BLOCK])]] <- sum(data_subset$rememberedLenient, na.rm = T) / dim(data_subset)[1]
       
       # sum up curiosity-driven memory memory benefit (continouos) for subjects
       postMemory[[paste0("curiosityBenefit_cuedRecallStrict", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallStrict, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_cuedRecallStrict_perc", blockstring[BLOCK])]] <- (sum(data_subset$curiosityBenefit_cuedRecallStrict > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_cuedRecallStrict < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_cuedRecallLenient", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallLenient, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_cuedRecallLenient_perc", blockstring[BLOCK])]] <- (sum(data_subset$curiosityBenefit_cuedRecallLenient > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_cuedRecallLenient < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_allConf", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_allConf, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_allConf_perc", blockstring[BLOCK])]] <-  (sum(data_subset$curiosityBenefit_allConf > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_allConf < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_highConf", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_highConf, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_highConf_perc", blockstring[BLOCK])]] <-  (sum(data_subset$curiosityBenefit_highConf > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_highConf < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_aboveAvgConf", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_aboveAvgConf, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_aboveAvgConf_perc", blockstring[BLOCK])]] <-(sum(data_subset$curiosityBenefit_aboveAvgConf > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_aboveAvgConf < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_rememberedStrict", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedStrict, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedStrict_perc", blockstring[BLOCK])]] <- (sum(data_subset$curiosityBenefit_rememberedStrict > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_rememberedStrict < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_rememberedLenient", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedLenient, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedLenient_perc", blockstring[BLOCK])]] <- (sum(data_subset$curiosityBenefit_rememberedLenient > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_rememberedLenient < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       
       # sum up curiosity-driven memory memory benefit (dichotomous) for subjects
       postMemory[[paste0("curiosityBenefit_cuedRecallStrict_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallStrict_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_cuedRecallStrict_dichotom_perc", blockstring[BLOCK])]] <- (sum(data_subset$curiosityBenefit_cuedRecallStrict_dichotom > 0, na.rm = T) / sum(data_subset$curiosity_dichotom > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_cuedRecallStrict_dichotom < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_cuedRecallLenient_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_cuedRecallLenient_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_cuedRecallLenient_dichotom_perc", blockstring[BLOCK])]] <-  (sum(data_subset$curiosityBenefit_cuedRecallLenient_dichotom > 0, na.rm = T) / sum(data_subset$curiosity_dichotom > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_cuedRecallLenient_dichotom < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_allConf_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_allConf_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_allConf_dichotom_perc", blockstring[BLOCK])]] <-  (sum(data_subset$curiosityBenefit_allConf_dichotom > 0, na.rm = T) / sum(data_subset$curiosity_dichotom > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_allConf_dichotom < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_highConf_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_highConf_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_highConf_dichotom_perc", blockstring[BLOCK])]] <-  (sum(data_subset$curiosityBenefit_highConf_dichotom > 0, na.rm = T) / sum(data_subset$curiosity_dichotom > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_highConf_dichotom < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_aboveAvgConf_dichotom", blockstring[BLOCK])]] <-  sum(data_subset$curiosityBenefit_aboveAvgConf_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_aboveAvgConf_dichotom_perc", blockstring[BLOCK])]] <-  (sum(data_subset$curiosityBenefit_aboveAvgConf_dichotom > 0, na.rm = T) / sum(data_subset$curiosity_dichotom > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_aboveAvgConf_dichotom < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_rememberedStrict_dichotom", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedStrict_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedStrict_dichotom_perc", blockstring[BLOCK])]] <- (sum(data_subset$curiosityBenefit_rememberedStrict_dichotom > 0, na.rm = T) / sum(data_subset$curiosity_dichotom > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_rememberedStrict_dichotom < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       postMemory[[paste0("curiosityBenefit_rememberedLenient_dichotom", blockstring[BLOCK])]] <- sum(data_subset$curiosityBenefit_rememberedLenient_dichotom, na.rm = T)
+      postMemory[[paste0("curiosityBenefit_rememberedLenient_dichotom_perc", blockstring[BLOCK])]] <- (sum(data_subset$curiosityBenefit_rememberedLenient_dichotom > 0, na.rm = T) / sum(data_subset$curiosity_dichotom > 0, na.rm = T)) - (sum(data_subset$curiosityBenefit_rememberedLenient_dichotom < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
       
       # calculate correlation between curiosity and memory
       postMemory[[paste0("curiosityCorrelation_cuedRecallStrict", blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset$cuedRecallStrict, use = "pairwise.complete.obs") 
@@ -1414,7 +1453,7 @@ for (s in seq_along(subjects)){
     
     # add RSFC estimates between HPC & VTA (Pearson)
     setwd(brainDir)
-    RSFC <- read.delim2("RSFC_VTA-HPC.txt") # read in data
+    RSFC <- read.delim2("RSFC_VTA-HPC_gruber.txt") # read in data
     names(RSFC)[names(RSFC)=="RSFC_run.1"] <- "RSFC_VTAHPC_run1" # change col name
     names(RSFC)[names(RSFC)=="RSFC_run.2"] <- "RSFC_VTAHPC_run2" # change col name
     RSFC$RSFC_VTAHPC_run1 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1)) # change from factor to numeric
@@ -1428,7 +1467,7 @@ for (s in seq_along(subjects)){
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
     
     # add RSFC estimates between HPC & VTA (Spearman)
-    RSFC <- read.delim2("RSFC_VTA-HPC_spearman.txt") # read in data
+    RSFC <- read.delim2("RSFC_VTA-HPC_spearman_gruber.txt") # read in data
     names(RSFC)[names(RSFC)=="RSFC_run.1_spearman"] <- "RSFC_VTAHPC_run1_spearman" # change col name
     names(RSFC)[names(RSFC)=="RSFC_run.2_spearman"] <- "RSFC_VTAHPC_run2_spearman" # change col name
     RSFC$RSFC_VTAHPC_run1_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1_spearman)) # change from factor to numeric
@@ -1747,22 +1786,22 @@ for (s in seq_along(subjects)){
             # dataTable_ISC_dummy[x,29] <- dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
             
             #curiosity-driven memory benefit and curiosity-driven memory benefit interaction
-            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_cuedRecallStrict_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallStrict_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,22] <- (MAGMOT$curiosityBeta_cuedRecallStrict_c[MAGMOT$ID == subjects[s]] + MAGMOT$curiosityBeta_cuedRecallStrict_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,23] <- dataTable_ISC_dummy[x,22] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,24] <- (MAGMOT$curiosityBeta_cuedRecallLenient_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_cuedRecallLenient_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,24] <- (MAGMOT$curiosityBeta_cuedRecallLenient_c[MAGMOT$ID == subjects[s]] + MAGMOT$curiosityBeta_cuedRecallLenient_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,25] <- dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
             #dataTable_ISC_dummy[x,30] <- 1-abs(MAGMOT$curiosityBeta_allConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,26] <- (MAGMOT$curiosityBeta_allConf_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_allConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,26] <- (MAGMOT$curiosityBeta_allConf_c[MAGMOT$ID == subjects[s]] + MAGMOT$curiosityBeta_allConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,27] <- dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
             # dataTable_ISC_dummy[x,32] <- 1-abs(MAGMOT$curiosityBeta_highConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,28] <- (MAGMOT$curiosityBeta_highConf_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_highConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,28] <- (MAGMOT$curiosityBeta_highConf_c[MAGMOT$ID == subjects[s]] + MAGMOT$curiosityBeta_highConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,29] <- dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
             # dataTable_ISC_dummy[x,34] <- 1-abs(MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf[MAGMOT$BIDS == subjectsToCorrelate[ss]])
-            dataTable_ISC_dummy[x,30] <- (MAGMOT$curiosityBeta_aboveAvgConf_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_aboveAvgConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,30] <- (MAGMOT$curiosityBeta_aboveAvgConf_c[MAGMOT$ID == subjects[s]] + MAGMOT$curiosityBeta_aboveAvgConf_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,31] <- dataTable_ISC_dummy[x,30] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,32] <- (MAGMOT$curiosityBeta_rememberedStrict_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_rememberedStrict_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,32] <- (MAGMOT$curiosityBeta_rememberedStrict_c[MAGMOT$ID == subjects[s]] + MAGMOT$curiosityBeta_rememberedStrict_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,33] <- dataTable_ISC_dummy[x,32] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,34] <- (MAGMOT$curiosityBeta_rememberedLenient_c[MAGMOT$ID == subjects[s]] - MAGMOT$curiosityBeta_rememberedLenient_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+            dataTable_ISC_dummy[x,34] <- (MAGMOT$curiosityBeta_rememberedLenient_c[MAGMOT$ID == subjects[s]] + MAGMOT$curiosityBeta_rememberedLenient_c[MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
             dataTable_ISC_dummy[x,35] <- dataTable_ISC_dummy[x,34] * dataTable_ISC_dummy[x,3] 
             
             # add curiosity benefit (dichotom or continuous)
