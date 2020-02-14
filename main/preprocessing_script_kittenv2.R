@@ -456,7 +456,11 @@ for (l in seq_along(group)) {
     postMain$effort <- (postMain$post13_score + postMain$post14_score + postMain$post15_score + postMain$post16_score + postMain$post17_score)/5
     postMain$pressure <- (postMain$post18_score + postMain$post19_score + postMain$post20_score + postMain$post21_score + postMain$post22_score)/5
     
-    
+    # rename items
+    names(postMain)[names(postMain) == "post23_score"] <- "compliance"
+    names(postMain)[names(postMain) == "post24_score"] <- "tooManyVids"
+    names(postMain)[names(postMain) == "post25_score"] <- "problemsInternet"
+    names(postMain)[names(postMain) == "post26_score"] <- "ableToSee"
     
     # process task m questions collected during memory part
     postMemory <-subset(memory, trial.type == "surveycat")
