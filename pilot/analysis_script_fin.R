@@ -35,8 +35,8 @@ source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
 
 ### read in data sets ###
 setwd(preprocessedDir)
-dfWide <- read.xlsx("wide_MagicBehavioural.xlsx", sheetName = "Sheet1")
-dfLong <- read.xlsx("long_MagicBehavioural.xlsx", sheetName = "Sheet1")
+dfWide <- read.xlsx(paste0("wide_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
+dfLong <- read.xlsx(paste0("long_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
 
 
 #### data set handling wide format ####
@@ -105,15 +105,17 @@ output <- as.data.frame(rbind(output$cont, output$exp))
 output$mot <- rep(c("int","ext"), each = 1)
 
 outg <- ggplot(output, aes(mot, mean, fill = mot))
-outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("ext","int")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
+outg <- outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("ext","int")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
+outg
 
 # gender
 library(plyr)
-output <- count(dfWide, c('gender','group'))
+table(dfWide$group,dfWide$gender)
+output <- count(dfWide, c('gender','group'),  na.rm=TRUE)
 # output <- count(df, c('gender','cond'))
 outg <- ggplot(output, aes(group, freq, fill = gender))
-outg + geom_bar(stat="identity", position="fill")  + scale_x_discrete(limits=c("cont","exp")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version)) + theme_classic() 
-
+outg <- outg + geom_bar(stat="identity", position="fill")  + scale_x_discrete(limits=c("cont","exp")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version)) + theme_classic() 
+outg
 
 #### plots post questionnaire ####
 setwd(ratingsDir)
@@ -138,7 +140,7 @@ ggsave("postMainByGroup.jpeg")
 # Post24	There were no problems with the internet connection while I participated in the experiment.
 # Post25	I was able to see the magic tricks properly.
 
-output <- by(cbind(dfWide[, c("post22_score", "post23_score", "post24_score", "post25_score")]),dfWide$group, describe)
+output <- by(cbind(dfWide[, c("compliance", "tooManyVids", "problemsInternet", "ableToSee")]),dfWide$group, describe)
 output <- as.data.frame(rbind(output$cont, output$exp))
 output$mot <- rep(c("intrinsic","extrinsic"), each = 4)
 output$vars <- as.factor(outposgraph$vars)
