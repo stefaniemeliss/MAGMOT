@@ -396,8 +396,15 @@ for (l in seq_along(group)) {
                          "post25", "post25_score", "post_comment1", "post_comment2", "post_comment3", "post_comment4")
     
     
+    # experiment in general
+    # Post22	I tried to find out how many people will be able to find the solution.
+    # Post23	The amount of magic tricks presented was
+    # Post24	There were no problems with the internet connection while I participated in the experiment.
+    # Post25	I was able to see the magic tricks properly.
+    
+    
     # compute item scores
-    items <- c("post1", "post3", "post4", "post5", "post6", "post7", "post8", "post9", "post10", "post11", "post12", "post13", "post15", "post16", "post19", "post21", "post22", "post23", "post25")
+    items <- c("post1", "post3", "post4", "post5", "post6", "post7", "post8", "post9", "post10", "post11", "post12", "post13", "post15", "post16", "post19", "post21", "post22", "post24", "post25")
     itemsReversed <- c("post2", "post14", "post17", "post18", "post20")
     
     
@@ -425,6 +432,18 @@ for (l in seq_along(group)) {
       rm(item_score)
     }
     
+    # recode tooManyVids
+    postMain$post23_score <- ifelse(postMain[,"post23"] == "Definitely too much ", 7, 
+                                    ifelse(postMain[,"post23"] == "Somehow too much", 6, 
+                                           ifelse(postMain[,"post23"] == "Slightly too much", 5, 
+                                                  ifelse(postMain[,"post23"] == "Neither too much nor too less", 4, 
+                                                         ifelse(postMain[,"post23"] == "Slightly too less", 3, 
+                                                                ifelse(postMain[,"post23"] == "Somehow too less", 2, 
+                                                                       ifelse(postMain[,"post23"] == "Definitely too less", 1, NA)))))))
+    
+    
+    
+    
     # compute scales
     postMain$intrinsicMotivation <- (postMain$post1_score + postMain$post2_score + postMain$post3_score)/3
     postMain$taskEngagement <- (postMain$post4_score + postMain$post5_score + postMain$post6_score)/3
@@ -433,6 +452,11 @@ for (l in seq_along(group)) {
     postMain$effort <- (postMain$post13_score + postMain$post14_score + postMain$post15_score + postMain$post16_score + postMain$post17_score)/5
     postMain$pressure <- (postMain$post18_score + postMain$post19_score + postMain$post20_score + postMain$post21_score)/4
     
+    # rename items
+    names(postMain)[names(postMain) == "post22_score"] <- "compliance"
+    names(postMain)[names(postMain) == "post23_score"] <- "tooManyVids"
+    names(postMain)[names(postMain) == "post24_score"] <- "problemsInternet"
+    names(postMain)[names(postMain) == "post25_score"] <- "ableToSee"
     
     # process task m questions collected during memory part
     postMemory <-subset(memory, Proc_comment == "questionnaire")
