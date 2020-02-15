@@ -723,127 +723,83 @@ setwd(ratingsDir)
 write.csv(effectsizes, paste0("effectsizesAll_", version, ".csv"))
 
 ########## 7. Create violin plots for sum scores of memory measures in each group ########## 
-
-# define dependent variables (i.e. sum scores)
-dependentVariablesWide <- c("cuedRecallStrict", "cuedRecallLenient",
-                            "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
-                            "rememberedStrict", "rememberedLenient", 
-                            "meanConfidence", "meanConfidenceCorrectTrials",
-                            #betas
-                            "curiosityBeta_cuedRecallStrict", "curiosityBeta_cuedRecallLenient",
-                            "curiosityBeta_allConf", "curiosityBeta_highConf", "curiosityBeta_aboveAvgConf",
-                            "curiosityBeta_rememberedStrict", "curiosityBeta_rememberedLenient",
-                            # benefit
-                            "curiosityBenefit_cuedRecallStrict", "curiosityBenefit_cuedRecallStrict_dichotom", "curiosityBenefit_cuedRecallStrict_perc",
-                            "curiosityBenefit_cuedRecallLenient", "curiosityBenefit_cuedRecallLenient_dichotom", "curiosityBenefit_cuedRecallLenient_perc",
-                            "curiosityBenefit_allConf", "curiosityBenefit_allConf_dichotom", "curiosityBenefit_allConf_perc",
-                            "curiosityBenefit_highConf", "curiosityBenefit_highConf_dichotom", "curiosityBenefit_highConf_perc",
-                            "curiosityBenefit_aboveAvgConf", "curiosityBenefit_aboveAvgConf_dichotom", "curiosityBenefit_aboveAvgConf_perc",
-                            "curiosityBenefit_rememberedStrict", "curiosityBenefit_rememberedStrict_dichotom", "curiosityBenefit_rememberedStrict_perc",
-                            "curiosityBenefit_rememberedLenient", "curiosityBenefit_rememberedLenient_dichotom", "curiosityBenefit_rememberedLenient_perc",
-                            # correlations
-                            "curiosityCorrelation_cuedRecallStrict", "curiosityCorrelation_cuedRecallLenient", 
-                            "curiosityCorrelation_allConf", "curiosityCorrelation_highConf", "curiosityCorrelation_aboveAvgConf", 
-                            "curiosityCorrelation_rememberedStrict", "curiosityCorrelation_rememberedLenient",                 
-                            # brain data
-                            "RSFC_VTAHPC_diff", "RSFC_VTAHPC_diff_spearman")
-
-
+ # subset dataWide
 output <- dfWide[,c("ID", "group", dependentVariablesWide)]
 output$group <- ifelse(output$group == "int", "No reward", "Reward")
 setwd(memoryDir)
 
+# define variables to plot data for
+plotVars <- c("recall", "recollection", "remembered", 
+              "betaRecall", "betaRecollection", "betaRemembered",
+              "percBenefitRecall", "percBenefitRecollection", "percBenefitRemembered",
+              "recognition", "betaRecognition", "percBenefitRecognition",
+              "benefitRecall", "benefitRecollection", "benefitRemembered", "benefitRecognition")
 
+# define thresholds for the facet.grid "criteria"
+threshold1 <- c("cuedRecallStrict", "recognitionAboveMeanConf", "rememberedStrict", 
+                "curiosityBeta_cuedRecallStrict", "curiosityBeta_aboveAvgConf", "curiosityBeta_rememberedStrict",
+                "curiosityBenefit_cuedRecallStrict_perc",  "curiosityBenefit_aboveAvgConf_perc", "curiosityBenefit_rememberedStrict_perc")
 
-# create long data frame for: 
-#cuedRecall: lenient vs strict
-output_recall <- output[,c("ID", "group", "cuedRecallStrict", "cuedRecallLenient")]
-output_recall <- reshape2::melt(output_recall, id=c("ID","group"))
-names(output_recall) <- c("ID", "group", "criteria", "performance")
-#recognition
-output_recognition <- output[,c("ID", "group", "recognition")]
-output_recognition <- reshape2::melt(output_recognition, id=c("ID","group"))
-names(output_recognition) <- c("ID", "group", "criteria", "performance")
-#recollection: high vs aboveAvg
-output_recollection <- output[,c("ID", "group", "recognitionAboveMeanConf", "recognitionConfLevel_4_5_6")]
-output_recollection <- reshape2::melt(output_recollection, id=c("ID","group"))
-names(output_recollection) <- c("ID", "group", "criteria", "performance")
-#remembered: lenient vs strict
-output_remembered <- output[,c("ID", "group", "rememberedStrict", "rememberedLenient")]
-output_remembered <- reshape2::melt(output_remembered, id=c("ID","group"))
-names(output_remembered) <- c("ID", "group", "criteria", "performance")
+threshold2 <- c("cuedRecallLenient", "recognitionConfLevel_4_5_6", "rememberedLenient", "curiosityBenefit_rememberedStrict_perc",
+                "curiosityBeta_cuedRecallLenient", "curiosityBeta_highConf", "curiosityBeta_rememberedLenient",
+                "curiosityBenefit_cuedRecallLenient_perc", "curiosityBenefit_highConf_perc",  "curiosityBenefit_rememberedLenient_perc")
 
-#beta recall: lenient vs strict
-output_betaRecall <- output[,c("ID", "group", "curiosityBeta_cuedRecallStrict", "curiosityBeta_cuedRecallLenient")]
-output_betaRecall <- reshape2::melt(output_betaRecall, id=c("ID","group"))
-names(output_betaRecall) <- c("ID", "group", "criteria", "performance")
-#beta familarity
-output_betaRecognition <- output[,c("ID", "group", "curiosityBeta_allConf")]
-output_betaRecognition <- reshape2::melt(output_betaRecognition, id=c("ID","group"))
-names(output_betaRecognition) <- c("ID", "group", "criteria", "performance")
-#beta recollection: high vs aboveAvg
-output_betaRecollection <- output[,c("ID", "group", "curiosityBeta_aboveAvgConf", "curiosityBeta_highConf")]
-output_betaRecollection <- reshape2::melt(output_betaRecollection, id=c("ID","group"))
-names(output_betaRecollection) <- c("ID", "group", "criteria", "performance")
-#beta recall: lenient vs strict
-output_betaRemembered <- output[,c("ID", "group", "curiosityBeta_rememberedStrict", "curiosityBeta_rememberedLenient")]
-output_betaRemembered <- reshape2::melt(output_betaRemembered, id=c("ID","group"))
-names(output_betaRemembered) <- c("ID", "group", "criteria", "performance")
+# define thresholds for unthresholded recognition
+threshold <- c("recognition", "curiosityBeta_allConf", "curiosityBenefit_allConf_perc")
 
-#benefit recall: 2 (lenient vs strict) * 2 (cont vs dichotom)
-output_benefitRecall <- output[,c("ID", "group","curiosityBenefit_cuedRecallStrict", "curiosityBenefit_cuedRecallStrict_dichotom",
-                                  "curiosityBenefit_cuedRecallLenient", "curiosityBenefit_cuedRecallLenient_dichotom")]
-output_benefitRecall <- reshape2::melt(output_benefitRecall, id=c("ID","group"))
-names(output_benefitRecall) <- c("ID", "group", "criteria", "performance")
-output_benefitRecall$method <- ifelse(output_benefitRecall$criteria == "curiosityBenefit_cuedRecallStrict" | output_benefitRecall$criteria == "curiosityBenefit_cuedRecallLenient", "continuous", "dichotom")
-output_benefitRecall$criteria <- ifelse(output_benefitRecall$criteria == "curiosityBenefit_cuedRecallStrict" | output_benefitRecall$criteria == "curiosityBenefit_cuedRecallStrict_dichotom", "cuedRecallStrict", "cuedRecallLenient")
-#benefit recognition: cont vs dichotom
-output_benefitRecognition <- output[,c("ID", "group","curiosityBenefit_allConf", "curiosityBenefit_allConf_dichotom")]
-output_benefitRecognition <- reshape2::melt(output_benefitRecognition, id=c("ID","group"))
-names(output_benefitRecognition) <- c("ID", "group", "criteria", "performance")
-output_benefitRecognition$method <- ifelse(output_benefitRecognition$criteria == "curiosityBenefit_allConf", "continuous", "dichotom")
-output_benefitRecognition$criteria <- "curiosityBenefit_allConf"
-#benefit recognition: 2 (high vs aboveAvg) * 2 (cont vs dichotom)
-output_benefitRecollection <- output[,c("ID", "group","curiosityBenefit_aboveAvgConf", "curiosityBenefit_aboveAvgConf_dichotom",
-                                        "curiosityBenefit_highConf", "curiosityBenefit_highConf_dichotom")]
-output_benefitRecollection <- reshape2::melt(output_benefitRecollection, id=c("ID","group"))
-names(output_benefitRecollection) <- c("ID", "group", "criteria", "performance")
-output_benefitRecollection$method <- ifelse(output_benefitRecollection$criteria == "curiosityBenefit_aboveAvgConf" | output_benefitRecollection$criteria == "curiosityBenefit_highConf", "continuous", "dichotom")
-output_benefitRecollection$criteria <- ifelse(output_benefitRecollection$criteria == "curiosityBenefit_aboveAvgConf" | output_benefitRecollection$criteria == "curiosityBenefit_aboveAvgConf_dichotom", "aboveAvgConf", "highConf")
-#benefit Remembered: 2 (lenient vs strict) * 2 (cont vs dichotom)
-output_benefitRemembered <- output[,c("ID", "group","curiosityBenefit_rememberedStrict", "curiosityBenefit_rememberedStrict_dichotom",
-                                      "curiosityBenefit_rememberedLenient", "curiosityBenefit_rememberedLenient_dichotom")]
-output_benefitRemembered <- reshape2::melt(output_benefitRemembered, id=c("ID","group"))
-names(output_benefitRemembered) <- c("ID", "group", "criteria", "performance")
-output_benefitRemembered$method <- ifelse(output_benefitRemembered$criteria == "curiosityBenefit_rememberedStrict" | output_benefitRemembered$criteria == "curiosityBenefit_rememberedLenient", "continuous", "dichotom")
-output_benefitRemembered$criteria <- ifelse(output_benefitRemembered$criteria == "curiosityBenefit_rememberedStrict" | output_benefitRemembered$criteria == "curiosityBenefit_rememberedStrict_dichotom", "rememberedStrict", "rememberedLenient")
+# define thresholds and labels for facet.grid "criteria" * "method"
+threshold_1 <- c("curiosityBenefit_cuedRecallStrict", "curiosityBenefit_aboveAvgConf", "curiosityBenefit_rememberedStrict")
+threshold_2 <- c("curiosityBenefit_cuedRecallStrict_dichotom", "curiosityBenefit_aboveAvgConf_dichotom", "curiosityBenefit_rememberedStrict_dichotom")
+threshold_3 <- c("curiosityBenefit_cuedRecallLenient", "curiosityBenefit_highConf", "curiosityBenefit_rememberedLenient")
+threshold_4 <- c("curiosityBenefit_cuedRecallLenient_dichotom", "curiosityBenefit_highConf_dichotom", "curiosityBenefit_rememberedLenient_dichotom")
 
-#percBenefit recall: lenient vs strict
-output_percBenefitRecall <- output[,c("ID", "group", "curiosityBenefit_cuedRecallStrict_perc", "curiosityBenefit_cuedRecallLenient_perc")]
-output_percBenefitRecall <- reshape2::melt(output_percBenefitRecall, id=c("ID","group"))
-names(output_percBenefitRecall) <- c("ID", "group", "criteria", "performance")
-#percBenefit familarity
-output_percBenefitRecognition <- output[,c("ID", "group", "curiosityBenefit_allConf_perc")]
-output_percBenefitRecognition <- reshape2::melt(output_percBenefitRecognition, id=c("ID","group"))
-names(output_percBenefitRecognition) <- c("ID", "group", "criteria", "performance")
-#percBenefit recollection: high vs aboveAvg
-output_percBenefitRecollection <- output[,c("ID", "group", "curiosityBenefit_aboveAvgConf_perc", "curiosityBenefit_highConf_perc")]
-output_percBenefitRecollection <- reshape2::melt(output_percBenefitRecollection, id=c("ID","group"))
-names(output_percBenefitRecollection) <- c("ID", "group", "criteria", "performance")
-#percBenefit recall: lenient vs strict
-output_percBenefitRemembered <- output[,c("ID", "group", "curiosityBenefit_rememberedStrict_perc", "curiosityBenefit_rememberedLenient_perc")]
-output_percBenefitRemembered <- reshape2::melt(output_percBenefitRemembered, id=c("ID","group"))
-names(output_percBenefitRemembered) <- c("ID", "group", "criteria", "performance")
+label1 <- c("cuedRecallStrict", "aboveAvgConf", "rememberedStrict")
+label2 <- c("cuedRecallLenient", "highConf", "rememberedLenient")
 
+# set variables to loop through
+pp <- 0
+ppp <- 0
 
-
-# define which variables to plot
-plotVars <- c("recall", "recognition","recollection", "remembered", 
-              "betaRecall", "betaRecognition", "betaRecollection", "betaRemembered", 
-              "benefitRecall", "benefitRecognition", "benefitRecollection", "benefitRemembered",
-              "percBenefitRecall", "percBenefitRecognition", "percBenefitRecollection", "percBenefitRemembered")
-
-for (plot in plotVars){
+# loop over all variables to plot
+for(p in 1:length(plotVars)) {
+  
+  plot <- plotVars[p]
+  
+  if (plot %in% c("recall", "recollection", "remembered", 
+                  "betaRecall", "betaRecollection", "betaRemembered",
+                  "percBenefitRecall", "percBenefitRecollection", "percBenefitRemembered")){
+    # create data frame in long format
+    columns <- c("ID", "group", threshold1[p], threshold2[p])
+    output_plot <- output[,columns]
+    output_plot <- reshape2::melt(output_plot, id=c("ID","group"))
+    names(output_plot) <- c("ID", "group", "criteria", "performance")
+    
+  }else if (plot %in% c("recognition", "betaRecognition", "percBenefitRecognition")){
+    # create data frame in long format
+    pp <- pp+1
+    columns <- c("ID", "group", threshold[pp])
+    output_plot <- output[,columns]
+    output_plot <- reshape2::melt(output_plot, id=c("ID","group"))
+    names(output_plot) <- c("ID", "group", "criteria", "performance")
+    
+  }else if (plot %in% c("benefitRecall", "benefitRecollection", "benefitRecollection", "benefitRemembered")){
+    # create data frame in long format
+    ppp <- ppp+1
+    columns <- c("ID", "group", threshold_1[ppp], threshold_2[ppp], threshold_3[ppp], threshold_4[ppp])
+    output_plot <- output[,columns]
+    output_plot <- reshape2::melt(output_plot, id=c("ID","group"))
+    names(output_plot) <- c("ID", "group", "criteria", "performance")
+    output_plot$method <- ifelse(output_plot$criteria ==  threshold_1[ppp] | output_plot$criteria ==  threshold_3[ppp], "continuous", "dichotom")
+    output_plot$criteria <- ifelse(output_plot$criteria == threshold_1[ppp] | output_plot$criteria == threshold_2[ppp], label1[ppp], label1[ppp])
+    
+  } else if (plot == "benefitRecognition") {
+    # create data frame in long format
+    output_plot <-  output[,c("ID", "group","curiosityBenefit_allConf", "curiosityBenefit_allConf_dichotom")]
+    output_plot <- reshape2::melt(output_plot, id=c("ID","group"))
+    names(output_plot) <- c("ID", "group", "criteria", "performance")
+    output_plot$method <- ifelse(output_plot$criteria == "curiosityBenefit_allConf", "continuous", "dichotom")
+    output_plot$criteria <- "curiosityBenefit_allConf"
+  }
   
   # Basic violin plot
   graph <- ggplot(get(paste0("output_",plot)), aes(x=group, y=performance, fill = group)) + 
@@ -855,30 +811,34 @@ for (plot in plotVars){
     theme(legend.position="none") +
     theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) 
   # change facet grid depending on dependent variable
-  if (plot %in% c("recall", "recollection", "betaRecall", "betaRecollection", "remembered", "betaRemembered")){
+  if (plot %in% c("recall", "recollection", "remembered", 
+                  "betaRecall", "betaRecollection", "betaRemembered",
+                  "percBenefitRecall", "percBenefitRecollection", "percBenefitRemembered")){
     graph <- graph + facet_grid(. ~ criteria) 
-    if (plot %in% c("recall", "recollection")){
-      graph + coord_cartesian(ylim = c(-5, 41))
-    } else {
-      graph + coord_cartesian(ylim = c(-.25, 0.25))
-    }
+  } else if (plot %in% c("benefitRecall", "benefitRecognition", "benefitRemembered", "benefitRecollection")){
+    graph <- graph + facet_grid(criteria ~ method)
   }
-  # change x y-axis depending on dependent variable
-  if (plot %in% c("benefitRecall", "benefitRecognition", "benefitRemembered", "benefitRecollection")){
-    graph <- graph + facet_grid(criteria ~ method) +
-      coord_cartesian(ylim = c(-23, 23))
+  # change y axis depending on variable
+  if (plot %in% c("recall", "recognition", "recollection", "remembered")){
+    graph <- graph + coord_cartesian(ylim = c(-5, 41))
+  } else if (plot %in% c("benefitRecall", "benefitRecognition", "benefitRemembered", "benefitRecollection")){
+    graph <- graph + coord_cartesian(ylim = c(-23, 23))
+  } else if (plot %in% c("percBenefitRecall", "percBenefitRecollection", "percBenefitRemembered", "percBenefitRecognition")){
+    graph <- graph + coord_cartesian(ylim = c(-1, 1))
+  } else if (plot %in% c("betaRecall", "betaRecognition", "betaRemembered", "betaRecollection")){
+    graph <- graph + coord_cartesian(ylim = c(-0.4, 0.4))
   }
+  
   
   print(graph)
   print(paste0("Violonplot_", plot, ".jpeg"))
   ggsave(paste0("Violonplot_", plot, ".jpeg"))
-}  
+  
+}
 
 
-################### 8. PROBLEM, for future stef to fix ###################
+########## 8. Look at the change in memory performance between blocks over time ########## 
 
-# check whether there is a difference in the effect size depending on task block
-# NOTE: SOMETHING IS NOT WORKING HERE!!!!! HOWEVER, the effect sizes do not seem to change over blocks, hence tiredness can be excluded
 blocks <- c(1,2,3,4)
 blockstring <- c("_firstBlock", "_secondBlock", "_thirdBlock", "")
 dependentVariablesWide <- c("cuedRecallStrict_perc", "cuedRecallLenient_perc",
@@ -968,7 +928,7 @@ for (block in blocks){
   
   # add block
   effectsizesMemoryBlock$blockNumber <- block
-
+  
   # delete row.names
   row.names(effectsizesMemoryBlock) <- NULL
   
