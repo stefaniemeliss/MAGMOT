@@ -951,6 +951,9 @@ effectsizesMemoryBlock_long$grouping <- ifelse(effectsizesMemoryBlock_long$group
 # define colours
 cols <- c("Mean (no reward)" = "#F8766D", "Mean (reward)" = "#00BFC4", "Cohen's d" = "black")
 
+# define intercept for horizontal line
+hline <- data.frame(measure = c("group mean", "effect size"), intercept = c(NA, 0))
+
 # for each variable in list, create a plot showing the average performance in each group per block as well as the effect size
 for(DV in 1:length(DV_wide)) {
   
@@ -968,7 +971,11 @@ for(DV in 1:length(DV_wide)) {
     theme(legend.title = element_blank()) +
     theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) 
   
-  print(graph)
+  # print(graph)
+  # add dashed line for zero effect size
+  graph <-graph + geom_hline(aes(yintercept = intercept), hline, linetype="dashed", color = "grey")
+  
+  print(graph)  
   print(paste0("Graph_changeOfEffectsizeOverBlocks_", DV_wide[DV], ".jpeg"))
   # save file
   ggsave(file = paste0("Graph_changeOfEffectsizeOverBlocks_", DV_wide[DV], ".jpeg"), graph)
