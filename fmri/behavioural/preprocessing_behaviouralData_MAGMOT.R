@@ -708,6 +708,10 @@ for (s in seq_along(subjects)){
   ptbdata$curiosityGroupMeanCentered <- ptbdata$responseCuriosity - mean(ptbdata$responseCuriosity, na.rm = T)
   ptbdata$curiosityGroupMeanCentered_updated <- ptbdata$curiosity - mean(ptbdata$curiosity, na.rm = T)
   
+  # dichotimise curiosity
+  ptbdata$curiosity_dich <- ifelse(ptbdata$curiosityGroupMeanCentered > 0, 1,
+                                ifelse(ptbdata$curiosityGroupMeanCentered < 0, -1, NA))
+  
   # compute reward by curiosity interaction
   ptbdata$rewardByCuriosity <- ptbdata$curiosityGroupMeanCentered * ptbdata$groupEffectCoded
   ptbdata$rewardByCuriosity_updated <- ptbdata$curiosityGroupMeanCentered_updated * ptbdata$groupEffectCoded
@@ -926,10 +930,6 @@ for (s in seq_along(subjects)){
   MEMO$rememberedLenientAboveAvg<- ifelse(MEMO$cuedRecallLenient == 1 | MEMO$recognitionAboveMeanConf == 1, 1, 0)
   MEMO$rememberedStrictHigh <- ifelse(MEMO$cuedRecallStrict == 1 | MEMO$recognitionConfLevel_4_5_6 == 1, 1, 0)
   MEMO$rememberedLenientHigh <- ifelse(MEMO$cuedRecallLenient == 1 | MEMO$recognitionConfLevel_4_5_6 == 1, 1, 0)
-  
-  # dichotimise curiosity
-  MEMO$curiosity_dich <- ifelse(MEMO$curiosityGroupMeanCentered > 0, 1,
-                                ifelse(MEMO$curiosityGroupMeanCentered < 0, -1, NA))
   
   for (mem in 1:length(memoryLevels)) {
     # calculate curiosity-driven memory memory benefit (continuous, absolute) --> range: [min(curiosityGroupMeanCentered); max(curiosityGroupMeanCentered)]
@@ -1164,7 +1164,8 @@ for (s in seq_along(subjects)){
   }
   
   
-  #################################################### process questionnaire data collected during memory part
+  ########### process questionnaire data collected during memory part   ########### 
+  
   postMemory <-subset(memory, trial.type == "surveycat")   # select relevant rows and columns of memory task questions data
   postMemory <- postMemory[,c("username","startMemory", "endMemory", "memoryFile",
                               "survey_sleep_response","survey_sleep_hours",
@@ -1367,8 +1368,6 @@ for (s in seq_along(subjects)){
     setwd(preprocessedDir)
     xlsx::write.xlsx(MAGMOT, file="wide_MAGMOT.xlsx", sheetName = "Sheet1", row.names = F)
     
-    
-    
     # compute summary statistics for measurements of memory
     recognitionPerformanceVars <- c("recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2",
                                     "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4",
@@ -1399,9 +1398,7 @@ for (s in seq_along(subjects)){
     names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
     
     setwd(preprocessedDir)
-    xlsx::write.xlsx(descriptivesRecognitionPerformance, file= paste0("memoryPerformance_MAGMOT_N", length(subjects), "_", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), sheetName = "Sheet1", row.names = F)
-    
-    
+    xlsx::write.xlsx(descriptivesRecognitionPerformance, file= paste0("memoryPerformance_" , version, "_N", length(subjects),".xlsx"), sheetName = "Sheet1", row.names = F)
     
     #################### as a last step, create the files we need for concatenation ####################
     
