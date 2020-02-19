@@ -681,7 +681,6 @@ for (s in seq_along(subjects)){
   ptbdata$BIDS <- BIDSstring
   ptbdata$groupEffectCoded <-  ifelse(ptbdata$group == "ext", 1, -1)
   
-  
   # change stimID of respMatTask to match collector
   names(ptbdata)[names(ptbdata)=="stimID"] <- "vidFileName"
   ptbdata$stimID <- gsub("^\\d\\d_", "", ptbdata$vidFileName)
@@ -1145,9 +1144,6 @@ for (s in seq_along(subjects)){
     write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     write.table(BIDS_concat, file=file.path(preprocessedconcatDir, paste0(BIDSstring, "_task-magictrickwatching_concat.tsv")), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
-    
-    
-    
     # if connected to VM, save it there too
     if (dir.exists(dirVM)==T & overwrite == "yes"){
       preprocessedEventsSubjDirVM <- file.path(preprocessedEventsRootDirVM, "concat", BIDSstring)
@@ -1166,8 +1162,6 @@ for (s in seq_along(subjects)){
   if (debug == 0){
     rm(duration, onset, run, run_BIDS, BIDS, events_BIDS)
   }
-  
-  
   
   
   #################################################### process questionnaire data collected during memory part
@@ -1227,11 +1221,11 @@ for (s in seq_along(subjects)){
         postMemory[[paste0(memoryLabels[mem], "_abs", blockstring[BLOCK])]] <- sum(data_subset[[paste0(memoryLevels[mem])]], na.rm = T) 
         postMemory[[paste0(memoryLabels[mem], "_rel", blockstring[BLOCK])]] <- sum(data_subset[[paste0(memoryLevels[mem])]], na.rm = T)  / dim(data_subset)[1]
         # sum up curiosity-driven memory memory benefit (continuous, absolute)
-        postMemory[[paste0("curBen_cont_", memoryLabels[mem], "_abs", blockstring[BLOCK])]] <- sum(data_subset[[paste0("curBen_cont_", memoryLabels[mem])]], na.rm = T) 
+        postMemory[[paste0("curBen_cont_", memoryLabels[mem], blockstring[BLOCK])]] <- sum(data_subset[[paste0("curBen_cont_", memoryLabels[mem])]], na.rm = T) 
         # sum up curiosity-driven memory memory benefit (dichotomuous, absolute)
-        postMemory[[paste0("curBen_dich_", memoryLabels[mem], "_abs", blockstring[BLOCK])]] <- sum(data_subset[[paste0("curBen_dich_", memoryLabels[mem])]], na.rm = T) 
+        postMemory[[paste0("curBen_dich_", memoryLabels[mem], blockstring[BLOCK])]] <- sum(data_subset[[paste0("curBen_dich_", memoryLabels[mem])]], na.rm = T) 
         # calculate relative curiosity benefit
-        postMemory[[paste0("curBen_rel_", memoryLabels[mem], blockstring[BLOCK])]] <- (sum(data_subset[[paste0("curBen_cont_", memoryLabels[mem])]] > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset[[paste0("curBen_cont", memoryLabels[mem])]] < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
+        postMemory[[paste0("curBen_rel_", memoryLabels[mem], blockstring[BLOCK])]] <- (sum(data_subset[[paste0("curBen_cont_", memoryLabels[mem])]] > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset[[paste0("curBen_cont_", memoryLabels[mem])]] < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
         # calculate correlation between curiosity and memory
         postMemory[[paste0("curCor_",  memoryLabels[mem], blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset[[paste0(memoryLevels[mem])]], use = "pairwise.complete.obs") 
       }
@@ -1374,56 +1368,41 @@ for (s in seq_along(subjects)){
     xlsx::write.xlsx(MAGMOT, file="wide_MAGMOT.xlsx", sheetName = "Sheet1", row.names = F)
     
     
-    #   # compute summary statistics for measurements of memory
-    #   recognitionPerformanceVars <- c("cuedRecallLenient", "cuedRecallStrict",
-    #                                   "recognition", "recognitionAboveMeanConf", "recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2",
-    #                                   "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4",
-    #                                   "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
-    #                                   "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh", 
-    #                                   "meanConfidence", "meanConfidenceCorrectTrials",
-    #                                   # benefit
-    #                                   "curBen_cuedRecallStrict", "curBen_cuedRecallLenient", 
-    #                                   "curBen_allConf", "curBen_highConf", "curBen_aboveAvgConf", 
-    #                                   "curBen_rememberedStrict", "curBen_rememberedLenient", "curBen_rememberedStrictHigh", "curBen_rememberedLenientHigh", 
-    #                                   # benefit dichotom
-    #                                   "curBen_cuedRecallStrict_dichotom", "curBen_cuedRecallLenient_dichotom", 
-    #                                   "curBen_allConf_dichotom", "curBen_highConf_dichotom", "curBen_aboveAvgConf_dichotom", 
-    #                                   "curBen_rememberedStrict_dichotom", "curBen_rememberedLenient_dichotom", "curBen_rememberedStrictHigh_dichotom", "curBen_rememberedLenientHigh_dichotom", 
-    #                                   # perc benefit
-    #                                   "curBen_cuedRecallStrict_perc", "curBen_cuedRecallLenient_perc", 
-    #                                   "curBen_allConf_perc", "curBen_highConf_perc", "curBen_aboveAvgConf_perc", 
-    #                                   "curBen_rememberedStrict_perc", "curBen_rememberedLenient_perc", "curBen_rememberedStrictHigh_perc", "curBen_rememberedLenientHigh_perc", 
-    #                                   # curiosity correlation
-    #                                   "curiosityCorrelation_cuedRecallStrict", "curiosityCorrelation_cuedRecallLenient", 
-    #                                   "curiosityCorrelation_allConf", "curiosityCorrelation_highConf", "curiosityCorrelation_aboveAvgConf", 
-    #                                   "curiosityCorrelation_rememberedStrict", "curiosityCorrelation_rememberedLenient", "curiosityCorrelation_rememberedStrictHigh", "curiosityCorrelation_rememberedLenientHigh",                  
-    #                                   # curiosity beta
-    #                                   "curiosityBeta_cuedRecallStrict", "curiosityBeta_cuedRecallLenient", 
-    #                                   "curiosityBeta_aboveAvgConf", "curiosityBeta_highConf", "curiosityBeta_allConf", 
-    #                                   "curiosityBeta_rememberedStrict", "curiosityBeta_rememberedLenient", "curiosityBeta_rememberedStrictHigh", "curiosityBeta_rememberedLenientHigh",
-    #                                   "RSFC_VTAHPC_run1_z", "RSFC_VTAHPC_run2_z", "RSFC_VTAHPC_diff", "RSFC_VTAHPC_run1_z_spearman", "RSFC_VTAHPC_run2_z_spearman", "RSFC_VTAHPC_diff_spearman"     
-    #   )
-    # }
-    # 
-    # # create a data frame that shows the summary statistics for each score, for the whole population
-    # dataWideRecognitionPerformance <- MAGMOT[,recognitionPerformanceVars]
-    # df_mean <- data.frame(apply(dataWideRecognitionPerformance, 2, mean, na.rm = T), recognitionPerformanceVars)
-    # df_sd <- data.frame(apply(dataWideRecognitionPerformance, 2, sd, na.rm = T), recognitionPerformanceVars)
-    # df_min <- data.frame(apply(dataWideRecognitionPerformance, 2, min, na.rm = T), recognitionPerformanceVars)
-    # df_max <- data.frame(apply(dataWideRecognitionPerformance, 2, max, na.rm = T), recognitionPerformanceVars)
-    # 
-    # descriptivesRecognitionPerformance <- merge(df_mean, df_sd, by = "recognitionPerformanceVars")
-    # descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_min, by = "recognitionPerformanceVars")
-    # descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_max, by = "recognitionPerformanceVars")
-    # rm(df_mean, df_sd, df_min, df_max)
-    # 
-    # names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
-    # 
-    # setwd(preprocessedDir)
-    # xlsx::write.xlsx(descriptivesRecognitionPerformance, file= paste0("memoryPerformance_MAGMOT_N", length(subjects), "_", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), sheetName = "Sheet1", row.names = F)
+    
+    # compute summary statistics for measurements of memory
+    recognitionPerformanceVars <- c("recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2",
+                                    "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4",
+                                    "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
+                                    "meanConfidence", "meanConfidenceCorrectTrials",
+                                    "RSFC_VTAHPC_run1_z", "RSFC_VTAHPC_run2_z", "RSFC_VTAHPC_diff", "RSFC_VTAHPC_run1_z_spearman", "RSFC_VTAHPC_run2_z_spearman", "RSFC_VTAHPC_diff_spearman")
+    
+    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_abs"))
+    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_rel"))
+    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_cont_",memoryLabels))
+    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_dich_",memoryLabels))
+    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_rel_",memoryLabels))
+    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curCor_",memoryLabels))
+    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBeta_",memoryLabels))
+    
+    # create a data frame that shows the summary statistics for each score, for the whole population
+    dataWideRecognitionPerformance <- MAGMOT[,recognitionPerformanceVars]
+    df_mean <- data.frame(apply(dataWideRecognitionPerformance, 2, mean, na.rm = T), recognitionPerformanceVars)
+    df_sd <- data.frame(apply(dataWideRecognitionPerformance, 2, sd, na.rm = T), recognitionPerformanceVars)
+    df_min <- data.frame(apply(dataWideRecognitionPerformance, 2, min, na.rm = T), recognitionPerformanceVars)
+    df_max <- data.frame(apply(dataWideRecognitionPerformance, 2, max, na.rm = T), recognitionPerformanceVars)
+    
+    descriptivesRecognitionPerformance <- merge(df_mean, df_sd, by = "recognitionPerformanceVars")
+    descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_min, by = "recognitionPerformanceVars")
+    descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_max, by = "recognitionPerformanceVars")
+    rm(df_mean, df_sd, df_min, df_max)
+    
+    names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
+    
+    setwd(preprocessedDir)
+    xlsx::write.xlsx(descriptivesRecognitionPerformance, file= paste0("memoryPerformance_MAGMOT_N", length(subjects), "_", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), sheetName = "Sheet1", row.names = F)
     
     
-
+    
     #################### as a last step, create the files we need for concatenation ####################
     
     if (doISCprep == 1){
@@ -1446,7 +1425,7 @@ for (s in seq_along(subjects)){
       # get a list with all subject BIDS strings
       subjectsCorr <- levels(dataLong$BIDS)
       subjectsToCorrelate <- subjectsCorr
-
+      
       N <- 0.5*length(subjectsCorr)*length(subjectsToCorrelate)
       
       # create empty df for 3dISC -dataTable
@@ -1811,7 +1790,7 @@ for (s in seq_along(subjects)){
           print("Trying to save information for 3dISC -dataTable, but not connected to study drive!!!")
         }
       }
-    }
+    } # end doISCprep
   }
 }
 
