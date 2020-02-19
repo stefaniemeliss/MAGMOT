@@ -7,30 +7,42 @@ rm(list=ls())
 # define necessary directories
 mainDir <- "~/Dropbox/Reading/PhD/Magictricks/behavioural_study"
 subDirData <- "data_kittenv2"
-version <- "kittenv2"
 dataDir <- file.path(mainDir, subDirData) #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin"
-groupDir <- file.path(dataDir, "MagicBehavioural_") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_"
-contDir <- file.path(dataDir, "MagicBehavioural_cont") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_cont"
-expDir <- file.path(dataDir, "MagicBehavioural_exp") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_exp"
-memoryDir <- file.path(dataDir, "MagicBehavioural_memory") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_memory"
 preprocessedDir <- file.path(dataDir, "MagicBehavioural_preprocessed") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_preprocessed"
-codedDir <- file.path(dataDir, "coded", "preprocessed") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/coded/preprocessing"
+codedDir <- file.path(dataDir, "MagicBehavioural_memory", "preprocessed")
+
 analysisDir <- file.path(dataDir, "Analysis")
 ratingsDir <- file.path(analysisDir, "Ratings")
-tricksDir <- file.path(analysisDir, "Tricks")
+memoryDir <- file.path(ratingsDir, "Memory")
+
 
 # check whether these directories exist, if not create them
 ifelse(!dir.exists(ratingsDir), dir.create(ratingsDir), FALSE) 
+ifelse(!dir.exists(memoryDir), dir.create(memoryDir), FALSE) 
+
+
+# define version 
+version <- "kittenv2"
+# define block names
+blockstring <- c("_firstBlock", "_secondBlock", "_thirdBlock", "")
+
+memoryLevels <- c("cuedRecallStrict", "cuedRecallLenient", 
+                  "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
+                  "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
+memoryLabels <- c("cuedRecallStrict", "cuedRecallLenient", 
+                  "allConf", "highConf", "aboveAvgConf", 
+                  "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
 
 #helper functions and packages #
 
 source("~/Dropbox/Reading/Codes and functions/R/errorbars.R")
+source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
+
 library(xlsx)
-library(dplyr)
 library(psych)
 library(ggplot2)
 
-### read in data sets ###
+###### read in data sets ###### 
 setwd(preprocessedDir)
 dfWide <- read.xlsx(paste0("wide_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
 dfLong <- read.xlsx(paste0("long_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
@@ -93,10 +105,10 @@ by(cbind(dfWide[,scales]), dfWide$group, describe)
 # age
 output <- describeBy(dfWide[,"age"], group=dfWide$group)
 output <- as.data.frame(rbind(output$cont, output$exp))
-output$mot <- rep(c("int","ext"), each = 1)
+output$mot <- rep(c("cont","exp"), each = 1)
 
 outg <- ggplot(output, aes(mot, mean, fill = mot))
-outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("ext","int")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
+outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("exp","cont")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
 
 # gender
 rm(output)
@@ -108,7 +120,7 @@ outg + geom_bar(stat="identity", position="fill")+ scale_x_discrete(limits=c("co
 
 #### plots post questionnaire ####
 setwd(ratingsDir)
-library(ggplot2)
+
 output <- by(cbind(dfWide[,scales]), dfWide$group, describe)
 rating <- as.data.frame(rbind(output$cont, output$exp))
 rating$mot <- rep(c("intrinsic","extrinsic"), each = 6)
@@ -140,78 +152,70 @@ ggsave("postMainByGroup2.jpeg")
 
 rm(outg, output, rating)
 
-#### anovas post questionnaire #####
-source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
+########## Compute t-tests and effect sizes for between-group differences in questionnaire scores ########## 
 
-# nothing significant
-
-model <- lapply(scales, function(x) {
-  lm(substitute(i~groupEffectCoded, list(i = as.name(x))), data = dfWide)})
-lapply(model, summary)
-test <-t.test(dfWide$pressure~dfWide$group)
-test$estimate[1] - test$estimate[2]  
-cohen.d(dfWide[,c("group", "pressure")], "group")
-t.test(dfWide$taskEngagement~dfWide$group)
-
-# effect sizes
 for(scale in 1:length(scales)) {
+  print(scales[scale])
+  # compute t-test for group difference
+  ttest <- t.test(dfWide[,scales[scale]]~dfWide$group)
+  t.stats <- as.data.frame(t(round(c(ttest$statistic, ttest$p.value), digits = 3)))
+  names(t.stats) <- c("tValue", "pValue(t)")
   
+  # compute wilcox
+  wilcox <- wilcox.test(dfWide[,scales[scale]]~dfWide$group) 
+  attributes(wilcox)
+  w.stats <- as.data.frame(t(round(c(wilcox$statistic, wilcox$p.value), digits = 3)))
+  names(w.stats) <- c("W", "pValue(W)")
+  
+  # merge t-test and wilconxon's test
+  t.stats <- merge(t.stats, w.stats)
+  
+  # compute mean for each group
   means <- tapply(dfWide[,scales[scale]], dfWide$group, mean, na.rm = T)
   means <- as.data.frame(t(means))
-  # print(means)
+  means <- merge(t.stats, means)
   
-  data <- dfWide[,c("group", scales[scale])]
+  # compute effect size
+  if (means$exp != means$cont) {
+    data <- dfWide[,c("group", scales[scale])]
+    psych::cohen.d(data, "group")
+    d <- psych::cohen.d(data, "group")
+    cohen <- as.data.frame(d$cohen.d)
+    means <- merge(means, cohen)
+  }
   
-  d <- cohen.d(data, "group")
-  cohen <- as.data.frame(d$cohen.d)
-  # print(cohen)
-  
-  cohen <- merge(cohen, means)
-  row.names(cohen) <- paste(scales[scale])
-  
+  # put all in a data frame
+  row.names(means) <- paste(scales[scale])
   if (scale == 1) {
-    effectsizesScales <- cohen
+    effectsizesScales <- means
   } else {
-    temp_effectsizesScales <- cohen
+    temp_effectsizesScales <- means
     effectsizesScales <- rbind.all.columns(effectsizesScales, temp_effectsizesScales) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
     rm(temp_effectsizesScales)
   }
-  
 }
-write.csv(effectsizesScales, paste0("effectsizesScales_", version, ".csv"))
-
+rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
+setwd(ratingsDir)
+write.csv(effectsizesScales, paste0("effectsizesScalesNeuro_", version, ".csv"))
 
 ###### lme #####
-source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
-
-if (exists("dfLong") == F) {
-  setwd(preprocessedDir)
-  dfLong <- xlsx::read.xlsx("long_MagicBehavioural.xlsx", sheetName = "Sheet1")#,  showWarnings = FALSE)
-}
-groupingVariables <- c("mediansplitCuriosityAya", "mediansplitCuriositySample", "mediansplitCuriosityWithinSubject")
-# mediansplitCuriosityAya = median split based an Aya's data, used for initial selection/definition
-# mediansplitCuriositySample = median split based on sample data ACROSS subjects
-# mediansplitCuriosityWithinSubject =  median split based on sample data within each subject
-
-#dfLong$mediansplitCuriosityAya <- ifelse(dfLong$mediansplitCuriosityAya == "above", 1, -1)
-
 
 workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
+
 if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
   dependentVariables <- c("curiosity", "curiosityRT", "decision", "decisionRT",
-                          "recognition", "recognitionConfLevel_1", "recognitionConfLevel_2", "recognitionConfLevel_3", "recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                          "recognitionConfLevel_1_2", "recognitionConfLevel_3_4", "recognitionConfLevel_5_6", "recognitionConfLevel_1_2_3", "recognitionConfLevel_4_5_6",
-                          "confidence", "confidenceGroupMeanCentered", "confidenceCorrectTrials")
-  } else {
-    dependentVariables <- c("curiosity", "curiosityRT", "decision", "decisionRT",
-                            "cuedRecallLenient", "cuedRecallStrict", 
-                            "recognition", "recognitionConfLevel_1", "recognitionConfLevel_2", "recognitionConfLevel_3", "recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                            "recognitionConfLevel_1_2", "recognitionConfLevel_3_4", "recognitionConfLevel_5_6", "recognitionConfLevel_1_2_3", "recognitionConfLevel_4_5_6",
-                            "confidence", "confidenceGroupMeanCentered", "confidenceCorrectTrials")
+                          "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+                          "confidence", "confidenceCorrectTrials")
+} else {
+  dependentVariables <- c("curiosity", "curiosityRT", "decision", "decisionRT",
+                          "cuedRecallStrict", "cuedRecallLenient", 
+                          "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+                          "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
+                          "confidence", "confidenceCorrectTrials")
 }
 
 
-#### get descriptives
+#### get descriptives #### 
 for(DV in 1:length(dependentVariables)) {
   # print(dependentVariables[DV])
   descriptive <- describe(dfLong[,dependentVariables[DV] ])
@@ -237,205 +241,17 @@ setwd(ratingsDir)
 xlsx::write.xlsx(descriptives, file="Descriptives_dependentVariables.xlsx", sheetName = "Sheet1")
 rm(descriptives)
 
-# lmer model using curiosity as a categorial variable 
+####### lmer model using curiosity as a continous variable ######
 
 if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
-  dependentVariables <- c("recognition","recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                          "recognitionConfLevel_5_6", "recognitionConfLevel_4_5_6",
-                          "confidence", "confidenceGroupMeanCentered", "confidenceCorrectTrials")
+  dependentVariables <- c("recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+                          "confidence", "confidenceCorrectTrials")
 } else {
-  dependentVariables <- c("cuedRecallLenient", "cuedRecallStrict",
-                          "recognition","recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                          "recognitionConfLevel_5_6", "recognitionConfLevel_4_5_6",
-                          "confidence", "confidenceGroupMeanCentered", "confidenceCorrectTrials")
+  dependentVariables <- c("cuedRecallStrict", "cuedRecallLenient", 
+                          "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+                          "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
+                          "confidence", "confidenceCorrectTrials")
 }
-
-library(lmerTest)
-
-for (DV in 1:length(dependentVariables)){
-  
-  # only looking at group, ignoring curiosity
-  if (max(dfLong[, dependentVariables[DV]], na.rm = T) > 1){
-    LMEmodel_byGroupOnly <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + (1 | ID), data = dfLong)
-    LMEmodel_byGroupOnly <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong)
-  }else{
-    LMEmodel_byGroupOnly <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-    LMEmodel_byGroupOnly <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-  }
-  testGroupOnly <- anova(LMEmodel_byGroupOnly)
-  summaryGroupOnly <- summary(LMEmodel_byGroupOnly)
-  summaryGroupOnlyCoefficients <- as.data.frame(summaryGroupOnly$coefficients)
-  
-  row.names(testGroupOnly) <- c(paste0("LME_",dependentVariables[DV], "_byGroupOnly"))
-  row.names(summaryGroupOnlyCoefficients) <- c( paste0("LME_",dependentVariables[DV], "_byGroupOnly_Intercept"), paste0("LME_",dependentVariables[DV], "_byGroupOnly_RewardExp"))
-   
-  # looking at group and curiosity using mediansplitCuriosityAya
-  if (max(dfLong[, dependentVariables[DV]], na.rm = T) > 1){
-    LMEmodel_byGroupAndMediansplitCuriosityAya <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityAya + group:mediansplitCuriosityAya + (1 | ID), data = dfLong)
-    LMEmodel_byGroupAndMediansplitCuriosityAya <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityAya + group:mediansplitCuriosityAya + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong)
-  }else{
-    LMEmodel_byGroupAndMediansplitCuriosityAya <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityAya + group:mediansplitCuriosityAya + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-    LMEmodel_byGroupAndMediansplitCuriosityAya <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityAya + group:mediansplitCuriosityAya + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-  }
-  testMediansplitCuriosityAya <- anova(LMEmodel_byGroupAndMediansplitCuriosityAya)
-  summaryMediansplitCuriosityAya <- summary(LMEmodel_byGroupAndMediansplitCuriosityAya)
-  summaryMediansplitCuriosityAyaCoefficients <- as.data.frame(summaryMediansplitCuriosityAya$coefficients)
-  
-  row.names(testMediansplitCuriosityAya) <- c(paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityAya_MainEffectReward"), 
-                                              paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityAya_MainEffectCuriosity"), 
-                                              paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityAya_InteractionEffect")) 
-  row.names(summaryMediansplitCuriosityAyaCoefficients) <- c(paste0("LME_",dependentVariables[DV],"_byGroupAndMediansplitCuriosityAya_Intercept"), 
-                                                             paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityAya_RewardExp"), 
-                                                             paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityAya_BelowMedian"), 
-                                                             paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityAya_InteractionEffect"))
-  
-  # looking at group and curiosity using mediansplitCuriositySample
-  if (max(dfLong[, dependentVariables[DV]], na.rm = T) > 1){
-    LMEmodel_byGroupAndMediansplitCuriositySample <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriositySample + group:mediansplitCuriositySample + (1 | ID), data = dfLong)
-    LMEmodel_byGroupAndMediansplitCuriositySample <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriositySample + group:mediansplitCuriositySample + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong)
-  }else{
-    LMEmodel_byGroupAndMediansplitCuriositySample <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriositySample + group:mediansplitCuriositySample + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-    LMEmodel_byGroupAndMediansplitCuriositySample <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriositySample + group:mediansplitCuriositySample + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-  }
-  
-  testMediansplitCuriositySample <- anova(LMEmodel_byGroupAndMediansplitCuriositySample)
-  summaryMediansplitCuriositySample <- summary(LMEmodel_byGroupAndMediansplitCuriositySample)
-  summaryMediansplitCuriositySampleCoefficients <- as.data.frame(summaryMediansplitCuriositySample$coefficients)
-  
-  row.names(testMediansplitCuriositySample) <- c(paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriositySample_MainEffectReward"), 
-                                                 paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriositySample_MainEffectCuriosity"), 
-                                                 paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriositySample_InteractionEffect"))
-  row.names(summaryMediansplitCuriositySampleCoefficients) <- c(paste0("LME_",dependentVariables[DV],"_byGroupAndMediansplitCuriositySample_Intercept"), 
-                                                                paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriositySample_RewardExp"), 
-                                                                paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriositySample_BelowMedian"), 
-                                                                paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriositySample_InteractionEffect"))
-  
-  # looking at group and curiosity using mediansplitCuriosityWithinSubject
-  if (max(dfLong[, dependentVariables[DV]], na.rm = T) > 1){
-    LMEmodel_byGroupAndMediansplitCuriosityWithinSubject <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityWithinSubject + group:mediansplitCuriosityWithinSubject + (1 | ID), data = dfLong)
-    LMEmodel_byGroupAndMediansplitCuriosityWithinSubject <- lmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityWithinSubject + group:mediansplitCuriosityWithinSubject + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong)
-  }else{
-    LMEmodel_byGroupAndMediansplitCuriosityWithinSubject <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityWithinSubject + group:mediansplitCuriosityWithinSubject + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-    LMEmodel_byGroupAndMediansplitCuriosityWithinSubject <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + group + mediansplitCuriosityWithinSubject + group:mediansplitCuriosityWithinSubject + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-  }
-  
-  testMediansplitCuriosityWithinSubject <- anova(LMEmodel_byGroupAndMediansplitCuriosityWithinSubject)
-  summaryMediansplitCuriosityWithinSubject <- summary(LMEmodel_byGroupAndMediansplitCuriosityWithinSubject)
-  summaryMediansplitCuriosityWithinSubjectCoefficients <- as.data.frame(summaryMediansplitCuriosityWithinSubject$coefficients)
-  
-  row.names(testMediansplitCuriosityWithinSubject) <- c(paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_MainEffectReward"), 
-                                                        paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_MainEffectCuriosity"), 
-                                                        paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_InteractionEffect"))
-  row.names(summaryMediansplitCuriosityWithinSubjectCoefficients) <- c(paste0("LME_",dependentVariables[DV],"_byGroupAndMediansplitCuriosityWithinSubject_Intercept"), 
-                                                                       paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_RewardExp"), 
-                                                                       paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_BelowMedian"), 
-                                                                       paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_Median"), 
-                                                                       paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_ExpBelow"),
-                                                                       paste0("LME_",dependentVariables[DV], "_byGroupAndMediansplitCuriosityWithinSubject_ExpMedian"))
-  
-  test <- rbind.all.columns(testGroupOnly, testMediansplitCuriosityAya)
-  test <- rbind.all.columns(test, testMediansplitCuriositySample)
-  test <- rbind.all.columns(test, testMediansplitCuriosityWithinSubject)
-  
-  summary <- rbind.all.columns(summaryGroupOnlyCoefficients, summaryMediansplitCuriosityAyaCoefficients)
-  summary <- rbind.all.columns(summary, summaryMediansplitCuriositySampleCoefficients)
-  summary <- rbind.all.columns(summary, summaryMediansplitCuriosityWithinSubjectCoefficients)
-  
-  summaryShort <- summaryMediansplitCuriositySampleCoefficients
-  
-  if (DV == 1) {
-    LMEresults <- test
-    LMEresults <- summary
-    LMEresultsShort <- summaryShort
-  }
-  else {
-    temp_LMEresults <- test
-    temp_LMEresults <- summary
-    temp_LMEresultsShort <- summaryShort
-    LMEresults <- rbind.all.columns(LMEresults, temp_LMEresults) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
-    LMEresultsShort <- rbind.all.columns(LMEresultsShort, temp_LMEresultsShort) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
-    rm(temp_LMEresults, temp_LMEresultsShort)
-  }
-  rm(LMEmodel_byGroupOnly, LMEmodel_byGroupAndMediansplitCuriosityAya, LMEmodel_byGroupAndMediansplitCuriositySample, LMEmodel_byGroupAndMediansplitCuriosityWithinSubject)
-  rm(testGroupOnly, testMediansplitCuriosityAya, testMediansplitCuriositySample, testMediansplitCuriosityWithinSubject)
-  rm(summaryGroupOnly,summaryGroupOnlyCoefficients, summaryMediansplitCuriosityAya, summaryMediansplitCuriosityAyaCoefficients, summaryMediansplitCuriositySample, summaryMediansplitCuriositySampleCoefficients, summaryMediansplitCuriosityWithinSubject, summaryMediansplitCuriosityWithinSubjectCoefficients)
-}
-rm(test)
-rm(summary)
-rm(summaryShort)
-LMEresults <- round(LMEresults, digits = 5)
-LMEresultsShort <- round(LMEresultsShort, digits = 5)
-
-setwd(ratingsDir)
-xlsx::write.xlsx(LMEresults, file="LME_Results_CuriosityRatingsAndMemoryScores_byRewardAndCuriosity_v2.xlsx", sheetName = "Sheet1")
-xlsx::write.xlsx(LMEresultsShort, file="LME_Results_CuriosityRatingsAndMemoryScores_byRewardAndCuriosity_MedianSplitSample.xlsx", sheetName = "Sheet1")
-
-
-# lmer model using curiosity as a continous variable
-DV <- 11 # look at confidence for correct trials
-DV <- 8 # look at high confidence recognition
-DV <- 3 # look at recognition
-LMEmodel_curiosityContinuous <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-LMEmodel_curiosityContinuous <- glmer(dfLong[, dependentVariables[DV]] ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-
-
-
-LMEmodel_curiosityContinuous_recogHighConf <- glmer(recognitionConfLevel_4_5_6 ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-LMEmodel_curiosityContinuous_recogHighConf <- glmer(recognitionConfLevel_4_5_6 ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-summary(LMEmodel_curiosityContinuous_recogHighConf)
-exp(2*LMEmodel_curiosityContinuous_recogHighConf@beta[2]) # transform beta estimate for log-Odds from effect coding interpretation to actual change
-exp(LMEmodel_curiosityContinuous_recogHighConf@beta[2]) # transform beta estimate for log-Odds from effect coding interpretation to actual change
-sjPlot::tab_model(LMEmodel_curiosityContinuous_recogHighConf)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_recogHighConf, transform = NULL)
-
-LMEmodel_curiosityContinuous_recog <- glmer(recognition ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-LMEmodel_curiosityContinuous_recog <- glmer(recognition ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-summary(LMEmodel_curiosityContinuous_recog)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_recog)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_recog, transform = NULL)
-
-LMEmodel_curiosityContinuous_confidenceCorrect <- lmerTest::lmer(confidenceCorrectTrials ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1 | ID), data = dfLong)
-LMEmodel_curiosityContinuous_confidenceCorrect <- lmerTest::lmer(confidenceCorrectTrials ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong)
-summary(LMEmodel_curiosityContinuous_confidenceCorrect)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_confidenceCorrect)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_confidenceCorrect, transform = NULL)
-
-LMEmodel_curiosityContinuous_confidence <- lmerTest::lmer(confidence ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1 | ID), data = dfLong)
-LMEmodel_curiosityContinuous_confidence <- lmerTest::lmer(confidence ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong)
-summary(LMEmodel_curiosityContinuous_confidence)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_confidence)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_confidence, transform = NULL)
-
-LMEmodel_curiosityContinuous_confidence_recogAsCov <- lmerTest::lmer(confidence ~ 1 + recognition + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1 | ID), data = dfLong)
-LMEmodel_curiosityContinuous_confidence_recogAsCov <- lmerTest::lmer(confidence ~ 1 + recognition + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong)
-summary(LMEmodel_curiosityContinuous_confidence_recogAsCov)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_confidence_recogAsCov)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_confidence_recogAsCov, transform = NULL, show.stat = T, show.std = T)
-sjstats::std_beta(LMEmodel_curiosityContinuous_confidence_recogAsCov)
-
-
-
-LMEmodel_curiosityContinuous_recall <- glmer(cuedRecallStrict ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-LMEmodel_curiosityContinuous_recall <- glmer(cuedRecallStrict ~ 1 + groupEffectCoded + curiosityGroupMeanCentered + rewardByCuriosity + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-summary(LMEmodel_curiosityContinuous_recall)
-sjPlot::tab_model(LMEmodel_curiosityContinuous_recall)
-
-
-LMEmodel <- glmer(recognition ~ 1 + confidenceGroupMeanCentered + curiosityGroupMeanCentered + confidenceGroupMeanCentered:curiosityGroupMeanCentered + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-LMEmodel <- glmer(recognition ~ 1 + confidenceGroupMeanCentered + curiosityGroupMeanCentered + confidenceGroupMeanCentered:curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-summary(LMEmodel)
-sjPlot::tab_model(LMEmodel)
-
-LMEmodel_highConfRec <- glmer(recognitionConfLevel_4_5_6 ~ 1 + confidenceGroupMeanCentered + curiosityGroupMeanCentered + confidenceGroupMeanCentered:curiosityGroupMeanCentered + (1 | ID), data = dfLong, family = binomial(link = 'logit'))
-LMEmodel_highConfRec <- glmer(recognitionConfLevel_4_5_6 ~ 1 + confidenceGroupMeanCentered + curiosityGroupMeanCentered + confidenceGroupMeanCentered:curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), data = dfLong, family = binomial(link = 'logit'))
-summary(LMEmodel_highConfRec)
-sjPlot::tab_model(LMEmodel_highConfRec)
-
-
-cor.test(dfLong$curiosityGroupMeanCentered, dfLong$confidenceGroupMeanCentered, use = "pairwise.complete.obs")
-plot(dfLong$curiosityGroupMeanCentered, dfLong$confidenceGroupMeanCentered, main = paste(version))
-abline(lm(dfLong$curiosityGroupMeanCentered ~ dfLong$confidenceGroupMeanCentered), col="red")
-
 
 for (DV in 1:length(dependentVariables)){
   
@@ -468,153 +284,357 @@ setwd(ratingsDir)
 xlsx::write.xlsx(LMEresults, file=paste0("LME_Results_", version, "_CuriosityRatingsAndMemoryScores_byCuriosityAsContinuousVariable.xlsx"), sheetName = "Sheet1")
 
 
-#### bar plots ####
-library(ggplot2)
-source('~/Dropbox/Reading/Codes and functions/R/errorbars.R')
-setwd(preprocessedDir)
-if (exists("groupingVariables") == F) {
-  groupingVariables <- c("mediansplitCuriosityAya", "mediansplitCuriositySample", "mediansplitCuriosityWithinSubject")
-}
-if (exists("dfLong") == F) {
-  setwd(preprocessedDir)
-  dfLong <- xlsx::read.xlsx("long_MagicBehavioural.xlsx", sheetName = "Sheet1")#,  showWarnings = FALSE)
-}
-if (exists("dependentVariables") == F) {
-  dependentVariables <- c("cuedRecallLenient", "cuedRecallStrict",
-                          "recognition", "recognitionConfLevel_1", "recognitionConfLevel_2", "recognitionConfLevel_3", "recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                          "recognitionConfLevel_1_2", "recognitionConfLevel_3_4", "recognitionConfLevel_5_6", "recognitionConfLevel_1_2_3", "recognitionConfLevel_4_5_6",
-                          "confidence", "confidenceCorrectTrials")
-}
+########## Create barplots to visualise the effects of curiosity and reward on memory performance ########## 
 
+# create a dichomotised curiosity variable using mean-cenetred curiosity
+dfLong$curiosity_dich <- ifelse(dfLong$curiosity_dich == -1, "below", 
+                                ifelse(dfLong$curiosity_dich == 1, "above", NA)) # create curiosity_dichotom as factor
+# define grouping variables
+groupingVariables <- c("mediansplitCuriositySample", "mediansplitCuriosityWithinSubject", "curiosity_dich")
+groupingVariables <- c("mediansplitCuriosityWithinSubject", "curiosity_dich")
+
+# determine dependent variables to loop over (same as above)
+DV_barplot <- c("cuedRecallStrict", "cuedRecallLenient", 
+                "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+                "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
+                "confidence", "confidenceCorrectTrials", 
+                "confidenceGroupMeanCentered", "confidenceGroupMeanCenteredCorrectTrials")
+
+# determine colours to be used in histogram
 cols <- c("above" = "#F8766D", "below" = "#00BFC4", "all tricks" = "grey", "median" = "#C77CFF")
 
-setwd(ratingsDir)
-for (g in 1:length(groupingVariables)){
+# set directory where to save plots
+setwd(memoryDir)
+
+#loop over dependent variables to create bar plots
+for (DV in DV_barplot){
   
-  for (DV in dependentVariables){
+  # loop over grouping variables for continuous curiosity variable
+  for (g in 1:length(groupingVariables)){
     # create a data frame containing the data for each group divided regarding curiosity ratings
     outputGroup <- summarySEwithin(dfLong, measurevar=DV, betweenvars="group", withinvars=groupingVariables[g], idvar="ID", na.rm = T)
-    levels(outputGroup$group) <- c("No reward","Reward")
+    levels(outputGroup$group) <- c("No reward", "Reward")
+    names(outputGroup)[names(outputGroup) == groupingVariables[g]] <- "cutoff"
     
-    # # create a data frame containing the data for each group regardless of curiosity ratings
-    # outputAll <- summarySE(dfLong, measurevar=DV, groupvars="group", na.rm=T,
-    #                        conf.interval=.95, .drop=TRUE)
-    # levels(outputAll$group) <- c("No reward","Reward")
-    # outputAll[[paste0(groupingVariables[g])]] <- rep("all tricks", 2)
+    # remove NAs (necessary for curiosity_dichotomous)
+    outputGroup <- na.omit(outputGroup) 
     
-    # combine these two data frames and use it for plotting
-    output <- outputGroup
-    
-    # output <- outputGroup
-    
-    # create bar graph
-    graph <- ggplot(output, aes(x=group, y=get(DV), fill=get(groupingVariables[g]))) +
-      geom_bar(stat="identity", position="dodge") + geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=get(DV)-1.96*se, ymax=get(DV)+1.96*se)) +
-      scale_x_discrete(limits=c("No reward", "Reward")) + 
-      labs(x="Between Group manipulation", y="Performance index", fill = "Curiosity median split", title = paste("Memory performance in",version, ":", DV, "by",groupingVariables[g] ))  +
-      theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"), legend.title = element_text(size=20), legend.text = element_text(size = 20)) +
-      theme_classic() + scale_fill_manual(values = cols)
-    if (DV %in% c("cuedRecallStrict", "cuedRecallLenient")){
-      graph <- graph + coord_cartesian(ylim = c(0, 1))
-    }
-    if (DV %in% c("recognition", "recognitionConfLevel_1", "recognitionConfLevel_2", "recognitionConfLevel_3", "recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                  "recognitionConfLevel_1_2", "recognitionConfLevel_3_4", "recognitionConfLevel_5_6", "recognitionConfLevel_1_2_3", "recognitionConfLevel_4_5_6")){
-      graph <- graph + coord_cartesian(ylim = c(0, 1)) + geom_hline(yintercept = 0.25, linetype="dashed", color = "black")
-    }
-    if (DV %in% c("confidence", "confidenceCorrectTrials")){
-      graph <- graph + coord_cartesian(ylim = c(0, 6))
-      
-    }
-    print(graph)
-    print(paste0("Graph_2x2_", DV, "_by", groupingVariables[g], ".jpeg"))
-    ggsave(paste0("Graph_2x2_", DV, "_by", groupingVariables[g], ".jpeg"))
-  }
-}
-
-for (g in 1:length(groupingVariables)){
-
-  for (DV in dependentVariables){
-    # create a data frame containing the data for each group divided regarding curiosity ratings
-    outputGroup <- summarySEwithin(dfLong, measurevar=DV, betweenvars="group", withinvars=groupingVariables[g], idvar="ID", na.rm = T)
-    levels(outputGroup$group) <- c("No reward","Reward")
+    # add grouping variable as column
+    outputGroup$groupingvar <- groupingVariables[g]
     
     # create a data frame containing the data for each group regardless of curiosity ratings
     outputAll <- summarySE(dfLong, measurevar=DV, groupvars="group", na.rm=T,
                            conf.interval=.95, .drop=TRUE)
-    levels(outputAll$group) <- c("No reward","Reward")
-    outputAll[[paste0(groupingVariables[g])]] <- rep("all tricks", 2)
+    levels(outputAll$group) <-  c("No reward", "Reward")
+    outputAll$cutoff <- rep("all tricks", 2)    
+    outputAll$groupingvar <- groupingVariables[g]
     
     # combine these two data frames and use it for plotting
-    output <- rbind.all.columns(outputGroup, outputAll)
-    
-    # output <- outputGroup
-    
-    # create bar graph
-    graph <- ggplot(output, aes(x=group, y=get(DV), fill=get(groupingVariables[g]))) +
-      geom_bar(stat="identity", position="dodge") + geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=get(DV)-se, ymax=get(DV)+se)) +
-      scale_x_discrete(limits=c("No reward", "Reward")) + 
-      labs(x="Between Group manipulation", y="Performance index", fill = "Curiosity median split", title = paste("Memory performance in",version, ":", DV, "by",groupingVariables[g] ))  +
-      theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"), legend.title = element_text(size=20), legend.text = element_text(size = 20)) +
-      theme_classic() + scale_fill_manual(values = cols)
-    if (DV %in% c("cuedRecallStrict", "cuedRecallLenient")){
-      graph <- graph + coord_cartesian(ylim = c(0, 1))
+    if (g == 1){
+      output <- rbind.all.columns(outputGroup, outputAll)
+    } else {
+      outputGroup <- rbind.all.columns(outputGroup, outputAll)
+      output <- rbind.all.columns(output, outputGroup)
     }
-    if (DV %in% c("recognition", "recognitionConfLevel_1", "recognitionConfLevel_2", "recognitionConfLevel_3", "recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                  "recognitionConfLevel_1_2", "recognitionConfLevel_3_4", "recognitionConfLevel_5_6", "recognitionConfLevel_1_2_3", "recognitionConfLevel_4_5_6")){
-      graph <- graph + coord_cartesian(ylim = c(0, 1)) + geom_hline(yintercept = 0.25, linetype="dashed", color = "black")
-    }
-    if (DV %in% c("confidence", "confidenceCorrectTrials")){
-      graph <- graph + coord_cartesian(ylim = c(0, 6))
-      
-    }
-    print(graph)
-    print(paste0("Graph_2x2_", DV, "_by", groupingVariables[g], "_v2.jpeg"))
-    ggsave(paste0("Graph_2x2_", DV, "_by", groupingVariables[g], "_v2.jpeg"))
   }
+  output <- output[!output$cutoff =="all tricks", ]  # this line can be commented out to also illustrate effect regardless of group
+  
+  
+  # create bar graph
+  graph <- ggplot(output, aes(x=group, y=get(DV), fill=cutoff)) +
+    geom_bar(stat="identity", position="dodge") + geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=get(DV)-se, ymax=get(DV)+se)) +
+    scale_x_discrete(limits=c("No reward", "Reward")) + 
+    labs(x="Between Group manipulation", y="Performance index", fill = "Curiosity category", title = paste(version, ":", DV ))  +
+    theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"), legend.title = element_text(size=20), legend.text = element_text(size = 20)) +
+    theme_classic() + scale_fill_manual(values = cols) +
+    facet_grid(. ~ groupingvar)     
+  
+  # modify bar graph depending on dependent variable
+  if (DV %in% c("cuedRecallStrict", "cuedRecallLenient", "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")){
+    graph <- graph + coord_cartesian(ylim = c(0, 1))
+  }
+  if (DV %in% c("recognition", "recognitionAboveMeanConf", "recognitionConfLevel_4_5_6")){
+    graph <- graph + coord_cartesian(ylim = c(0, 1)) + geom_hline(yintercept = 0.25, linetype="dashed", color = "black")
+  }
+  if (DV %in% c("confidence", "confidenceCorrectTrials")){
+    graph <- graph + coord_cartesian(ylim = c(0, 6))
+  }
+  if (DV %in% c("confidenceGroupMeanCentered", "confidenceGroupMeanCenteredCorrectTrials")){
+    graph <- graph + coord_cartesian(ylim = c(-1, 1))
+  }
+  print(graph)
+  print(paste0("Bargraph_", DV, ".jpeg"))
+  ggsave(paste0("Bargraph_", DV, ".jpeg"))
 }
 
-## determine effect sizes
-source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
 
-dependentVariablesWide <- c("cuedRecallStrict", "cuedRecallLenient",
-                        "recognition", 
-                        "recognitionConfLevel_6", "recognitionConfLevel_5_6", "recognitionConfLevel_4_5_6")
-dependentVariablesWide <- c("recognition", "meanConfidence", "meanConfidenceCorrectTrials",
-                            "recognitionConfLevel_6", "recognitionConfLevel_5_6", "recognitionConfLevel_4_5_6")
-dependentVariablesWide <- c("cuedRecallStrict", "cuedRecallLenient", "recognition", "recognitionConfLevel_1", "recognitionConfLevel_2", "recognitionConfLevel_3", "recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                            "recognitionConfLevel_1_2", "recognitionConfLevel_3_4", "recognitionConfLevel_5_6", "recognitionConfLevel_1_2_3", "recognitionConfLevel_4_5_6",
-                            "meanConfidence", "meanConfidenceCorrectTrials")
+########## Create histograms to further investigate the relation between reward, curiosity and memory ########## 
 
-for(DV in 1:length(dependentVariablesWide)) {
-  means <- tapply(dfWide[,dependentVariablesWide[DV]], dfWide$group, mean, na.rm = T)
-  # deviations <- tapply(dfWide[,dependentVariablesWide[DV]], dfWide$group, sd, na.rm = T)
+# define variables
+DV_hist <- c("cuedRecallStrict", "cuedRecallLenient", 
+             "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+             "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
+# create data frame and recode memory as factors
+output <- dfLong[,c("ID", "group", "curiosityGroupMeanCentered", DV_hist)]
+output$group <- ifelse(output$group == "cont", "No reward", "Reward")
+
+# remove IDs without memory data
+output <- subset(output, output$ID != "exp36")
+output <- subset(output, output$ID != "exp24")
+
+# loop over dependent variables to create histograms 
+for (DV in DV_hist){
+  
+  # recode memory performance
+  output[[paste0(DV)]] <- ifelse(output[[paste0(DV)]] == 0, "forgotten", "remembered")
+  
+  # histogram plot: facet: group, col: memory
+  graph <- ggplot(output, aes(x=curiosityGroupMeanCentered, col = get(DV), fill = get(DV))) + 
+    geom_histogram(aes(y=..density..), binwidth = 0.1, alpha=0.2, position="dodge") +
+    geom_density(alpha=.1) +
+    theme_classic() + 
+    scale_color_brewer(palette="Dark2", limits = c("remembered", "forgotten")) + scale_fill_brewer(palette="Dark2", limits = c("remembered", "forgotten")) +
+    facet_grid(group ~ .) +
+    coord_cartesian(xlim = c(-5, 5), ylim = c(0, 1)) +
+    labs(x="curiosity group mean centered", y="Density", title = paste(version, DV)) +
+    theme(legend.position="bottom") + theme(legend.title = element_blank()) + 
+    theme(axis.text=element_text(size=14), axis.title=element_text(size=16, face="bold"), title=element_text(size =20, face="bold"), strip.text = element_text(size = 16)) 
+  
+  print(graph)
+  print(paste0("Histogram_", DV, ".jpeg"))
+  ggsave(paste0("Histogram_", DV, ".jpeg"))
+  
+  # histogram plot: facet: memory, col: group
+  graph <- ggplot(output, aes(x=curiosityGroupMeanCentered, col = group, fill = group)) + 
+    geom_histogram(aes(y=..density..), binwidth = 0.1, alpha=0.2, position="dodge") +
+    geom_density(alpha=.1) +
+    theme_classic() + 
+    facet_grid(get(DV) ~ .) +
+    coord_cartesian(xlim = c(-5, 5), ylim = c(0, 1)) +
+    labs(x="curiosity group mean centered", y="Density", title = paste(version, DV)) +
+    theme(legend.position="bottom") + theme(legend.title = element_blank()) + 
+    theme(axis.text=element_text(size=14), axis.title=element_text(size=16, face="bold"), title=element_text(size =20, face="bold"), strip.text = element_text(size = 16)) 
+  
+  print(graph)
+  print(paste0("Histogram_", DV, "_2.jpeg"))
+  ggsave(paste0("Histogram_", DV, "_2.jpeg"))
+}
+
+
+
+########## 6. Compute t-tests and effect sizes for between-group differences in memory scores ########## 
+
+
+# define dependent variables (i.e. sum scores)
+
+DV_wide <- c(paste0(memoryLabels, "_abs")) # absolute sum scores
+DV_wide <- c(DV_wide, paste0("curBeta_",memoryLabels)) # betas
+DV_wide <- c(DV_wide, paste0("curCor_",memoryLabels)) # correlation
+for (mem in 1:length(memoryLevels)) { # benefits
+  DV_wide <- c(DV_wide, paste0("curBen_cont_", memoryLabels[mem], collapse = ", "))
+  DV_wide <- c(DV_wide, paste0("curBen_dich_", memoryLabels[mem], collapse = ", "))
+  DV_wide <- c(DV_wide, paste0("curBen_rel_", memoryLabels[mem], collapse = ", "))
+}
+
+
+# for all dependent variables compute two-sample t-test and calculate effect size
+for(DV in 1:length(DV_wide)) {
+  
+    # compute t-test for group difference
+  ttest <- t.test(dfWide[,DV_wide[DV]]~dfWide$group)
+  t.stats <- as.data.frame(t(round(c(ttest$statistic, ttest$p.value), digits = 3)))
+  names(t.stats) <- c("tValue", "pValue(t)")
+  
+  # compute wilcox
+  wilcox <- wilcox.test(dfWide[,DV_wide[DV]]~dfWide$group) 
+  attributes(wilcox)
+  w.stats <- as.data.frame(t(round(c(wilcox$statistic, wilcox$p.value), digits = 3)))
+  names(w.stats) <- c("W", "pValue(W)")
+  
+  # merge t-test and wilconxon's test
+  t.stats <- merge(t.stats, w.stats)
+  
+  # compute mean for each group
+  means <- tapply(dfWide[,DV_wide[DV]], dfWide$group, mean, na.rm = T)
   means <- as.data.frame(t(means))
-  # deviations <- as.data.frame(t(deviations))
-
-  data <- dfWide[,c("group", dependentVariablesWide[DV])]
+  means <- merge(t.stats, means)
   
-  d <- cohen.d(data, "group")
-  cohen <- as.data.frame(d$cohen.d)
-  rm(d)
+  # compute effect size
+  if (means$cont != means$exp) {
+    data <- dfWide[,c("group", DV_wide[DV])]
+    d <- psych::cohen.d(data, "group")
+    cohen <- as.data.frame(d$cohen.d)
+    means <- merge(means, cohen)
+  }
   
-  cohen <- merge(cohen, means)
-  rm(means)
-  row.names(cohen) <- paste(dependentVariablesWide[DV])
+  # put all in a data frame
+  row.names(means) <- paste(DV_wide[DV])
   if (DV == 1) {
-    effectsizesMemory <- cohen
+    effectsizesMemory <- means
   } else {
-    temp_effectsizesMemory <- cohen
+    temp_effectsizesMemory <- means
     effectsizesMemory <- rbind.all.columns(effectsizesMemory, temp_effectsizesMemory) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
     rm(temp_effectsizesMemory)
   }
-  rm(cohen)
 }
+# delete unnecssary variables, round values and save dataframe
+rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
 effectsizesMemory <- round(effectsizesMemory, digits = 3)
-
+setwd(memoryDir)
 write.csv(effectsizesMemory, paste0("effectsizesMemory_", version, ".csv"))
-
 effectsizes <- rbind.all.columns(effectsizesScales, effectsizesMemory)
+setwd(ratingsDir)
 write.csv(effectsizes, paste0("effectsizesAll_", version, ".csv"))
+
+
+########## 7. Create violin plots for sum scores of memory measures in each group ########## 
+# subset dataWide
+output <- dfWide[,c("ID", "group", DV_wide)]
+output$group <- ifelse(output$group == "cont", "No reward", "Reward")
+setwd(memoryDir)
+
+threshold_remembered1 <- c("rememberedStrictAboveAvg_abs", "curBeta_rememberedStrictAboveAvg", "curCor_rememberedStrictAboveAvg",
+                           "curBen_cont_rememberedStrictAboveAvg", "curBen_dich_rememberedStrictAboveAvg", "curBen_rel_rememberedStrictAboveAvg")
+threshold_remembered2 <- c("rememberedLenientAboveAvg_abs", "curBeta_rememberedLenientAboveAvg", "curCor_rememberedLenientAboveAvg", 
+                           "curBen_cont_rememberedLenientAboveAvg", "curBen_dich_rememberedLenientAboveAvg", "curBen_rel_rememberedLenientAboveAvg")
+threshold_remembered3 <- c("rememberedStrictHigh_abs", "curBeta_rememberedStrictHigh", "curCor_rememberedStrictHigh",
+                           "curBen_cont_rememberedStrictHigh", "curBen_dich_rememberedStrictHigh", "curBen_rel_rememberedStrictHigh")
+threshold_remembered4 <- c("rememberedLenientHigh_abs", "curBeta_rememberedLenientHigh", "curCor_rememberedLenientHigh",
+                           "curBen_cont_rememberedLenientHigh", "curBen_dich_rememberedLenientHigh", "curBen_rel_rememberedLenientHigh")
+
+# define variables to plot data for
+plotVars <- c("recall", "recollection", # absolute values 
+              "betaRecall", "betaRecollection", # beta values
+              "absoluteBenefitRecall_dich", "absoluteBenefitRecollection_dich", # dichotomised curiosity benefit
+              "absoluteBenefitRecall_cont", "absoluteBenefitRecollection_cont", # continuous curiosity benefit
+              "relativeBenefitRecall", "relativeBenefitRecollection", # relative curiosity benefit
+              "correlationRecall", "correlationRecollection", # correlation
+              "recognition", "betaRecognition", "correlationRecognition",
+              "absoluteBenefitRecognition_dich", "absoluteBenefitRecognition_cont", "relativeBenefitRecognition",
+              "remembered", "betaRemembered", "correlationRemembered",
+              "absoluteBenefitRemembered_dich", "absoluteBenefitRemembered_cont", "relativeBenefitRemembered")
+
+# define thresholds for the facet.grid "criteria"
+threshold_recoll1 <- c("cuedRecallStrict_abs", "aboveAvgConf_abs", 
+                       "curBeta_cuedRecallStrict", "curBeta_aboveAvgConf", 
+                       "curBen_dich_cuedRecallStrict", "curBen_dich_aboveAvgConf",
+                       "curBen_cont_cuedRecallStrict", "curBen_cont_highConf", 
+                       "curBen_rel_cuedRecallStrict", "curBen_rel_aboveAvgConf", 
+                       "curCor_cuedRecallStrict", "curCor_aboveAvgConf")
+
+threshold_recoll2 <- c("cuedRecallLenient_abs", "highConf_abs", 
+                       "curBeta_cuedRecallLenient", "curBeta_highConf", 
+                       "curBen_dich_cuedRecallLenient", "curBen_dich_highConf",
+                       "curBen_cont_cuedRecallLenient", "curBen_cont_aboveAvgConf",
+                       "curBen_rel_cuedRecallLenient", "curBen_rel_highConf", 
+                       "curCor_cuedRecallLenient", "curCor_highConf")
+
+# define thresholds for unthresholded recognition
+threshold_recog <- c("allConf_abs", "curBeta_allConf", "curCor_allConf", "curBen_dich_allConf", "curBen_cont_allConf", "curBen_rel_allConf")
+
+# define thresholds and labels for facet.grid "criteria" * "method"
+threshold_remembered1 <- c("rememberedStrictAboveAvg_abs", "curBeta_rememberedStrictAboveAvg", "curCor_rememberedStrictAboveAvg",
+                           "curBen_cont_rememberedStrictAboveAvg", "curBen_dich_rememberedStrictAboveAvg", "curBen_rel_rememberedStrictAboveAvg")
+threshold_remembered2 <- c("rememberedLenientAboveAvg_abs", "curBeta_rememberedLenientAboveAvg", "curCor_rememberedLenientAboveAvg", 
+                           "curBen_cont_rememberedLenientAboveAvg", "curBen_dich_rememberedLenientAboveAvg", "curBen_rel_rememberedLenientAboveAvg")
+threshold_remembered3 <- c("rememberedStrictHigh_abs", "curBeta_rememberedStrictHigh", "curCor_rememberedStrictHigh",
+                           "curBen_cont_rememberedStrictHigh", "curBen_dich_rememberedStrictHigh", "curBen_rel_rememberedStrictHigh")
+threshold_remembered4 <- c("rememberedLenientHigh_abs", "curBeta_rememberedLenientHigh", "curCor_rememberedLenientHigh",
+                           "curBen_cont_rememberedLenientHigh", "curBen_dich_rememberedLenientHigh", "curBen_rel_rememberedLenientHigh")
+
+# set variables to loop through
+pp <- 0
+ppp <- 0
+
+# loop over all variables to plot
+for(p in 1:length(plotVars)) {
+  
+  plot <- plotVars[p]
+  print(plot)
+  
+  if (plot %in% c("recall", "recollection", # absolute values 
+                  "betaRecall", "betaRecollection", # beta values
+                  "absoluteBenefitRecall_dich", "absoluteBenefitRecollection_dich", # dichotomised curiosity benefit
+                  "absoluteBenefitRecall_cont", "absoluteBenefitRecollection_cont", # continuous curiosity benefit
+                  "relativeBenefitRecall", "relativeBenefitRecollection", # relative curiosity benefit
+                  "correlationRecall", "correlationRecollection")){ # correlation
+    # create data frame in long format
+    columns <- c("ID", "group", threshold_recoll1[p], threshold_recoll2[p])
+    output_plot <- output[,columns]
+    output_plot <- reshape2::melt(output_plot, id=c("ID","group"))
+    names(output_plot) <- c("ID", "group", "criteria", "performance")
+    
+  } else if (plot %in% c("recognition", "betaRecognition", "relativeBenefitRecognition", "correlationRecognition",
+                         "absoluteBenefitRecognition_dich", "absoluteBenefitRecognition_cont", "relativeBenefitRecognition")){
+    # create data frame in long format
+    pp <- pp+1
+    columns <- c("ID", "group", threshold_recog[pp])
+    output_plot <- output[,columns]
+    output_plot <- reshape2::melt(output_plot, id=c("ID","group"))
+    names(output_plot) <- c("ID", "group", "criteria", "performance")
+    
+  } else if (plot %in% c("remembered", "betaRemembered", "correlationRemembered",
+                         "absoluteBenefitRemembered_dich", "absoluteBenefitRemembered_cont", "relativeBenefitRemembered")){
+    # create data frame in long format
+    ppp <- ppp+1
+    columns <- c("ID", "group", threshold_remembered1[ppp], threshold_remembered2[ppp], threshold_remembered3[ppp], threshold_remembered4[ppp])
+    output_plot <- output[,columns]
+    output_plot <- reshape2::melt(output_plot, id=c("ID","group"))
+    names(output_plot) <- c("ID", "group", "criteria", "performance")
+    output_plot$method <- ifelse(output_plot$criteria ==  threshold_remembered1[ppp] | output_plot$criteria ==  threshold_remembered3[ppp], "strict recall", "lenient recall")
+    output_plot$criteria <- ifelse(output_plot$criteria == threshold_remembered1[ppp] | output_plot$criteria == threshold_remembered2[ppp], "above average conf", "high conf")
+  } 
+  
+  # Basic violin plot
+  # graph <- ggplot(get(paste0("output_",plot)), aes(x=group, y=performance, fill = group)) + 
+  graph <- ggplot(get(paste0("output_plot")), aes(x=group, y=performance, fill = group)) + 
+    geom_violin(trim=FALSE) +
+    geom_boxplot(width=0.1) +
+    geom_jitter(size = 1, shape=1, position=position_jitter(0.2)) +
+    theme_classic() +
+    labs(x="Experimental Condition", y="Sum score", title = paste(version, plot)) +
+    theme(legend.position="none") +
+    theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) 
+  # change facet grid depending on dependent variable
+  if (plot %in% c("recall", "recollection", # absolute values 
+                  "betaRecall", "betaRecollection", # beta values
+                  "absoluteBenefitRecall_dich", "absoluteBenefitRecollection_dich", # dichotomised curiosity benefit
+                  "absoluteBenefitRecall_cont", "absoluteBenefitRecollection_cont", # continuous curiosity benefit
+                  "relativeBenefitRecall", "relativeBenefitRecollection", # relative curiosity benefit
+                  "correlationRecall", "correlationRecollection")){
+    graph <- graph + facet_grid(. ~ criteria) 
+  } else if (plot %in% c( "remembered", "betaRemembered", "correlationRemembered",
+                          "absoluteBenefitRemembered_dich", "absoluteBenefitRemembered_cont", "relativeBenefitRemembered")){
+    graph <- graph + facet_grid(criteria ~ method)
+  }
+  # change y axis depending on variable
+  if (plot %in% c("recall", "recognition", "recollection", "remembered")){
+    graph <- graph + coord_cartesian(ylim = c(-5, 41))
+  } else if (plot %in% c("absoluteBenefitRecall_dich", "absoluteBenefitRecollection_dich", # dichotomised curiosity benefit
+                         "absoluteBenefitRecall_cont", "absoluteBenefitRecollection_cont", # continuous curiosity benefit
+                         "absoluteBenefitRecognition_dich", "absoluteBenefitRecognition_cont",
+                         "absoluteBenefitRemembered_dich", "absoluteBenefitRemembered_cont")){
+    graph <- graph + coord_cartesian(ylim = c(-23, 23))
+  } else if (plot %in% c("relativeBenefitRecall", "relativeBenefitRecollection",
+                         "relativeBenefitRecognition", "relativeBenefitRemembered",
+                         "correlationRecall", "correlationRecollection",
+                         "correlationRecognition", "correlationRemembered")){
+    graph <- graph + coord_cartesian(ylim = c(-1, 1))
+  } else if (plot %in% c("betaRecall", "betaRecognition", "betaRemembered", "betaRecollection")){
+    graph <- graph + coord_cartesian(ylim = c(-0.4, 0.4))
+  }
+  
+  
+  print(graph)
+  print(paste0("Violonplot_", plot, ".jpeg"))
+  ggsave(paste0("Violonplot_", plot, ".jpeg"))
+  
+}
+
+
+
+
+
 
 
 # check whether there is a difference in the effect size depending on task block
@@ -717,39 +737,135 @@ for (DV in 1:length(dependentVariablesWideMemory)){
 }
 
 
+########## 8. Look at the change in memory performance between blocks over time ########## 
 
-dfLong$recognisedAndRecalledStrict <- ifelse(dfLong$recognition == dfLong$cuedRecallStrict, 1, 0)
-dfLong$recognisedHighConfAndRecalledStrict <- ifelse(dfLong$recognitionConfLevel_4_5_6 == dfLong$cuedRecallStrict, 1, 0)
-dfLong$recognisedAndRecalledLenient <- ifelse(dfLong$recognition == dfLong$cuedRecallLenient, 1, 0)
-dfLong$recognisedHighConfAndRecalledLenient <- ifelse(dfLong$recognitionConfLevel_4_5_6 == dfLong$cuedRecallLenient, 1, 0)
-mean(dfLong$recognisedAndRecalledStrict, na.rm=T)
-mean(dfLong$recognisedAndRecalledLenient, na.rm=T)
-mean(dfLong$recognisedHighConfAndRecalledStrict, na.rm=T)
-mean(dfLong$recognisedHighConfAndRecalledLenient, na.rm=T)
+blocks <- c(1,2,3,4)
+blockstring <- c("_firstBlock", "_secondBlock", "_thirdBlock", "")
 
 
-dfLong$memoryStrict <- ifelse(dfLong$recognitionConfLevel_4_5_6 == 1 & dfLong$cuedRecallStrict == 1, "recognisedHighConfAndRecalledStrict", 
-                              #ifelse(dfLong$recognition == 1 & dfLong$cuedRecallStrict == 1, "recognisedAndRecalledStrict",
-                                                    #ifelse(dfLong$recognition == 0  & dfLong$cuedRecallStrict == 1, "notRecognisedButRecalledStrict",
-                                                                  ifelse(dfLong$recognitionConfLevel_4_5_6 == 0 & dfLong$cuedRecallStrict == 1, "notRecognisedHighButAndRecalledStrict",
-                                                                                #ifelse(dfLong$recognition == 1 & dfLong$cuedRecallStrict == 0, "recognisedButNotRecalledStrict",
-                                                                                              ifelse(dfLong$recognitionConfLevel_4_5_6 == 1 & dfLong$cuedRecallStrict == 0, "recognisedHighConfButNotRecalledStrict", 
-                                                                                                            #ifelse(dfLong$recognition == 0 & dfLong$cuedRecallStrict == 0, "notRecognisedAndNotRecalledStrict",
-                                                                                                                          ifelse(dfLong$recognitionConfLevel_4_5_6 == 0 & dfLong$cuedRecallStrict == 0, "notRecognisedHighConfAndNotRecalledStrict", 
-                                                                                                                                 NA))))#))))
+DV_wide <- c(paste0(memoryLabels, "_rel")) # absolute sum scores
+DV_wide <- c(DV_wide, paste0("curCor_",memoryLabels)) # correlation
+for (mem in 1:length(memoryLevels)) { # benefits
+  DV_wide <- c(DV_wide, paste0("curBen_rel_", memoryLabels[mem], collapse = ", "))
+}
 
-dfLong$memoryLenient <- ifelse(dfLong$recognitionConfLevel_4_5_6 == 1 & dfLong$cuedRecallLenient == 1, "recognisedHighConfAndRecalledLenient",
-                               #ifelse(dfLong$recognition == 1 & dfLong$cuedRecallLenient == 1, "recognisedAndRecalledLenient",
-                                                   #ifelse(dfLong$recognition == 0 & dfLong$cuedRecallLenient == 1, "notRecognisedButRecalledLenient",
-                                                                 ifelse(dfLong$recognitionConfLevel_4_5_6 == 0 & dfLong$cuedRecallLenient == 1, "notRecognisedHighConfButRecalledLenient",
-                                                                               #ifelse(dfLong$recognition == 1 & dfLong$cuedRecallLenient == 0, "recognisedButNotRecalledLenient",
-                                                                                             ifelse(dfLong$recognitionConfLevel_4_5_6 == 1 & dfLong$cuedRecallLenient == 0, "recognisedHighConfButNotRecalledLenient",
-                                                                                                           #ifelse(dfLong$recognition == 0 & dfLong$cuedRecallLenient == 0, "notRecognisedAndNotRecalledLenient",
-                                                                                                                         ifelse(dfLong$recognitionConfLevel_4_5_6 == 0 & dfLong$cuedRecallLenient == 0, "notRecognisedHighConfAndNotRecalledLenient",
-                                                                                                                                       NA))))#))))
-gmodels::CrossTable(dfLong$memoryLenient)
-gmodels::CrossTable(dfLong$memoryStrict)
+# create a data frame that includes the mean + CI for each group and the effect size of the group difference + CI
+# aim: data set with col: dependentVar; measure (effect size/group mean);  group (int / ext / effect); value; upper; lower
+# rows: dependent variables
 
-                               
-problematic <- subset(dfLong, dfLong$recognisedHighConfAndRecalledLenient == 0)
-problematic <- problematic[,c("username", "stimID", "ID", "group", "groupEffectCoded", "cuedRecallLenient", "recognition", "recognitionConfLevel_4_5_6", "recognisedHighConfAndRecalledLenient")]
+
+for (block in blocks){
+  for(DV in 1:length(DV_wide)) {
+    paste0(DV_wide[DV])
+    # compute mean for each block and group
+    means <- as.data.frame(tapply(dfWide[[paste0(DV_wide[DV], blockstring[block])]], dfWide$group, mean, na.rm = T)) # maybe not transpose
+    names(means) <- "effect" # need to be the same as 
+    means$grouping <- row.names(means)
+    
+    # compute SD for each block and grouping
+    sds <- as.data.frame(tapply(dfWide[[paste0(DV_wide[DV], blockstring[block])]], dfWide$group, sd, na.rm = T)) # maybe not transpose
+    names(sds) <- "sd" # need to be the same as 
+    sds$grouping <- row.names(sds)
+    
+    # compute SE
+    sds$se[sds$grouping == "cont"] <- (sds$sd[sds$grouping == "cont"]) / (nrow(dfWide[dfWide$group=="cont",]))
+    sds$se[sds$grouping == "exp"] <- (sds$sd[sds$grouping == "exp"]) / (nrow(dfWide[dfWide$group=="exp",]))
+    
+    # merge means and sds
+    df <- merge(means, sds, by = "grouping")
+    
+    # compute confidence interval
+    df$upper <- df$effect + 1.96 * df$se
+    df$lower <- df$effect - 1.96 * df$se
+    
+    # calculate effect size
+    if (df$effect[df$grouping=="cont"] != df$effect[df$grouping=="exp"]) {
+      data <- dfWide[,c("group", paste0(DV_wide[DV], blockstring[block]))]
+      d <- psych::cohen.d(data, "group")
+      cohen <- as.data.frame(d$cohen.d)
+      cohen$grouping <- "effect"
+      df <- rbind.all.columns(df, cohen)
+      rm(d)
+    } else {
+      cohen <- data.frame("lower" = 0, "effect" = 0, "upper" = 0, "grouping" = "effect")
+      df <- rbind.all.columns(df, cohen)
+    }
+    rm(cohen)
+    
+    # combine data from all DVs
+    df$dependentVar <- paste(DV_wide[DV])
+    
+    if (DV == 1) {
+      effectsizesMemoryBlock <- df
+    } else {
+      temp_effectsizesMemory <- df
+      effectsizesMemoryBlock <- rbind.all.columns(effectsizesMemoryBlock, temp_effectsizesMemory) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
+      rm(temp_effectsizesMemory)
+    }
+  }
+  
+  # for those occasions where mean in both groups was identical, add zeros:
+  effectsizesMemoryBlock$lower[is.na(effectsizesMemoryBlock$lower)] <- 0
+  effectsizesMemoryBlock$upper[is.na(effectsizesMemoryBlock$upper)] <- 0
+  effectsizesMemoryBlock$effect[is.na(effectsizesMemoryBlock$effect)] <- 0
+  
+  # add block
+  effectsizesMemoryBlock$blockNumber <- block
+  
+  # delete row.names
+  row.names(effectsizesMemoryBlock) <- NULL
+  
+  # rbind variables
+  if (block == 1){
+    effectsizesMemoryBlock_long <- effectsizesMemoryBlock
+  }  else {
+    effectsizesMemoryBlock_temp <- effectsizesMemoryBlock
+    effectsizesMemoryBlock_long <- rbind.all.columns(effectsizesMemoryBlock_long, effectsizesMemoryBlock_temp)
+    rm(effectsizesMemoryBlock_temp)
+  }
+  #assign(paste0("effectsizesMemoryBlock",block), effectsizesMemoryBlock) # if effect sizes for a single block were of interest
+  rm(effectsizesMemoryBlock)
+}
+
+
+# add measure to use as facet.grid
+effectsizesMemoryBlock_long$measure <- c("group mean", "group mean", "effect size")
+
+# add group discription
+effectsizesMemoryBlock_long$grouping <- ifelse(effectsizesMemoryBlock_long$grouping == "cont", "Mean (no reward)",
+                                               ifelse(effectsizesMemoryBlock_long$grouping == "exp", "Mean (reward)",
+                                                      ifelse(effectsizesMemoryBlock_long$grouping == "effect", "Cohen's d", NA)))
+# define colours
+cols <- c("Mean (no reward)" = "#F8766D", "Mean (reward)" = "#00BFC4", "Cohen's d" = "black")
+
+# define intercept for horizontal line
+hline <- data.frame(measure = c("group mean", "effect size"), intercept = c(NA, 0))
+
+# for each variable in list, create a plot showing the average performance in each group per block as well as the effect size
+for(DV in 1:length(DV_wide)) {
+  
+  # subset the data frame containing the effect sizes per block and select relevant DV only
+  output <- subset(effectsizesMemoryBlock_long, effectsizesMemoryBlock_long$dependentVar == DV_wide[DV], col = grouping)
+  
+  # create graph
+  graph <- ggplot(data=output, aes(x=blockNumber, y=effect)) +
+    geom_point(aes(col = grouping)) + 
+    geom_errorbar(aes(ymin=lower, ymax=upper, col = grouping), width=.025) +
+    facet_grid(measure ~., scales = "free_y") +
+    theme_classic() + scale_color_manual(values = cols) +
+    scale_x_discrete(limits=c("1", "2", "3", "all")) +
+    labs(x="Task block", y="Value", group = "", title = paste(version, "Proportial effect over time",DV_wide[DV])) +
+    theme(legend.title = element_blank()) +
+    theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"))
+  # print(graph)
+  # add dashed line for zero effect size
+  graph <-graph + geom_hline(aes(yintercept = intercept), hline, linetype="dashed", color = "grey")
+  
+  print(graph)
+  print(paste0("Graph_changeOfEffectsizeOverBlocks_", DV_wide[DV], ".jpeg"))
+  # save file
+  ggsave(file = paste0("Graph_changeOfEffectsizeOverBlocks_", DV_wide[DV], ".jpeg"), graph)
+  
+}
+
+
