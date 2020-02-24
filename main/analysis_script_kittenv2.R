@@ -1,4 +1,4 @@
-## analysis of the pilot data collected on MTurk may 2018
+## analysis of the pilot data collected on Prolific
 
 #### setups ####
 #empty work space, load libraries and functions
@@ -14,12 +14,17 @@ codedDir <- file.path(dataDir, "MagicBehavioural_memory", "preprocessed")
 analysisDir <- file.path(dataDir, "Analysis")
 ratingsDir <- file.path(analysisDir, "Ratings")
 memoryDir <- file.path(ratingsDir, "Memory")
-
+tricksDir <- file.path(analysisDir, "Tricks")
 
 # check whether these directories exist, if not create them
 ifelse(!dir.exists(ratingsDir), dir.create(ratingsDir), FALSE) 
 ifelse(!dir.exists(memoryDir), dir.create(memoryDir), FALSE) 
+ifelse(!dir.exists(analysisDir), dir.create(analysisDir), FALSE) 
+ifelse(!dir.exists(tricksDir), dir.create(tricksDir), FALSE) 
 
+pooledDir <-  "~/Dropbox/Reading/PhD/Magictricks/pooled_analyses"
+
+pooled <- 1
 
 # define version 
 version <- "kittenv2"
@@ -33,181 +38,33 @@ memoryLabels <- c("cuedRecallStrict", "cuedRecallLenient",
                   "allConf", "highConf", "aboveAvgConf", 
                   "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
 
-#helper functions and packages #
 
+#helper functions and packages #
 source("~/Dropbox/Reading/Codes and functions/R/errorbars.R")
 source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
-
-library(xlsx)
+library(lmerTest)
 library(psych)
 library(ggplot2)
 
-###### read in data sets ###### 
+### read in data sets ###
 setwd(preprocessedDir)
-dfWide <- read.xlsx(paste0("wide_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
-dfLong <- read.xlsx(paste0("long_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
+dfWide <- xlsx::read.xlsx(paste0("wide_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
+dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1")
 
+#####################################################################################################################################
+############################################### ANALYSIS BASED ON DATA IN LONG FORMAT ############################################### 
+#####################################################################################################################################
 
-#### data set handling wide format ####
-
-# compute scale scores
-
-###intrinsic motivation items
-# Post1	It was fun to do the experiment.
-# Post2	It was boring to do the experiment. ### (R) note: post2_score is already recoded!
-# Post3	It was enjoyable to do the experiment.
-
-###task engagement items
-# Post4	I was totally absorbed in the experiment.
-# Post5	I lost track of time.
-# Post6	I concentrated on the experiment.
-
-###interest items
-# Post7	The task was interesting.
-# Post8	I liked the experiment.
-# Post9	I found working on the task interesting.
-
-###boredom items
-# Post10	The experiment bored me.
-# Post11	I found the experiment fairly dull.
-# Post12	I got bored.
-
-####effort/importance
-# Post13	I put a lot of effort into this.
-# Post14	I didn't try very hard to do well at this activity. ### (R) note: post14_score is already recoded!
-# Post15	I tried very hard on this activity.
-# Post16	It was important to me to do well at this task.
-# Post17	I didn't put much energy into this. ### (R) note: post17_score is already recoded!
-
-###pressure/tension
-# Post18	I did not feel nervous at all while doing this. ### (R) note: post18_score is already recoded!
-# Post19 I felt very tense while doing this activity.
-# Post20	I was very relaxed in doing this experiment. ### (R) note: post20_score is already recoded!
-# Post21	I was anxious while working on this task.
-# Post22	I felt pressured while doing this task.
-
-###others
-# Post23	I tried to find out how many people will be able to find the solution.
-# Post24	The amount of magic tricks presented was
-# Post25	There were no problems with the internet connection while I participated in the experiment.
-# Post26	I was able to see the magic tricks properly.
-
-# Post_comment1	Did you like the experiment? Why? Why not?
-# Post_comment2	What did you do while watching the videos?
-# Post_comment3	What do you think is the hypothesis behind the experiment?
-# Post_comment4	Is there anything else you would like us to know?
-
-scales <- names(dfWide[,c("intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure")])
-describe(dfWide[,scales])
-by(cbind(dfWide[,scales]), dfWide$group, describe)
-
-### demogs ####
-# age
-output <- describeBy(dfWide[,"age"], group=dfWide$group)
-output <- as.data.frame(rbind(output$cont, output$exp))
-output$mot <- rep(c("cont","exp"), each = 1)
-
-outg <- ggplot(output, aes(mot, mean, fill = mot))
-outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("exp","cont")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
-
-# gender
-rm(output)
-output <- plyr::count(dfWide, vars = c("gender","group"))
-
-# output <- count(df, c('gender','cond'))
-outg <- ggplot(output, aes(group, freq, fill = gender))
-outg + geom_bar(stat="identity", position="fill")+ scale_x_discrete(limits=c("cont","exp")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version)) + theme_classic() 
-
-#### plots post questionnaire ####
-setwd(ratingsDir)
-
-output <- by(cbind(dfWide[,scales]), dfWide$group, describe)
-rating <- as.data.frame(rbind(output$cont, output$exp))
-rating$mot <- rep(c("intrinsic","extrinsic"), each = 6)
-
-outg <- ggplot(rating, aes(vars, mean, fill = mot))
-outg + geom_bar(stat="identity", position="dodge") + 
-  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + 
-  labs(x="Post task questionnaire", y="Rating", fill = "Experimental Condition", title = paste("all post questions",version)) + 
-  theme_classic() + coord_cartesian(ylim = c(0, 7)) +
-  scale_x_discrete(limits=paste(scales)) +
-  theme(legend.position="bottom")
-ggsave("postMainByGroup.jpeg")
-
-
-output <- by(cbind(dfWide[, c("compliance", "tooManyVids", "problemsInternet", "ableToSee")]),dfWide$group, describe)
-output <- as.data.frame(rbind(output$cont, output$exp))
-output$mot <- rep(c("intrinsic","extrinsic"), each = 4)
-output$vars <- as.factor(output$vars)
-levels(output$vars) <- c("task compliance","too many magic tricks","problems internet", "video display")
-
-outg <- ggplot(output, aes(vars, mean, fill = mot))
-outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + 
-  labs(x="Dependent variable", y="Rating", fill = "Group", title = paste("ratings about experiment", version)) + 
-  theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"), legend.title = element_text(size=20), legend.text = element_text(size = 20)) + 
-  theme_classic() + coord_cartesian(ylim = c(0, 7)) +
-  theme(legend.position="bottom") +
-  scale_x_discrete(limits=c("task compliance","too many magic tricks","problems internet", "video display")) +
-ggsave("postMainByGroup2.jpeg")
-
-rm(outg, output, rating)
-
-########## Compute t-tests and effect sizes for between-group differences in questionnaire scores ########## 
-
-for(scale in 1:length(scales)) {
-  print(scales[scale])
-  # compute t-test for group difference
-  ttest <- t.test(dfWide[,scales[scale]]~dfWide$group)
-  t.stats <- as.data.frame(t(round(c(ttest$statistic, ttest$p.value), digits = 3)))
-  names(t.stats) <- c("tValue", "pValue(t)")
-  
-  # compute wilcox
-  wilcox <- wilcox.test(dfWide[,scales[scale]]~dfWide$group) 
-  attributes(wilcox)
-  w.stats <- as.data.frame(t(round(c(wilcox$statistic, wilcox$p.value), digits = 3)))
-  names(w.stats) <- c("W", "pValue(W)")
-  
-  # merge t-test and wilconxon's test
-  t.stats <- merge(t.stats, w.stats)
-  
-  # compute mean for each group
-  means <- tapply(dfWide[,scales[scale]], dfWide$group, mean, na.rm = T)
-  means <- as.data.frame(t(means))
-  means <- merge(t.stats, means)
-  
-  # compute effect size
-  if (means$exp != means$cont) {
-    data <- dfWide[,c("group", scales[scale])]
-    psych::cohen.d(data, "group")
-    d <- psych::cohen.d(data, "group")
-    cohen <- as.data.frame(d$cohen.d)
-    means <- merge(means, cohen)
-  }
-  
-  # put all in a data frame
-  row.names(means) <- paste(scales[scale])
-  if (scale == 1) {
-    effectsizesScales <- means
-  } else {
-    temp_effectsizesScales <- means
-    effectsizesScales <- rbind.all.columns(effectsizesScales, temp_effectsizesScales) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
-    rm(temp_effectsizesScales)
-  }
-}
-rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
-setwd(ratingsDir)
-write.csv(effectsizesScales, paste0("effectsizesScalesNeuro_", version, ".csv"))
-
-###### lme #####
+########## 1. get descriptives for curiosity and memory for whole sample as well as for each group individually ########## 
 
 workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
 
 if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
-  dependentVariables <- c("curiosity", "curiosityRT", "decision", "decisionRT",
+  dependentVariables <- c("curiosity", "curiosityRT", "decisionRT",
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
                           "confidence", "confidenceCorrectTrials")
 } else {
-  dependentVariables <- c("curiosity", "curiosityRT", "decision", "decisionRT",
+  dependentVariables <- c("curiosity", "curiosityRT", "decisionRT",
                           "cuedRecallStrict", "cuedRecallLenient", 
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
                           "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
@@ -215,7 +72,7 @@ if(length(workspace) == 0) { # if data is not coded yet, only look at recognitio
 }
 
 
-#### get descriptives #### 
+### get descriptives ###
 for(DV in 1:length(dependentVariables)) {
   # print(dependentVariables[DV])
   descriptive <- describe(dfLong[,dependentVariables[DV] ])
@@ -233,15 +90,59 @@ for(DV in 1:length(dependentVariables)) {
     descriptives <- rbind.all.columns(descriptives, temp_descriptives) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
     rm(temp_descriptives)
   }
-
+  
   rm(descriptive, descriptive_groupwise, descriptive_groupwise_named)
 }
 descriptives <- round(descriptives, digit = 3)
 setwd(ratingsDir)
-xlsx::write.xlsx(descriptives, file="Descriptives_dependentVariables.xlsx", sheetName = "Sheet1")
+write.csv(descriptives, paste0("Descriptives_dependentVariables_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(descriptives, file="Descriptives_dependentVariables.xlsx", sheetName = paste(version), append = T) # note: row.names contain variables
+}
 rm(descriptives)
 
-####### lmer model using curiosity as a continous variable ######
+########## 2. compute mean memory performance for each magic trick ########## 
+# define variables for which the mean per trick should be calculated
+indicesPerTrick <- c("decisionRT", "curiosity", "curiosityRT",
+                     memoryLevels,
+                     "confidence", "confidenceCorrectTrials")
+indicesPerTrickMean <- paste0("mean_", indicesPerTrick)
+
+# calculate mean values for each magic trick for each index
+for (iMean in seq_along(indicesPerTrickMean)){
+  
+  # put data from long into wide format
+  assign(paste(indicesPerTrick[iMean]), reshape::cast(dfLong, ID~stimID,value=paste0(indicesPerTrick[iMean])))
+  
+  # calculate mean value for each magic trick
+  meansPerTrick <-   colMeans(get(indicesPerTrick[iMean]), na.rm = T) # calculate mean for each magic trick
+  
+  rm(list = indicesPerTrick[iMean])
+  
+  # combine all means in one data frame
+  if (iMean == 1){
+    dfMeans <- data.frame(meansPerTrick)
+    names(dfMeans) <- indicesPerTrickMean[iMean]
+    dfMeans$stimID <- row.names(dfMeans)
+  } else {
+    dfMeans_temp <- data.frame(meansPerTrick)
+    names(dfMeans_temp) <- indicesPerTrickMean[iMean]
+    dfMeans_temp$stimID <- row.names(dfMeans_temp)
+    dfMeans <- merge(dfMeans, dfMeans_temp, by = "stimID")
+    rm(dfMeans_temp)
+  }
+}
+
+setwd(file.path(analysisDir))
+write.csv(dfMeans, paste0("stimuli_MagicBehavioural_memoryPerformance_", version, ".csv"), row.names = F)
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(dfMeans, file="stimuli_MagicBehavioural_memoryPerformance.xlsx", sheetName = paste(version), row.names = F, append = T)
+}
+rm(dfMeans, meansPerTrick, indicesPerTrick, indicesPerTrickMean)
+
+########## 3. Compute lmer model predicting memory performance using curiosity as a continous variable and group effect coded ########## 
 
 if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
   dependentVariables <- c("recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
@@ -276,15 +177,19 @@ for (DV in 1:length(dependentVariables)){
     LMEresults <- rbind.all.columns(LMEresults, temp_LMEresults) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
     rm(temp_LMEresults)
   }
-  rm(summaryCuriosityContinuousCoefficients, summaryCuriosityContinuous)
+  rm(summaryCuriosityContinuousCoefficients, summaryCuriosityContinuous, LMEmodel_curiosityContinuous)
 }
 LMEresults <- round(LMEresults, digits = 5)
 
-setwd(ratingsDir)
-xlsx::write.xlsx(LMEresults, file=paste0("LME_Results_", version, "_CuriosityRatingsAndMemoryScores_byCuriosityAsContinuousVariable.xlsx"), sheetName = "Sheet1")
+setwd(memoryDir)
+write.csv(LMEresults, paste0("LME_Results_curiosityByReward_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(LMEresults, file="LME_Results_curiosityByReward.xlsx", sheetName = paste(version), append = T)
+}
 
 
-########## Create barplots to visualise the effects of curiosity and reward on memory performance ########## 
+########## 3. Create barplots to visualise the effects of curiosity and reward on memory performance ########## 
 
 # create a dichomotised curiosity variable using mean-cenetred curiosity
 dfLong$curiosity_dich <- ifelse(dfLong$curiosity_dich == -1, "below", 
@@ -309,6 +214,7 @@ setwd(memoryDir)
 #loop over dependent variables to create bar plots
 for (DV in DV_barplot){
   
+  print(DV)
   # loop over grouping variables for continuous curiosity variable
   for (g in 1:length(groupingVariables)){
     # create a data frame containing the data for each group divided regarding curiosity ratings
@@ -366,9 +272,10 @@ for (DV in DV_barplot){
   print(paste0("Bargraph_", DV, ".jpeg"))
   ggsave(paste0("Bargraph_", DV, ".jpeg"))
 }
+rm(output, outputAll, outputGroup)
 
 
-########## Create histograms to further investigate the relation between reward, curiosity and memory ########## 
+########## 4. Create histograms to further investigate the relation between reward, curiosity and memory ########## 
 
 # define variables
 DV_hist <- c("cuedRecallStrict", "cuedRecallLenient", 
@@ -421,9 +328,200 @@ for (DV in DV_hist){
 }
 
 
+#####################################################################################################################################
+############################################### ANALYSIS BASED ON DATA IN WIDE FORMAT ############################################### 
+#####################################################################################################################################
 
-########## 6. Compute t-tests and effect sizes for between-group differences in memory scores ########## 
+########## 1. Look at demographics of the sample ########## 
+# age
+output <- describeBy(dfWide[,"age"], group=dfWide$group)
+output <- as.data.frame(rbind(output$cont, output$exp))
+output$mot <- rep(c("cont","exp"), each = 1)
 
+outg <- ggplot(output, aes(mot, mean, fill = mot))
+outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("exp","cont")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
+
+# gender
+rm(output)
+output <- plyr::count(dfWide, vars = c("gender","group"))
+
+# output <- count(df, c('gender','cond'))
+outg <- ggplot(output, aes(group, freq, fill = gender))
+outg + geom_bar(stat="identity", position="fill")+ scale_x_discrete(limits=c("cont","exp")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version)) + theme_classic() 
+
+########## 2. Compute t-tests and effect sizes for between-group differences in questionnaire scores ########## 
+
+###intrinsic motivation items
+# Post1	It was fun to do the experiment.
+# Post2	It was boring to do the experiment. ### (R) note: post2_score is already recoded!
+# Post3	It was enjoyable to do the experiment.
+
+###task engagement items
+# Post4	I was totally absorbed in the experiment.
+# Post5	I lost track of time.
+# Post6	I concentrated on the experiment.
+
+###interest items
+# Post7	The task was interesting.
+# Post8	I liked the experiment.
+# Post9	I found working on the task interesting.
+
+###boredom items
+# Post10	The experiment bored me.
+# Post11	I found the experiment fairly dull.
+# Post12	I got bored.
+
+####effort/importance
+# Post13	I put a lot of effort into this.
+# Post14	I didn't try very hard to do well at this activity. ### (R) note: post14_score is already recoded!
+# Post15	I tried very hard on this activity.
+# Post16	It was important to me to do well at this task.
+# Post17	I didn't put much energy into this. ### (R) note: post17_score is already recoded!
+
+###pressure/tension
+# Post18	I did not feel nervous at all while doing this. ### (R) note: post18_score is already recoded!
+# Post19 I felt very tense while doing this activity.
+# Post20	I was very relaxed in doing this experiment. ### (R) note: post20_score is already recoded!
+# Post21	I was anxious while working on this task.
+# Post22	I felt pressured while doing this task.
+
+###others
+# Post23	I tried to find out how many people will be able to find the solution.
+# Post24	The amount of magic tricks presented was
+# Post25	There were no problems with the internet connection while I participated in the experiment.
+# Post26	I was able to see the magic tricks properly.
+
+# Post_comment1	Did you like the experiment? Why? Why not?
+# Post_comment2	What did you do while watching the videos?
+# Post_comment3	What do you think is the hypothesis behind the experiment?
+# Post_comment4	Is there anything else you would like us to know?
+
+scales <- names(dfWide[,c("intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure")])
+describe(dfWide[,scales])
+by(cbind(dfWide[,scales]), dfWide$group, describe)
+
+# compute t-test and effect size for each scale
+for(scale in 1:length(scales)) {
+  print(scales[scale])
+  # compute t-test for group difference
+  ttest <- t.test(dfWide[,scales[scale]]~dfWide$group)
+  t.stats <- as.data.frame(t(round(c(ttest$statistic, ttest$p.value), digits = 3)))
+  names(t.stats) <- c("tValue", "pValue(t)")
+  
+  # compute wilcox
+  wilcox <- wilcox.test(dfWide[,scales[scale]]~dfWide$group) 
+  attributes(wilcox)
+  w.stats <- as.data.frame(t(round(c(wilcox$statistic, wilcox$p.value), digits = 3)))
+  names(w.stats) <- c("W", "pValue(W)")
+  
+  # merge t-test and wilconxon's test
+  t.stats <- merge(t.stats, w.stats)
+  
+  # compute mean for each group
+  means <- tapply(dfWide[,scales[scale]], dfWide$group, mean, na.rm = T)
+  means <- as.data.frame(t(means))
+  means <- merge(t.stats, means)
+  
+  # compute effect size
+  if (means$exp != means$cont) {
+    data <- dfWide[,c("group", scales[scale])]
+    psych::cohen.d(data, "group")
+    d <- psych::cohen.d(data, "group")
+    cohen <- as.data.frame(d$cohen.d)
+    means <- merge(means, cohen)
+  }
+  
+  # put all in a data frame
+  row.names(means) <- paste(scales[scale])
+  if (scale == 1) {
+    effectsizesScales <- means
+  } else {
+    temp_effectsizesScales <- means
+    effectsizesScales <- rbind.all.columns(effectsizesScales, temp_effectsizesScales) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
+    rm(temp_effectsizesScales)
+  }
+}
+rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
+setwd(ratingsDir)
+write.csv(effectsizesScales, paste0("effectsizesScales_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(effectsizesScales, file="effectsizesScales.xlsx", sheetName = paste(version), append = T)
+}
+
+
+########## 3. Create bar plots for  mean values (with SE) of the questionnaire scores for each group ########## 
+setwd(ratingsDir)
+
+output <- by(cbind(dfWide[,scales]), dfWide$group, describe)
+rating <- as.data.frame(rbind(output$cont, output$exp))
+rating$mot <- rep(c("intrinsic","extrinsic"), each = 6)
+
+outg <- ggplot(rating, aes(vars, mean, fill = mot))
+outg + geom_bar(stat="identity", position="dodge") + 
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + 
+  labs(x="Post task questionnaire", y="Rating", fill = "Experimental Condition", title = paste("all post questions",version)) + 
+  theme_classic() + coord_cartesian(ylim = c(0, 7)) +
+  scale_x_discrete(limits=paste(scales)) +
+  theme(legend.position="bottom")
+ggsave("postMainByGroup.jpeg")
+
+
+output <- by(cbind(dfWide[, c("compliance", "tooManyVids", "problemsInternet", "ableToSee")]),dfWide$group, describe)
+output <- as.data.frame(rbind(output$cont, output$exp))
+output$mot <- rep(c("intrinsic","extrinsic"), each = 4)
+output$vars <- as.factor(output$vars)
+levels(output$vars) <- c("task compliance","too many magic tricks","problems internet", "video display")
+
+outg <- ggplot(output, aes(vars, mean, fill = mot))
+outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + 
+  labs(x="Dependent variable", y="Rating", fill = "Group", title = paste("ratings about experiment", version)) + 
+  theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"), legend.title = element_text(size=20), legend.text = element_text(size = 20)) + 
+  theme_classic() + coord_cartesian(ylim = c(0, 7)) +
+  theme(legend.position="bottom") +
+  scale_x_discrete(limits=c("task compliance","too many magic tricks","problems internet", "video display")) +
+ggsave("postMainByGroup2.jpeg")
+
+rm(outg, output, rating)
+
+########## 4. Compute summary statistics for measurements of memory (subject sum scores) ########## 
+
+recognitionPerformanceVars <- c("recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2",
+                                "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4",
+                                "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
+                                "meanConfidence", "meanConfidenceCorrectTrials")
+
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_abs"))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_rel"))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_cont_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_dich_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_rel_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curCor_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBeta_",memoryLabels))
+
+# create a data frame that shows the summary statistics for each score, for the whole population
+dataWideRecognitionPerformance <- dfWide[,recognitionPerformanceVars]
+df_mean <- data.frame(apply(dataWideRecognitionPerformance, 2, mean, na.rm = T), recognitionPerformanceVars)
+df_sd <- data.frame(apply(dataWideRecognitionPerformance, 2, sd, na.rm = T), recognitionPerformanceVars)
+df_min <- data.frame(apply(dataWideRecognitionPerformance, 2, min, na.rm = T), recognitionPerformanceVars)
+df_max <- data.frame(apply(dataWideRecognitionPerformance, 2, max, na.rm = T), recognitionPerformanceVars)
+
+descriptivesRecognitionPerformance <- merge(df_mean, df_sd, by = "recognitionPerformanceVars")
+descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_min, by = "recognitionPerformanceVars")
+descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_max, by = "recognitionPerformanceVars")
+rm(df_mean, df_sd, df_min, df_max)
+
+names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
+
+setwd(memoryDir)
+write.csv(descriptivesRecognitionPerformance, paste0("subjectSumscore_performance_memory_", version, ".csv"), row.names = F)
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(descriptivesRecognitionPerformance, file="subjectSumscore_performance_memory.xlsx", sheetName = paste(version), row.names = F, append = T)
+}
+rm(dataWideRecognitionPerformance, descriptivesRecognitionPerformance)
+
+########## 5. Compute t-tests and effect sizes for between-group differences in memory scores ########## 
 
 # define dependent variables (i.e. sum scores)
 
@@ -482,12 +580,17 @@ rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
 effectsizesMemory <- round(effectsizesMemory, digits = 3)
 setwd(memoryDir)
 write.csv(effectsizesMemory, paste0("effectsizesMemory_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(effectsizesMemory, file="effectsizesMemory.xlsx", sheetName = paste(version), append = T)
+}
 effectsizes <- rbind.all.columns(effectsizesScales, effectsizesMemory)
 setwd(ratingsDir)
-write.csv(effectsizes, paste0("effectsizesAll_", version, ".csv"))
+write.csv(effectsizes, paste0("effectsizesAll_", version, ".csv"), row.names = F)
 
 
-########## 7. Create violin plots for sum scores of memory measures in each group ########## 
+########## 6. Create violin plots for sum scores of memory measures in each group ########## 
+
 # subset dataWide
 output <- dfWide[,c("ID", "group", DV_wide)]
 output$group <- ifelse(output$group == "cont", "No reward", "Reward")
@@ -631,113 +734,7 @@ for(p in 1:length(plotVars)) {
   
 }
 
-
-
-
-
-
-
-# check whether there is a difference in the effect size depending on task block
-blocks <- c(1,2,3)
-blockstring <- c("_firstBlock", "_secondBlock", "_thirdBlock")
-
-for (block in blocks){
-  for(DV in 1:length(dependentVariablesWide)) {
-    means <- tapply(dfWide[[paste0(dependentVariablesWide[DV], blockstring[block])]], dfWide$group, mean, na.rm = T)
-    means <- as.data.frame(t(means))
-    
-    data <- dfWide[,c("group", paste0(dependentVariablesWide[DV], blockstring[block]))]
-    d <- cohen.d(data, "group")
-    cohen <- as.data.frame(d$cohen.d)
-    rm(d)
-    cohen <- merge(cohen, means)
-    rm(means)
-    row.names(cohen) <- paste(dependentVariablesWide[DV])
-    if (DV == 1) {
-      effectsizesMemoryBlock <- cohen
-    } else {
-      temp_effectsizesMemory <- cohen
-      effectsizesMemoryBlock <- rbind.all.columns(effectsizesMemoryBlock, temp_effectsizesMemory) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
-      rm(temp_effectsizesMemory)
-    }
-    rm(cohen)
-  }
-  names(effectsizesMemoryBlock)[names(effectsizesMemoryBlock)=="lower"] <- c(paste0("lower", blockstring[block]))
-  names(effectsizesMemoryBlock)[names(effectsizesMemoryBlock)=="effect"] <- c(paste0("effect", blockstring[block]))
-  names(effectsizesMemoryBlock)[names(effectsizesMemoryBlock)=="upper"] <- c(paste0("upper", blockstring[block]))
-  names(effectsizesMemoryBlock)[names(effectsizesMemoryBlock)=="cont"] <- c(paste0("cont", blockstring[block]))
-  names(effectsizesMemoryBlock)[names(effectsizesMemoryBlock)=="exp"] <- c(paste0("exp", blockstring[block]))
-  
-  assign(paste0("effectsizesMemoryBlock",block), effectsizesMemoryBlock)
-  rm(effectsizesMemoryBlock)
-  
-}
-
-effectsizesMemoryBlock <- merge(effectsizesMemoryBlock1, effectsizesMemoryBlock2, by = "row.names")
-row.names(effectsizesMemoryBlock) <- effectsizesMemoryBlock$Row.names
-effectsizesMemoryBlock$Row.names <- NULL
-effectsizesMemoryBlock <- merge(effectsizesMemoryBlock, effectsizesMemoryBlock3, by = "row.names")
-row.names(effectsizesMemoryBlock) <- effectsizesMemoryBlock$Row.names
-effectsizesMemoryBlock$Row.names <- NULL
-
-effectsizesMemoryBlock[,c("effect_firstBlock", "effect_secondBlock", "effect_thirdBlock", "exp_firstBlock", "exp_secondBlock", "exp_thirdBlock", "cont_firstBlock", "cont_secondBlock", "cont_thirdBlock")]
-write.csv(effectsizesMemoryBlock, paste0("effectsizesMemoryPerBlock_", version, ".csv"))
-# effectsizesMemoryBlock<- effectsizesMemoryBlock[,c("effect_firstBlock", "effect_secondBlock", "effect_thirdBlock")]
-# write.csv(effectsizesMemoryBlock, paste0("effectsizesMemoryPerBlock_", version, ".csv"))
-
-# spaghetti plot
-library(gridExtra)
-setwd(ratingsDir)
-output <- effectsizesMemoryBlock[,c("effect_firstBlock", "effect_secondBlock", "effect_thirdBlock", "exp_firstBlock", "exp_secondBlock", "exp_thirdBlock", "cont_firstBlock", "cont_secondBlock", "cont_thirdBlock")]
-
-output <- as.data.frame(t(output))
-output$rowname <-   row.names(output)
-output$block <- rep(c("first", "second", "third"), 3)
-output$whatIsMeasured <- rep(c("effectsize", "meanExpGroup", "meanContGroup"), each = 3)
-output$whatIsMeasured2 <- rep(c("effectsize", "group mean", "group mean"), each = 3)
-
-dependentVariablesWideMemory <- c("recognition", "recognitionConfLevel_4", "recognitionConfLevel_5", "recognitionConfLevel_6",
-                                  "recognitionConfLevel_5_6", "recognitionConfLevel_4_5_6", 
-                                  "meanConfidence", "meanConfidenceCorrectTrials")
-for (DV in 1:length(dependentVariablesWideMemory)){
-    graph <- ggplot(data=output, aes(x=block, y=get(dependentVariablesWideMemory[DV] ), colour = whatIsMeasured, group = whatIsMeasured)) +
-      geom_point() + geom_line() + theme_bw() +
-      labs(x="Task block", y="", colour = "", title = paste(dependentVariablesWideMemory[DV])) +
-      facet_grid(rows = vars(whatIsMeasured2), scales = "free_y")  + coord_cartesian(ylim = c(0, 5))
-    print(graph)
-    ggsave(paste0("Graph_changeOfEffectsizeOverBlocks_", dependentVariablesWideMemory[DV], ".jpeg"))
-}
-
-outputEffect <- subset(output, output$whatIsMeasured2 == "effectsize")
-outputGroupMean <- subset(output, output$whatIsMeasured2 == "group mean")
-
-for (DV in 1:length(dependentVariablesWideMemory)){
-  # create one graph for the effect size (ranging from -1 to 1)
-  graphEffect <- ggplot(data=outputEffect, aes(x=block, y=get(dependentVariablesWideMemory[DV] ), group = whatIsMeasured2)) +
-    geom_point(color='black') + geom_line(color='black') + theme_bw() +
-    theme(legend.position="bottom") +
-    labs(x="Task block", y="Cohen's d", group = "", title = paste("Effect size",dependentVariablesWideMemory[DV], version)) + 
-    coord_cartesian(ylim = c(-1, 1)) +
-    scale_y_continuous(labels = scales::scientific)
-  
-  # then create a graph for the group average
-  graphGroupMean <- ggplot(data=outputGroupMean, aes(x=block, y=get(dependentVariablesWideMemory[DV] ), colour = whatIsMeasured, group = whatIsMeasured)) +
-    geom_point() + geom_line() + theme_bw() +
-    labs(x="Task block", y="Mean value", colour = "", title = paste("Group means",dependentVariablesWideMemory[DV], version)) + 
-    coord_cartesian(ylim = c(floor(min(outputGroupMean[,dependentVariablesWideMemory[DV]]))-1, floor(min(outputGroupMean[,dependentVariablesWideMemory[DV]]))+3)) +
-    theme(legend.position="bottom") +
-    scale_y_continuous(labels = scales::scientific)
-
-  # then combine those two in a new graphic using gridExtra
-  grid.arrange(graphEffect, graphGroupMean, nrow = 2) 
-  graph <- arrangeGrob(graphEffect, graphGroupMean, nrow=2) #generates graph
-  ggsave(file = paste0("Graph_changeOfEffectsizeOverBlocks_", dependentVariablesWideMemory[DV], "_v2.jpeg"), graph)
-  
-  rm(graphEffect, graphGroupMean, graph)
-}
-
-
-########## 8. Look at the change in memory performance between blocks over time ########## 
+########## 7. Look at the change in memory performance between blocks over time ########## 
 
 blocks <- c(1,2,3,4)
 blockstring <- c("_firstBlock", "_secondBlock", "_thirdBlock", "")
@@ -802,6 +799,7 @@ for (block in blocks){
       effectsizesMemoryBlock <- rbind.all.columns(effectsizesMemoryBlock, temp_effectsizesMemory) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
       rm(temp_effectsizesMemory)
     }
+    rm(means, df, sds)
   }
   
   # for those occasions where mean in both groups was identical, add zeros:
@@ -827,14 +825,25 @@ for (block in blocks){
   rm(effectsizesMemoryBlock)
 }
 
-
-# add measure to use as facet.grid
-effectsizesMemoryBlock_long$measure <- c("group mean", "group mean", "effect size")
-
 # add group discription
 effectsizesMemoryBlock_long$grouping <- ifelse(effectsizesMemoryBlock_long$grouping == "cont", "Mean (no reward)",
                                                ifelse(effectsizesMemoryBlock_long$grouping == "exp", "Mean (reward)",
                                                       ifelse(effectsizesMemoryBlock_long$grouping == "effect", "Cohen's d", NA)))
+# remove unneccary columns, reorder vars, round & save
+effectsizesMemoryBlock_long$sd <- NULL
+effectsizesMemoryBlock_long$se <- NULL
+effectsizesMemoryBlock_long <- effectsizesMemoryBlock_long[,c("dependentVar", "grouping", "blockNumber", "lower", "effect", "upper")]
+effectsizesMemoryBlock_long$lower <- round(effectsizesMemoryBlock_long$lower, digits = 5)
+effectsizesMemoryBlock_long$effect <- round(effectsizesMemoryBlock_long$effect, digits = 5)
+effectsizesMemoryBlock_long$upper <- round(effectsizesMemoryBlock_long$upper, digits = 5)
+
+setwd(memoryDir)
+write.csv(effectsizesMemoryBlock_long, paste0("effectsizesMemory_perBlock_", version, ".csv"), row.names = F)
+
+
+# add measure to use as facet.grid
+effectsizesMemoryBlock_long$measure <- c("group mean", "group mean", "effect size")
+
 # define colours
 cols <- c("Mean (no reward)" = "#F8766D", "Mean (reward)" = "#00BFC4", "Cohen's d" = "black")
 
@@ -868,4 +877,28 @@ for(DV in 1:length(DV_wide)) {
   
 }
 
+########## 8. Check whether any of the differences in the questionnaires relates to memory performance and whether there is a group effect  ########## 
 
+# create intercorrelation table
+
+cor_vars <- c("intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure", 
+              "compliance", "ableToSee",
+              "cuedRecallStrict_abs", "cuedRecallLenient_abs",
+              "allConf_abs", "highConf_abs", "aboveAvgConf_abs",
+              "rememberedStrictAboveAvg_abs", "rememberedLenientAboveAvg_abs", "rememberedStrictHigh_abs", "rememberedLenientHigh_abs",
+              "meanConfidence", "meanConfidenceCorrectTrials")
+
+cor_all <- as.data.frame(t(cor(dfWide[,cor_vars], use = "pairwise.complete.obs")))
+
+cor_int <- as.data.frame(t(cor(dfWide[dfWide$group == "cont", cor_vars],  use = "pairwise.complete.obs")))
+
+cor_ext <- as.data.frame(t(cor(dfWide[dfWide$group == "exp", cor_vars],  use = "pairwise.complete.obs")))
+
+cor_all <- round(cor_all, digits = 3)
+cor_int <- round(cor_int, digits = 3)
+cor_ext <- round(cor_ext, digits = 3)
+
+setwd(ratingsDir)
+xlsx::write.xlsx(cor_all, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_all", row.names = F) 
+xlsx::write.xlsx(cor_int, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_cont", row.names = F, append = T) 
+xlsx::write.xlsx(cor_ext, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_exp", row.names = F, append = T) 
