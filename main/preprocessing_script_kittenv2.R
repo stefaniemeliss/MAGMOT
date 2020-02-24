@@ -348,19 +348,15 @@ for (l in seq_along(group)) {
     # merge all data (video watching, recall & recognition) together
     # all.x = T makes sure that NA are produced if a pps has not completed the full task
     recall <- merge(cuedRecall, recognition, by = c("username", "stimID"), all.x = T)
-    data <- merge(main, recall, by = c("username", "stimID"), all.x = T)
+    
+    data <- merge(main, recall, by = c("Username", "stimID"), all.x = T)
     if (is.factor(data$cuedRecallLenient) == T){
       print(paste0(subjects[s], "_cuedRecall_CP.csv has cuedRecallLenient as factor"))
-      data$cuedRecallLenient <- as.numeric(data$cuedRecallLenient)
-      data$cuedRecallLenient <- ifelse(data$cuedRecallLenient == 1, 0,
-                                       ifelse(data$cuedRecallLenient == 2, 1, NA))
+      data$cuedRecallLenient <- as.numeric(as.character(data$cuedRecallLenient))
     }
     if (is.factor(data$cuedRecallStrict) == T){
-      print(paste0(subjects[s], "_cuedRecall_CP.csv has cuedRecallStrict as factor")) 
-      
-      data$cuedRecallStrict <- as.numeric(data$cuedRecallStrict)
-      data$cuedRecallStrict <- ifelse(data$cuedRecallStrict == 1, 0,
-                                      ifelse(data$cuedRecallStrict == 2, 1, NA))
+      print(paste0(subjects[s], "_cuedRecall_CP.csv has cuedRecallStrict as factor"))
+      data$cuedRecallStrict <- as.numeric(as.character(data$cuedRecallStrict))
     }
     
     # compute whether a trick has been remembered based on Hasson et al. (2008).  
@@ -376,9 +372,7 @@ for (l in seq_along(group)) {
       # calculate curiosity-driven datary datary benefit (dichotomous, absolute)  --> range: [-1; 1]
       data[[paste0("curBen_dich_", memoryLabels[mem])]] <- data$curiosity_dich * data[[paste0(memoryLevels[mem])]]
     }    
-    
-    
-    
+  
     # save data per participant in long format, this includes data from movie watching and memory test
     setwd(file.path(preprocessedDir, "long"))
     write.csv(data, file = paste0(subjects[s], "_long.csv"), row.names = F)
