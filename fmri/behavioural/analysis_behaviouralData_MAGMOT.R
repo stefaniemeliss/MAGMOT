@@ -11,6 +11,7 @@ version <- "MAGMOT"
 dataDir <- file.path(mainDir, subDirData) #"~/Dropbox/Reading/PhD/Magic tricks/fmri_study/Data"
 preprocessedDir <- file.path(dataDir, "preprocessed") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_preprocessed"
 codedDir <- file.path(dataDir, "magicmemory_fmri", "coded") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/coded/preprocessing"
+
 analysisDir <- file.path(mainDir, "Analysis")
 ratingsDir <- file.path(analysisDir, "Ratings")
 memoryDir <- file.path(ratingsDir, "Memory")
@@ -18,11 +19,17 @@ brainDir <- file.path(ratingsDir, "BrainBehaviour")
 questDir <- file.path(ratingsDir, "Questionnaires")
 tricksDir <- file.path(analysisDir, "Tricks")
 
+pooledDir <-  "~/Dropbox/Reading/PhD/Magictricks/pooled_analyses"
+
+pooled <- 1
+
 # check whether these directories exist, if not create them
 ifelse(!dir.exists(ratingsDir), dir.create(ratingsDir), FALSE) 
 ifelse(!dir.exists(memoryDir), dir.create(memoryDir), FALSE) 
 ifelse(!dir.exists(questDir), dir.create(questDir), FALSE) 
 ifelse(!dir.exists(brainDir), dir.create(brainDir), FALSE) 
+ifelse(!dir.exists(analysisDir), dir.create(analysisDir), FALSE) 
+ifelse(!dir.exists(tricksDir), dir.create(tricksDir), FALSE) 
 
 
 memoryLevels <- c("cuedRecallStrict", "cuedRecallLenient", 
@@ -96,14 +103,58 @@ for(DV in 1:length(dependentVariables)) {
 # round result and save
 descriptives <- round(descriptives, digit = 3)
 setwd(ratingsDir)
-xlsx::write.xlsx(descriptives, file="Descriptives_dependentVariables.xlsx", sheetName = "Sheet1")
+write.csv(descriptives, paste0("Descriptives_dependentVariables_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(descriptives, file="Descriptives_dependentVariables.xlsx", sheetName = paste(version), append = T) # note: row.names contain variables
+}
 rm(descriptives)
 
+########## 2. compute mean memory performance for each magic trick ########## 
+# define variables for which the mean per trick should be calculated
+indicesPerTrick <- c("answerRT", "responseCuriosity", "rtCuriosity",
+                     memoryLevels,
+                     "confidence", "confidenceCorrectTrials")
+indicesPerTrickMean <- paste0("mean_", indicesPerTrick)
 
-########## 2. Compute lmer model predicting memory performance using curiosity as a continous variable and group effect coded ########## 
+# calculate mean values for each magic trick for each index
+for (iMean in seq_along(indicesPerTrickMean)){
+  
+  # put data from long into wide format
+  assign(paste(indicesPerTrick[iMean]), reshape::cast(dfLong, ID~stimID,value=paste0(indicesPerTrick[iMean])))
+  
+  # calculate mean value for each magic trick
+  meansPerTrick <-   colMeans(get(indicesPerTrick[iMean]), na.rm = T) # calculate mean for each magic trick
+  
+  rm(list = indicesPerTrick[iMean])
+  
+  # combine all means in one data frame
+  if (iMean == 1){
+    dfMeans <- data.frame(meansPerTrick)
+    names(dfMeans) <- indicesPerTrickMean[iMean]
+    dfMeans$stimID <- row.names(dfMeans)
+  } else {
+    dfMeans_temp <- data.frame(meansPerTrick)
+    names(dfMeans_temp) <- indicesPerTrickMean[iMean]
+    dfMeans_temp$stimID <- row.names(dfMeans_temp)
+    dfMeans <- merge(dfMeans, dfMeans_temp, by = "stimID")
+    rm(dfMeans_temp)
+  }
+}
+
+setwd(file.path(analysisDir))
+write.csv(dfMeans, paste0("stimuli_MagicBehavioural_memoryPerformance_", version, ".csv"), row.names = F)
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(dfMeans, file="stimuli_MagicBehavioural_memoryPerformance.xlsx", sheetName = paste(version), row.names = F, append = T)
+}
+rm(dfMeans, meansPerTrick, indicesPerTrick, indicesPerTrickMean)
+
+
+
+########## 3. Compute lmer model predicting memory performance using curiosity as a continous variable and group effect coded ########## 
 
 # define dependent variables 
-workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
 if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
   DV_LME <- c("recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
               "confidence", "confidenceCorrectTrials")
@@ -114,7 +165,7 @@ if(length(workspace) == 0) { # if data is not coded yet, only look at recognitio
               "confidence", "confidenceCorrectTrials")
 }
 
-##### 2.1 basic LME predicting memory performance with mean-centered curiosity, effect-coded reward and their interaction #####
+##### 3.1 basic LME predicting memory performance with mean-centered curiosity, effect-coded reward and their interaction #####
 
 # loop over dependent variables to compute LME
 for (DV in 1:length(DV_LME)){
@@ -139,19 +190,26 @@ for (DV in 1:length(DV_LME)){
     LMEresults <- rbind.all.columns(LMEresults, temp_LMEresults) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
     rm(temp_LMEresults)
   }
-  rm(summaryCuriosityContinuousCoefficients, summaryCuriosityContinuous)
+  rm(summaryCuriosityContinuousCoefficients, summaryCuriosityContinuous, LMEmodel_curiosityContinuous)
 }
 # round results and save
 LMEresults <- round(LMEresults, digits = 5)
+
 setwd(memoryDir)
-xlsx::write.xlsx(LMEresults, file=paste0("LME_Results_", version, "_CuriosityRatingsAndMemoryScores_byCuriosityAsContinuousVariable.xlsx"), sheetName = "Sheet1")
+write.csv(LMEresults, paste0("LME_Results_curiosityByReward_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(LMEresults, file="LME_Results_curiosityByReward.xlsx", sheetName = paste(version), append = T)
+}
 
 
-##### 2.2 LME with covariates predicting memory performance with mean-centered curiosity, effect-coded reward and their interaction #####
+##### 3.2 LME with covariates predicting memory performance with mean-centered curiosity, effect-coded reward and their interaction #####
 
 # define control vars
 controlVar <- c("nback_accurary", "BAS_rewardresponsiveness", "ableToSee", "AvoidanceTemperament")
 subjects  <- as.character(dfWide$fMRI)
+
+setwd(memoryDir)
 
 # loop controlling for different variables
 for (cov in 1:length(controlVar)){
@@ -177,8 +235,7 @@ for (cov in 1:length(controlVar)){
     summaryCuriosityContinuousCoefficientsControlled <- as.data.frame(summaryCuriosityContinuousControlled$coefficients)
     # change row names of data frame
     row.names(summaryCuriosityContinuousCoefficientsControlled) <- c(paste0("LME_", DV_LME[DV], "_Intercept"), paste0("LME_",DV_LME[DV], "_", controlVar[cov]),
-                                                                     paste0("LME_", DV_LME[DV], "_groupEffectCoded"),
-                                                                     paste0("LME_", DV_LME[DV], "_curiosityGroupMeanCentered"),
+                                                                     paste0("LME_", DV_LME[DV], "_groupEffectCoded"),                                                          paste0("LME_", DV_LME[DV], "_curiosityGroupMeanCentered"),
                                                                      paste0("LME_", DV_LME[DV], "_interaction"))
     # round results and save
     if (DV == 1) {
@@ -188,12 +245,11 @@ for (cov in 1:length(controlVar)){
       LMEresultsControlled <- rbind.all.columns(LMEresultsControlled, temp_LMEresults) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
       rm(temp_LMEresults)
     }
-    rm(summaryCuriosityContinuousCoefficientsControlled, summaryCuriosityContinuousControlled)
+    rm(summaryCuriosityContinuousCoefficients, summaryCuriosityContinuous, LMEmodel_curiosityContinuousControlled)
   }
   # round results and save
   LMEresultsControlled <- round(LMEresultsControlled, digits = 5)
-  xlsx::write.xlsx(LMEresultsControlled, file=paste0("LME_Results_", version, "_CuriosityRatingsAndMemoryScores_byCuriosityAsContinuousVariable_controlledFor_", controlVar[cov], ".xlsx"), sheetName = "Sheet1")
-  
+  write.csv(LMEresultsControlled, paste0("LME_Results_curiosityByReward_", version, "_controlledFor_", controlVar[cov], ".csv"))
 }
 
 # When there seem to be an interaction effect like nback, you can test a model like memory~nback*group to see if the interaction is indeed significant. If it is significant, there might be a way to show that memory performance is different for s particular subset of participants (e.g. those who are low in the nback task). Given that reward group showed numerically lower memory performance but it is still informative for us.
@@ -220,15 +276,15 @@ for (DV in 1:length(DV_LME)){
     LMEresults <- rbind.all.columns(LMEresults, temp_LMEresults) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
     rm(temp_LMEresults)
   }
-  rm(summaryCuriosityContinuousCoefficients, summaryCuriosityContinuous)
+  rm(summaryCuriosityContinuousCoefficients, summaryCuriosityContinuous, LMEmodel_curiosityContinuous)
 }
 
 
-##### 2.3 basic LME predicting memory performance using subset of reward group (i.e. those who believed in the manipulation) #####
+##### 3.3 basic LME predicting memory performance using subset of reward group (i.e. those who believed in the manipulation) #####
 
 # create subset of data
-dfWide$reward_subset <- ifelse(dfWide$group == "int", 1, #include everyone from control group
-                               ifelse(dfWide$rewardBelief_score > 3 & dfWide$group == "ext", 1, 0)) # and those from reward group believing in manipulation
+dfWide$reward_subset <- ifelse(dfWide$group == "cont", 1, #include everyone from control group
+                               ifelse(dfWide$rewardBelief_score > 3 & dfWide$group == "exp", 1, 0)) # and those from reward group believing in manipulation
 
 for (s in seq_along(subjects)){
   # take subset variable for subject from dfWide and paste it to dfLong
@@ -264,7 +320,7 @@ for (DV in 1:length(DV_LME)){
 # round results and save
 LMEresults <- round(LMEresults, digits = 5)
 setwd(memoryDir)
-xlsx::write.xlsx(LMEresults, file=paste0("LME_Results_", version, "_subset_CuriosityRatingsAndMemoryScores_byCuriosityAsContinuousVariable.xlsx"), sheetName = "Sheet1")
+write.csv(LMEresults, paste0("LME_Results_curiosityByReward_", version, "_subset.csv"))
 
 
 
@@ -297,7 +353,8 @@ for (DV in 1:length(DV_LME)){
 # round results and save
 LMEresults <- round(LMEresults, digits = 5)
 setwd(memoryDir)
-xlsx::write.xlsx(LMEresults, file=paste0("LME_Results_", version, "_CuriosityRatingsAndMemoryScores_byCuriosityOnly.xlsx"), sheetName = "Sheet1")
+write.csv(LMEresults, paste0("LME_Results_curiosityOnly_", version, "_subset.csv"))
+
 
 ########## 3. Create barplots to visualise the effects of curiosity and reward on memory performance ########## 
 if (exists("dfLong") == F) {
@@ -332,7 +389,7 @@ for (DV in DV_barplot){
   for (g in 1:length(groupingVariables)){
     # create a data frame containing the data for each group divided regarding curiosity ratings
     outputGroup <- summarySEwithin(dfLong, measurevar=DV, betweenvars="group", withinvars=groupingVariables[g], idvar="ID", na.rm = T)
-    levels(outputGroup$group) <- c("Reward","No reward")
+    levels(outputGroup$group) <- c("No reward", "Reward")
     names(outputGroup)[names(outputGroup) == groupingVariables[g]] <- "cutoff"
     
     # remove NAs (necessary for curiosity_dichotomous)
@@ -344,7 +401,7 @@ for (DV in DV_barplot){
     # create a data frame containing the data for each group regardless of curiosity ratings
     outputAll <- summarySE(dfLong, measurevar=DV, groupvars="group", na.rm=T,
                            conf.interval=.95, .drop=TRUE)
-    levels(outputAll$group) <- c("Reward","No reward")
+    levels(outputAll$group) <-  c("No reward", "Reward")
     outputAll$cutoff <- rep("all tricks", 2)    
     outputAll$groupingvar <- groupingVariables[g]
     
@@ -396,7 +453,7 @@ DV_hist <- c("cuedRecallStrict", "cuedRecallLenient",
              "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
 # create data frame and recode memory as factors
 output <- dfLong[,c("ID", "group", "curiosityGroupMeanCentered", DV_hist)]
-output$group <- ifelse(output$group == "int", "No reward", "Reward")
+output$group <- ifelse(output$group == "cont", "No reward", "Reward")
 
 
 # loop over dependent variables to create histograms 
@@ -446,11 +503,11 @@ for (DV in DV_hist){
 
 # age
 output <- psych::describeBy(dfWide[,"age"], group=dfWide$group)
-output <- as.data.frame(rbind(output$int, output$ext))
-output$mot <- rep(c("int","ext"), each = 1)
+output <- as.data.frame(rbind(output$cont, output$exp))
+output$mot <- rep(c("cont","exp"), each = 1)
 
 outg <- ggplot(output, aes(mot, mean, fill = mot))
-outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("ext","int")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
+outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("exp","cont")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
 
 t.test(dfWide$age ~ dfWide$group)
 
@@ -460,7 +517,7 @@ output <- plyr::count(dfWide, vars = c("gender","group"))
 
 # output <- count(df, c('gender','cond'))
 outg <- ggplot(output, aes(group, freq, fill = gender))
-outg + geom_bar(stat="identity", position="fill")+ scale_x_discrete(limits=c("int","ext")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version)) + theme_classic() 
+outg + geom_bar(stat="identity", position="fill")+ scale_x_discrete(limits=c("cont","exp")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version)) + theme_classic() 
 
 
 ########## 2. Look at the effectiveness of reward manipulation ########## 
@@ -540,7 +597,7 @@ setwd(questDir)
 for (q in seq_along(allQ)){
   # create data frame used by ggplot
   output <- by(cbind(dfWide[,get(allQ[q])]), dfWide$group, psych::describe)
-  rating <- as.data.frame(rbind(output$int, output$ext))
+  rating <- as.data.frame(rbind(output$cont, output$exp))
   rating$mot <- rep(c("intrinsic","extrinsic"), each = length(get(allQ[q])))
   
   # bar plot
@@ -559,10 +616,10 @@ for (q in seq_along(allQ)){
 rm(output, rating, outg)
 
 ########## 4. Compute t-tests and effect sizes for between-group differences in questionnaire scores ########## 
-scales <- names(dfWide[,c("BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", 
+scales <- names(dfWide[,c("intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure", 
+                          "BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", 
                           "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", 
                           "TraitCuriosity", "StateCuriosity", 
-                          "intrinsicMotivation", "taskEngagement", "interest", "boredom", "effort", "pressure", 
                           "compliance", "ableToSee", 
                           "corsiSpan", "nback_hitrate", "nback_falsealarmrate", "nback_accurary")])
 
@@ -588,7 +645,7 @@ for(scale in 1:length(scales)) {
   means <- merge(t.stats, means)
   
   # compute effect size
-  if (means$ext != means$int) {
+  if (means$exp != means$cont) {
     data <- dfWide[,c("group", scales[scale])]
     psych::cohen.d(data, "group")
     d <- psych::cohen.d(data, "group")
@@ -608,10 +665,14 @@ for(scale in 1:length(scales)) {
 }
 rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
 setwd(ratingsDir)
-write.csv(effectsizesScales, paste0("effectsizesScalesNeuro_", version, ".csv"))
+write.csv(effectsizesScales, paste0("effectsizesScales_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(effectsizesScales, file="effectsizesScales.xlsx", sheetName = paste(version), append = T)
+}
 
 
-########## 5. Check whether any of the differences in the questionnaires relates to memory performance and whetehr there is a group effect  ########## 
+########## 5. Check whether any of the differences in the questionnaires relates to memory performance and whether there is a group effect  ########## 
 
 # create intercorrelation table
 
@@ -628,13 +689,56 @@ cor_vars <- c("BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking",
 
 cor_all <- as.data.frame(t(cor(dfWide[,cor_vars], use = "pairwise.complete.obs")))
 
-cor_int <- as.data.frame(t(cor(dfWide[dfWide$group == "int", cor_vars],  use = "pairwise.complete.obs")))
+cor_cont <- as.data.frame(t(cor(dfWide[dfWide$group == "cont", cor_vars],  use = "pairwise.complete.obs")))
 
-cor_ext <- as.data.frame(t(cor(dfWide[dfWide$group == "ext", cor_vars],  use = "pairwise.complete.obs")))
+cor_exp <- as.data.frame(t(cor(dfWide[dfWide$group == "exp", cor_vars],  use = "pairwise.complete.obs")))
 
 cor_all <- round(cor_all, digits = 3)
-cor_int <- round(cor_int, digits = 3)
-cor_ext <- round(cor_ext, digits = 3)
+cor_cont <- round(cor_cont, digits = 3)
+cor_exp <- round(cor_exp, digits = 3)
+
+setwd(ratingsDir)
+xlsx::write.xlsx(cor_all, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_all", row.names = F) 
+xlsx::write.xlsx(cor_cont, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_cont", row.names = F, append = T) 
+xlsx::write.xlsx(cor_exp, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_exp", row.names = F, append = T) 
+
+
+########## 4. Compute summary statistics for measurements of memory (subject sum scores) ########## 
+
+recognitionPerformanceVars <- c("recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2",
+                                "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4",
+                                "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
+                                "meanConfidence", "meanConfidenceCorrectTrials")
+
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_abs"))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_rel"))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_cont_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_dich_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_rel_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curCor_",memoryLabels))
+recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBeta_",memoryLabels))
+
+# create a data frame that shows the summary statistics for each score, for the whole population
+dataWideRecognitionPerformance <- dfWide[,recognitionPerformanceVars]
+df_mean <- data.frame(apply(dataWideRecognitionPerformance, 2, mean, na.rm = T), recognitionPerformanceVars)
+df_sd <- data.frame(apply(dataWideRecognitionPerformance, 2, sd, na.rm = T), recognitionPerformanceVars)
+df_min <- data.frame(apply(dataWideRecognitionPerformance, 2, min, na.rm = T), recognitionPerformanceVars)
+df_max <- data.frame(apply(dataWideRecognitionPerformance, 2, max, na.rm = T), recognitionPerformanceVars)
+
+descriptivesRecognitionPerformance <- merge(df_mean, df_sd, by = "recognitionPerformanceVars")
+descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_min, by = "recognitionPerformanceVars")
+descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_max, by = "recognitionPerformanceVars")
+rm(df_mean, df_sd, df_min, df_max)
+
+names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
+
+setwd(memoryDir)
+write.csv(descriptivesRecognitionPerformance, paste0("subjectSumscore_performance_memory_", version, ".csv"), row.names = F)
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(descriptivesRecognitionPerformance, file="subjectSumscore_performance_memory.xlsx", sheetName = paste(version), row.names = F, append = T)
+}
+rm(dataWideRecognitionPerformance, descriptivesRecognitionPerformance)
 
 
 ########## 6. Compute t-tests and effect sizes for between-group differences in memory scores ########## 
@@ -651,7 +755,6 @@ for (mem in 1:length(memoryLevels)) { # benefits
   DV_wide <- c(DV_wide, paste0("curBen_rel_", memoryLabels[mem], collapse = ", "))
 }
 DV_wide <- c(DV_wide, paste("RSFC_VTAHPC_diff"),  paste("RSFC_VTAHPC_diff_spearman")) # brain data
-
 
 
 # for all dependent variables compute two-sample t-test and calculate effect size
@@ -679,7 +782,7 @@ for(DV in 1:length(DV_wide)) {
   means <- merge(t.stats, means)
   
   # compute effect size
-  if (means$ext != means$int) {
+  if (means$cont != means$exp) {
     data <- dfWide[,c("group", DV_wide[DV])]
     d <- psych::cohen.d(data, "group")
     cohen <- as.data.frame(d$cohen.d)
@@ -701,6 +804,10 @@ rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
 effectsizesMemory <- round(effectsizesMemory, digits = 3)
 setwd(memoryDir)
 write.csv(effectsizesMemory, paste0("effectsizesMemory_", version, ".csv"))
+if (pooled == 1){
+  setwd(pooledDir)
+  xlsx::write.xlsx(effectsizesMemory, file="effectsizesMemory.xlsx", sheetName = paste(version), append = T)
+}
 effectsizes <- rbind.all.columns(effectsizesScales, effectsizesMemory)
 setwd(ratingsDir)
 write.csv(effectsizes, paste0("effectsizesAll_", version, ".csv"))
@@ -708,7 +815,7 @@ write.csv(effectsizes, paste0("effectsizesAll_", version, ".csv"))
 ########## 7. Create violin plots for sum scores of memory measures in each group ########## 
 # subset dataWide
 output <- dfWide[,c("ID", "group", DV_wide)]
-output$group <- ifelse(output$group == "int", "No reward", "Reward")
+output$group <- ifelse(output$group == "cont", "No reward", "Reward")
 setwd(memoryDir)
 
 threshold_remembered1 <- c("rememberedStrictAboveAvg_abs", "curBeta_rememberedStrictAboveAvg", "curCor_rememberedStrictAboveAvg",
@@ -881,8 +988,8 @@ for (block in blocks){
     sds$grouping <- row.names(sds)
     
     # compute SE
-    sds$se[sds$grouping == "int"] <- (sds$sd[sds$grouping == "int"]) / (nrow(dfWide[dfWide$group=="int",]))
-    sds$se[sds$grouping == "ext"] <- (sds$sd[sds$grouping == "ext"]) / (nrow(dfWide[dfWide$group=="ext",]))
+    sds$se[sds$grouping == "cont"] <- (sds$sd[sds$grouping == "cont"]) / (nrow(dfWide[dfWide$group=="cont",]))
+    sds$se[sds$grouping == "exp"] <- (sds$sd[sds$grouping == "exp"]) / (nrow(dfWide[dfWide$group=="exp",]))
     
     # merge means and sds
     df <- merge(means, sds, by = "grouping")
@@ -892,7 +999,7 @@ for (block in blocks){
     df$lower <- df$effect - 1.96 * df$se
     
     # calculate effect size
-    if (df$effect[df$grouping=="int"] != df$effect[df$grouping=="ext"]) {
+    if (df$effect[df$grouping=="cont"] != df$effect[df$grouping=="exp"]) {
       data <- dfWide[,c("group", paste0(DV_wide[DV], blockstring[block]))]
       d <- psych::cohen.d(data, "group")
       cohen <- as.data.frame(d$cohen.d)
@@ -945,8 +1052,8 @@ for (block in blocks){
 effectsizesMemoryBlock_long$measure <- c("group mean", "group mean", "effect size")
 
 # add group discription
-effectsizesMemoryBlock_long$grouping <- ifelse(effectsizesMemoryBlock_long$grouping == "int", "Mean (no reward)",
-                                               ifelse(effectsizesMemoryBlock_long$grouping == "ext", "Mean (reward)",
+effectsizesMemoryBlock_long$grouping <- ifelse(effectsizesMemoryBlock_long$grouping == "cont", "Mean (no reward)",
+                                               ifelse(effectsizesMemoryBlock_long$grouping == "exp", "Mean (reward)",
                                                       ifelse(effectsizesMemoryBlock_long$grouping == "effect", "Cohen's d", NA)))
 # define colours
 cols <- c("Mean (no reward)" = "#F8766D", "Mean (reward)" = "#00BFC4", "Cohen's d" = "black")
@@ -985,9 +1092,14 @@ for(DV in 1:length(DV_wide)) {
 
 ########## 9. Test changes if RSFC between HPC and VTA for significance ########## 
 # t-test for groupwise differences in RSFC change
-t.test(dfWide$RSFC_VTAHPC_diff)
+t.test(dfWide$RSFC_VTAHPC_diff, alternative = c("greater"))
+t.test(dfWide$RSFC_VTAHPC_diff[dfWide$group == "cont"], alternative = c("greater"))
+t.test(dfWide$RSFC_VTAHPC_diff[dfWide$group == "exp"], alternative = c("greater"))
 t.test(dfWide$RSFC_VTAHPC_diff ~ dfWide$group)
-t.test(dfWide$RSFC_VTAHPC_diff_spearman)
+
+t.test(dfWide$RSFC_VTAHPC_diff_spearman, alternative = c("greater"))
+t.test(dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group == "cont"], alternative = c("greater"))
+t.test(dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group == "exp"], alternative = c("greater"))
 t.test(dfWide$RSFC_VTAHPC_diff_spearman ~ dfWide$group) 
 
 # create data in long format
@@ -1013,7 +1125,7 @@ summary(lm(RSFC_VTAHPC_run2_z_spearman~group + RSFC_VTAHPC_run1_z_spearman, dfWi
 
 # create data frame for spaghetti plot
 output <- merge(df_long_pearson, df_long_spearman, by = c("ID", "group", "run"))
-output$group <- ifelse(output$group == "int", "No reward", "Reward")
+output$group <- ifelse(output$group == "cont", "No reward", "Reward")
 
 output <- melt(output, id=c("ID", "group", "run"), measure = c("RSFC_pearson", "RSFC_spearman"))
 names(output) <- c("ID", "group", "run", "coefficient", "RSFC")
@@ -1034,7 +1146,7 @@ ggsave(paste0("Spaghettiplot_HPCVTA_RSFC.jpeg")) # save plot
 # create data frame for violin plot
 output <- melt(dfWide, id=c("ID", "group"), measure = c("RSFC_VTAHPC_diff", "RSFC_VTAHPC_diff_spearman"))
 names(output) <- c("ID", "group", "coefficient", "RSFC_change")
-output$group <- ifelse(output$group == "int", "No reward", "Reward")
+output$group <- ifelse(output$group == "cont", "No reward", "Reward")
 output$coefficient <- ifelse(output$coefficient == "RSFC_VTAHPC_diff", "Pearson", "Spearman")
 
 
@@ -1044,7 +1156,7 @@ graph <- ggplot(output, aes(x=group, y=RSFC_change, fill = group)) +
   geom_boxplot(width=0.1) +
   geom_jitter(size = 1, shape=1, position=position_jitter(0.2)) +
   theme_classic() +
-  labs(x="Experimental Condition", y="Sum score", title = "Difference in HPC-VTA RSFC") +
+  labs(x="Experimental Condition", y="Change post > pre", title = "Difference in HPC-VTA RSFC") +
   theme(legend.position="none") +
   theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) +
   coord_cartesian(ylim = c(-1, 1)) + 
@@ -1070,25 +1182,44 @@ for (mem in 1:length(memoryLevels)) { # benefits
 # for all dependent variables compute correlation between changes in RSFC and memory for whole sample as well as in each group
 df_cor <- data.frame(var   = character(length(DV_wide)),
                      pearson = numeric(length(DV_wide)),
+                     p_value_pearson = numeric(length(DV_wide)),
                      pearson_noR = numeric(length(DV_wide)),
+                     p_value_pearson_noR = numeric(length(DV_wide)),
                      pearson_R = numeric(length(DV_wide)),
+                     p_value_pearson_R = numeric(length(DV_wide)),
                      spearman = numeric(length(DV_wide)),
+                     p_value_spearman = numeric(length(DV_wide)),
                      spearman_noR = numeric(length(DV_wide)),
+                     p_value_spearman_noR = numeric(length(DV_wide)),
                      spearman_R = numeric(length(DV_wide)),
+                     p_value_spearman_R = numeric(length(DV_wide)),
                      stringsAsFactors=FALSE)
 for(DV in 1:length(DV_wide)) {
   # paste variable
   df_cor$var[DV] <- paste(DV_wide[DV])
   # compute correlarion with FC computed with pearson
-  df_cor$pearson[DV] <- cor(dfWide[[paste(DV_wide[DV])]], dfWide$RSFC_VTAHPC_diff)
-  df_cor$pearson_noR[DV] <- cor(dfWide[[paste(DV_wide[DV])]][dfWide$group=="int"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="int"])
-  df_cor$pearson_R[DV] <- cor(dfWide[[paste(DV_wide[DV])]][dfWide$group=="ext"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="ext"])
-  # compute correlarion with FC computed with spearman
-  df_cor$spearman[DV] <- cor(dfWide[[paste(DV_wide[DV])]], dfWide$RSFC_VTAHPC_diff_spearman)
-  df_cor$spearman_noR[DV] <- cor(dfWide[[paste(DV_wide[DV])]][dfWide$group=="int"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="int"])
-  df_cor$spearman_R[DV] <- cor(dfWide[[paste(DV_wide[DV])]][dfWide$group=="ext"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="ext"])
+  cor <- cor.test(dfWide[[paste(DV_wide[DV])]], dfWide$RSFC_VTAHPC_diff)
+  df_cor$pearson[DV] <- cor$estimate # correlation
+  df_cor$p_value_pearson[DV] <- cor$p.value # p value
+  cor <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="cont"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="cont"])
+  df_cor$pearson_noR[DV] <- cor$estimate # correlation
+  df_cor$p_value_pearson_noR[DV] <-cor$p.value # p value
+  cor <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="exp"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="exp"])
+  df_cor$pearson_R[DV] <- cor$estimate # correlation
+  df_cor$p_value_pearson_R[DV] <-cor$p.value # p value
+  # compute correlarion with FC computed with spearman (using spearman)
+  cor <- cor.test(dfWide[[paste(DV_wide[DV])]], dfWide$RSFC_VTAHPC_diff_spearman, method = "spearman")
+  df_cor$spearman[DV] <- cor$estimate # correlation
+  df_cor$p_value_spearman[DV] <- cor$p.value # p value
+  cor <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="cont"], dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group=="cont"], method = "spearman")
+  df_cor$spearman_noR[DV] <- cor$estimate # correlation
+  df_cor$p_value_spearman_noR[DV] <-cor$p.value # p value
+  cor <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="exp"], dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group=="exp"], method = "spearman")
+  df_cor$spearman_R[DV] <- cor$estimate # correlation
+  df_cor$p_value_spearman_R[DV] <-cor$p.value # p value
 }
 # 
+df_cor[, 2:12] <- round(df_cor[, 2:12], digits = 5)
 setwd(brainDir)
 write.csv(df_cor, file = "Correlation_RSFC_changes_memory.csv", row.names = F)
 
@@ -1096,7 +1227,7 @@ write.csv(df_cor, file = "Correlation_RSFC_changes_memory.csv", row.names = F)
 
 # select variables to be plotted
 output <- dfWide[,c("ID", "group", DV_wide, "RSFC_VTAHPC_diff", "RSFC_VTAHPC_diff_spearman")]
-output$group <- ifelse(output$group == "int", "No reward", "Reward")
+output$group <- ifelse(output$group == "cont", "No reward", "Reward")
 
 # set variables to loop through
 pp <- 0
@@ -1181,10 +1312,13 @@ for(p in 1:length(plotVars)) {
                   "absoluteBenefitRecall_cont", "absoluteBenefitRecollection_cont", # continuous curiosity benefit
                   "relativeBenefitRecall", "relativeBenefitRecollection", # relative curiosity benefit
                   "correlationRecall", "correlationRecollection")){
-    graph <- graph + facet_grid(. ~ criteria) 
+    graph <- graph + facet_grid(coefficient ~ criteria) 
   } else if (plot %in% c( "remembered", "betaRemembered", "correlationRemembered",
                           "absoluteBenefitRemembered_dich", "absoluteBenefitRemembered_cont", "relativeBenefitRemembered")){
-    graph <- graph + facet_grid(criteria ~ method)
+    graph <- graph + facet_grid(coefficient ~ criteria+method)
+  }  else if (plot %in% c("recognition", "betaRecognition", "relativeBenefitRecognition", "correlationRecognition",
+                          "absoluteBenefitRecognition_dich", "absoluteBenefitRecognition_cont", "relativeBenefitRecognition")){
+    graph <- graph + facet_grid(coefficient ~ .) 
   }
   # change y axis depending on variable
   if (plot %in% c("recall", "recognition", "recollection", "remembered")){
