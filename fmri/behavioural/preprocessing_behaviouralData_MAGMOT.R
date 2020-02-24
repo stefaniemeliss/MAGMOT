@@ -493,10 +493,10 @@ participantToDelete5 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 =
 MAGMOT_post <- subset(MAGMOT_post, MAGMOT_post$participant != participantToDelete1 & MAGMOT_post$participant != participantToDelete2 & MAGMOT_post$participant != participantToDelete3 & MAGMOT_post$participant != participantToDelete4 & MAGMOT_post$participant != participantToDelete5)
 rm(list=ls(pattern = "participantToDelete"))
 ### recode demographic information and then delete the old variable
-MAGMOT_post$group <- ifelse(MAGMOT_post$group.1 == 1, "int", # group
-                            ifelse(MAGMOT_post$group.1 == 2, "ext", NA))
+MAGMOT_post$group <- ifelse(MAGMOT_post$group.1 == 1, "cont", # group
+                            ifelse(MAGMOT_post$group.1 == 2, "exp", NA))
 MAGMOT_post$group.1 <- NULL
-MAGMOT_post$groupEffectCoded <-  ifelse(MAGMOT_post$group == "ext", 1, -1)
+MAGMOT_post$groupEffectCoded <-  ifelse(MAGMOT_post$group == "exp", 1, -1)
 
 MAGMOT_post$alcohol <- ifelse(MAGMOT_post$alcohol.1 == 1, "alcohol in the last 24 hours", # alcohol
                               ifelse(MAGMOT_post$alcohol.1 == 2, "no alcohol in the last 24 hours", NA))
@@ -563,9 +563,9 @@ for (s in seq_along(subjects)){
   # if (nchar(subjects[s])==1){ # add a zeo if not present in front of one digit numbers
   #   subjects[s] <- paste0("0", subjects[s])
   # }
-  if (MAGMOT$group[MAGMOT$ID == subjects[s]] == "ext"){ # define BIDS name depending on group
+  if (MAGMOT$group[MAGMOT$ID == subjects[s]] == "exp"){ # define BIDS name depending on group
     BIDSstring = paste0("sub-experimental0", subjects[s])
-  } else if (MAGMOT$group[MAGMOT$ID == subjects[s]] == "int"){
+  } else if (MAGMOT$group[MAGMOT$ID == subjects[s]] == "cont"){
     BIDSstring = paste0("sub-control0", subjects[s])
   }
   print(paste("processing data for",BIDSstring))
@@ -585,6 +585,9 @@ for (s in seq_along(subjects)){
   # rename variables questionnaire
   names(quest) <- c("ID","fMRI","group","motivation","q_trial", "question",
                     "startValueQuestion","clicksQuestion","endValue","displayQuestionOnset","timestampQuestion","rtQuestion")
+  
+  # change group from int/ext to cont/exp
+  quest$group <- ifelse(quest$group == "int", "cont", "exp")
   
   # assign names to question
   quest$IMI <- ifelse(quest$question == "It was fun to do the experiment.", "post1",
@@ -680,6 +683,7 @@ for (s in seq_along(subjects)){
   ptbdata$ID <- ifelse(nchar(ptbdata$ID)==1, paste0("0", ptbdata$ID), ptbdata$ID) # add a zeo if not present in front of one digit numbers
   ptbdata$BIDS <- BIDSstring
   ptbdata$groupEffectCoded <-  ifelse(ptbdata$group == "ext", 1, -1)
+  ptbdata$group <-  ifelse(ptbdata$group == "ext", "exp", "cont") # note: behavioural studies have cont vs exp as croup names
   
   # change stimID of respMatTask to match collector
   names(ptbdata)[names(ptbdata)=="stimID"] <- "vidFileName"
@@ -710,7 +714,7 @@ for (s in seq_along(subjects)){
   
   # dichotimise curiosity
   ptbdata$curiosity_dich <- ifelse(ptbdata$curiosityGroupMeanCentered > 0, 1,
-                                ifelse(ptbdata$curiosityGroupMeanCentered < 0, -1, NA))
+                                   ifelse(ptbdata$curiosityGroupMeanCentered < 0, -1, NA))
   
   # compute reward by curiosity interaction
   ptbdata$rewardByCuriosity <- ptbdata$curiosityGroupMeanCentered * ptbdata$groupEffectCoded
@@ -1331,14 +1335,20 @@ for (s in seq_along(subjects)){
     
     # compute the glmer models to extract the slopes
     for (mem in 1:length(memoryLevels)) {
+      # model with curiosity, reward and their interaction
       LMEmodel <- glmer(dataLong[, memoryLevels[mem]] ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
       MAGMOT[[paste0("curBeta_", memoryLabels[mem])]] <-  coef(LMEmodel)$ID$curiosityGroupMeanCentered
       MAGMOT[[paste0("curBeta_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBeta_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBeta_", memoryLabels[mem])]])
+      
+      # model with curiosity only
+      LMEmodel <- glmer(dataLong[, memoryLevels[mem]] ~ curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
+      MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] <-  coef(LMEmodel)$ID$curiosityGroupMeanCentered
+      MAGMOT[[paste0("curBetaOnly_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]])
     }
     
     # add RSFC estimates between HPC & VTA (Pearson)
     setwd(brainDir)
-    RSFC <- read.delim2("RSFC_VTA-HPC_gruber.txt") # read in data
+    RSFC <- read.delim2("RSFC_VTA-HPC_pearson.txt") # read in data
     names(RSFC)[names(RSFC)=="RSFC_run.1"] <- "RSFC_VTAHPC_run1" # change col name
     names(RSFC)[names(RSFC)=="RSFC_run.2"] <- "RSFC_VTAHPC_run2" # change col name
     RSFC$RSFC_VTAHPC_run1 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1)) # change from factor to numeric
@@ -1352,7 +1362,7 @@ for (s in seq_along(subjects)){
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
     
     # add RSFC estimates between HPC & VTA (Spearman)
-    RSFC <- read.delim2("RSFC_VTA-HPC_spearman_gruber.txt") # read in data
+    RSFC <- read.delim2("RSFC_VTA-HPC_spearman.txt") # read in data
     names(RSFC)[names(RSFC)=="RSFC_run.1_spearman"] <- "RSFC_VTAHPC_run1_spearman" # change col name
     names(RSFC)[names(RSFC)=="RSFC_run.2_spearman"] <- "RSFC_VTAHPC_run2_spearman" # change col name
     RSFC$RSFC_VTAHPC_run1_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1_spearman)) # change from factor to numeric
@@ -1367,38 +1377,6 @@ for (s in seq_along(subjects)){
     
     setwd(preprocessedDir)
     xlsx::write.xlsx(MAGMOT, file="wide_MAGMOT.xlsx", sheetName = "Sheet1", row.names = F)
-    
-    # compute summary statistics for measurements of memory
-    recognitionPerformanceVars <- c("recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2",
-                                    "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4",
-                                    "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
-                                    "meanConfidence", "meanConfidenceCorrectTrials",
-                                    "RSFC_VTAHPC_run1_z", "RSFC_VTAHPC_run2_z", "RSFC_VTAHPC_diff", "RSFC_VTAHPC_run1_z_spearman", "RSFC_VTAHPC_run2_z_spearman", "RSFC_VTAHPC_diff_spearman")
-    
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_abs"))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_rel"))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_cont_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_dich_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_rel_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curCor_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBeta_",memoryLabels))
-    
-    # create a data frame that shows the summary statistics for each score, for the whole population
-    dataWideRecognitionPerformance <- MAGMOT[,recognitionPerformanceVars]
-    df_mean <- data.frame(apply(dataWideRecognitionPerformance, 2, mean, na.rm = T), recognitionPerformanceVars)
-    df_sd <- data.frame(apply(dataWideRecognitionPerformance, 2, sd, na.rm = T), recognitionPerformanceVars)
-    df_min <- data.frame(apply(dataWideRecognitionPerformance, 2, min, na.rm = T), recognitionPerformanceVars)
-    df_max <- data.frame(apply(dataWideRecognitionPerformance, 2, max, na.rm = T), recognitionPerformanceVars)
-    
-    descriptivesRecognitionPerformance <- merge(df_mean, df_sd, by = "recognitionPerformanceVars")
-    descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_min, by = "recognitionPerformanceVars")
-    descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_max, by = "recognitionPerformanceVars")
-    rm(df_mean, df_sd, df_min, df_max)
-    
-    names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
-    
-    setwd(preprocessedDir)
-    xlsx::write.xlsx(descriptivesRecognitionPerformance, file= paste0("memoryPerformance_" , version, "_N", length(subjects),".xlsx"), sheetName = "Sheet1", row.names = F)
     
     #################### as a last step, create the files we need for concatenation ####################
     
@@ -1546,19 +1524,24 @@ for (s in seq_along(subjects)){
             addCol <- 0
             for (mem in 1:length(memoryLevels)) {
               # memory and reward-memory interaction
-              memoCol <- 8 + (8*addCol) # add more columns
+              memoCol <- 8 + (10*addCol) # add more columns
               
               dataTable_ISC_dummy[x,memoCol] <- cor(events[, paste0("trial_type_", memoryLabels[mem],"_",subjectsCorr[s], "_effectCoded")], events[, paste0("trial_type_", memoryLabels[mem],"_",subjectsToCorrelate[ss], "_effectCoded")])
               dataTable_ISC_dummy[x,memoCol+1] <-  dataTable_ISC_dummy[x,memoCol] * dataTable_ISC_dummy[x,3] # third col has group information
               
               # curiosity beta and curiosity beta interaction
               betaCol <- memoCol + 2
-              
               dataTable_ISC_dummy[x,betaCol] <- (MAGMOT[[paste0("curBeta_c_", memoryLabels[mem])]][MAGMOT$BIDS == subjectsCorr[s]] + MAGMOT[[paste0("curBeta_c_", memoryLabels[mem])]][MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
               dataTable_ISC_dummy[x,betaCol+1] <- dataTable_ISC_dummy[x,betaCol] * dataTable_ISC_dummy[x,3] 
               
+              # curiosity only beta and curiosity only beta interaction
+              betaOnlyCol <- betaCol + 2
+              
+              dataTable_ISC_dummy[x,betaOnlyCol] <- (MAGMOT[[paste0("curBetaOnly_c_", memoryLabels[mem])]][MAGMOT$BIDS == subjectsCorr[s]] + MAGMOT[[paste0("curBetaOnly_c_", memoryLabels[mem])]][MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
+              dataTable_ISC_dummy[x,betaOnlyCol+1] <- dataTable_ISC_dummy[x,betaOnlyCol] * dataTable_ISC_dummy[x,3] 
+              
               # curiosity benefit and curiosity benefit interaction (RELATIVE)
-              benCol <- betaCol + 2
+              benCol <- betaOnlyCol + 2
               
               dataTable_ISC_dummy[x,benCol] <- (MAGMOT[[paste0("curBen_rel_", memoryLabels[mem])]][MAGMOT$BIDS == subjectsCorr[s]] + MAGMOT[[paste0("curBen_rel_", memoryLabels[mem])]][MAGMOT$BIDS == subjectsToCorrelate[ss]])/2
               dataTable_ISC_dummy[x,benCol+1] <- dataTable_ISC_dummy[x,benCol] * dataTable_ISC_dummy[x,3]              
@@ -1729,6 +1712,8 @@ for (s in seq_along(subjects)){
         ISC_table_names <-  c(ISC_table_names, paste0("grCorr_", memoryLabels[mem], collapse = ", "))
         ISC_table_names <-  c(ISC_table_names, paste0("curBeta_", memoryLabels[mem], collapse = ", "))
         ISC_table_names <-  c(ISC_table_names, paste0("grCurBeta_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("curBetaOnly_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("grCurBetaOnly_", memoryLabels[mem], collapse = ", "))
         ISC_table_names <-  c(ISC_table_names, paste0("curBen_", memoryLabels[mem], collapse = ", "))
         ISC_table_names <-  c(ISC_table_names, paste0("grCurBen_", memoryLabels[mem], collapse = ", "))
         ISC_table_names <-  c(ISC_table_names, paste0("curCor_", memoryLabels[mem], collapse = ", "))
@@ -1743,7 +1728,7 @@ for (s in seq_along(subjects)){
       
       # determine the unique contribution of curiosity, memory and confidence
       uniqueCurAboveAvgConf <- lm(dataTable_ISC_dummy$corr_curiosity ~ dataTable_ISC_dummy$corr_aboveAvgConf)
-      plot(predict(uniqueCurAboveAvgConf), rstandard(uniqueCurAboveAvgConf))
+      #plot(predict(uniqueCurAboveAvgConf), rstandard(uniqueCurAboveAvgConf))
       dataTable_ISC_dummy[,nextCol] <- residuals(uniqueCurAboveAvgConf)
       dataTable_ISC_dummy[,nextCol+1] <- dataTable_ISC_dummy[,nextCol] * dataTable_ISC_dummy[,3] 
       
