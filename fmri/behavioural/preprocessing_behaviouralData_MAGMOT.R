@@ -941,7 +941,7 @@ for (s in seq_along(subjects)){
     # calculate curiosity-driven memory memory benefit (dichotomous, absolute)  --> range: [-1; 1]
     MEMO[[paste0("curBen_dich_", memoryLabels[mem])]] <- MEMO$curiosity_dich * MEMO[[paste0(memoryLevels[mem])]]
   }
-  
+
   # save data in long format
   setwd(preprocessedLongDir)
   filenameLong <- paste0(BIDSstring,"_long.csv")
@@ -1233,6 +1233,10 @@ for (s in seq_along(subjects)){
         postMemory[[paste0("curBen_rel_", memoryLabels[mem], blockstring[BLOCK])]] <- (sum(data_subset[[paste0("curBen_cont_", memoryLabels[mem])]] > 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered > 0, na.rm = T)) - (sum(data_subset[[paste0("curBen_cont_", memoryLabels[mem])]] < 0, na.rm = T) / sum(data_subset$curiosityGroupMeanCentered < 0, na.rm = T))
         # calculate correlation between curiosity and memory
         postMemory[[paste0("curCor_",  memoryLabels[mem], blockstring[BLOCK])]] <- cor(data_subset$curiosityGroupMeanCentered, data_subset[[paste0(memoryLevels[mem])]], use = "pairwise.complete.obs") 
+        
+        # LM to predict memory using curiosity
+        glm <- glm(data_subset[[paste0(memoryLevels[mem])]] ~ data_subset$curiosityGroupMeanCentered, family=binomial(link='logit'))
+        postMemory[[paste0("lmBeta_", memoryLabels[mem])]] <- glm$coefficients[2]
       }
       
       # average mean confidence
@@ -1341,8 +1345,8 @@ for (s in seq_along(subjects)){
       MAGMOT[[paste0("curBeta_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBeta_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBeta_", memoryLabels[mem])]])
       
       # model with curiosity only
-      LMEmodel <- glmer(dataLong[, memoryLevels[mem]] ~ curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
-      MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] <-  coef(LMEmodel)$ID$curiosityGroupMeanCentered
+      LMEmodel2 <- glmer(dataLong[, memoryLevels[mem]] ~ curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
+      MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] <-  coef(LMEmodel2)$ID$curiosityGroupMeanCentered
       MAGMOT[[paste0("curBetaOnly_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]])
     }
     
@@ -1491,7 +1495,7 @@ for (s in seq_along(subjects)){
             # create an index variable
             x <- x+1
             
-            # fill in information to dataTable and dataTable_ISC
+            ### fill in information to dataTable (group coding) ###
             dataTable[x,1] <- subjectsCorr[s]
             dataTable[x,2] <- subjectsToCorrelate[ss]          
             
@@ -1506,7 +1510,7 @@ for (s in seq_along(subjects)){
               dataTable_ISC[x,5] <- '\\' #add back slash at end of the row
             }
             
-            # fill in information to dataTable_ISC_dummy
+            ### fill in information to dataTable_ISC_dummy (group coding) ###
             dataTable_ISC_dummy[x,1] <- subjectsCorr[s]
             dataTable_ISC_dummy[x,2] <- subjectsToCorrelate[ss]
             #we adopt deviation coding for the two groups by replacing two groups G1 (cont) and G2 (exp) with -0.5 and 0.5. 
@@ -1555,24 +1559,15 @@ for (s in seq_along(subjects)){
               addCol <- addCol + 1 # updates multiplier
             }
             
-            # # determine the unique contribution of curiosity, memory and confidence
+            # add file name and back slashs
             nextCol <- corCol + 2 # looks at current number of columns in object and adds 1
             
-            dataTable_ISC_dummy[x,nextCol] <- NA #residuals(uniqueCurAboveAvgConf)
-            dataTable_ISC_dummy[x,nextCol+1] <-  NA #dataTable_ISC_dummy[x,24] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,nextCol+2] <- NA #residuals(uniqueMemAboveAvgConf)
-            dataTable_ISC_dummy[x,nextCol+3] <- NA #dataTable_ISC_dummy[x,26] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,nextCol+4] <- NA #residuals(uniqueConf)
-            dataTable_ISC_dummy[x,nextCol+5] <- NA #dataTable_ISC_dummy[x,28] * dataTable_ISC_dummy[x,3] 
-            
-            
-            dataTable_ISC_dummy[x,nextCol+6] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
+            dataTable_ISC_dummy[x,nextCol] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
             if(x < N) {
-              dataTable_ISC_dummy[x,nextCol+7] <- '\\' #add back slash at end of the row
+              dataTable_ISC_dummy[x,nextCol+1] <- '\\' #add back slash at end of the row
             }
-            
-            
-            ### create SME dataTables
+
+            ### create SME dataTables ###
             for (p in seq_along(pair)) {
               
               # disentangle events for pair[p]
@@ -1588,13 +1583,14 @@ for (s in seq_along(subjects)){
               SME_events <- merge(SME_events, behavParc, by = "row.names")
               
               xx <- 2
-              
+              # loop over all memory labels to create SME tables
               for (mem in seq_along(memoryLabels)){
                 
                 # reset variable for if statement
                 anyRemembered <- "no"
                 anyForgotten <- "no"
                 
+                # for remembered and forgotten
                 for (o in seq_along(SME_outcome)){
                   
                   # subset data depnding on memory performance
@@ -1678,9 +1674,11 @@ for (s in seq_along(subjects)){
             } # end of "for (p in seq_along(pair))"
           } # end of subjectsToCorrelate
         } # end of subjectsCorr
-      }
+      } 
       
-      # process 3dISC -dataTable
+      ############# once all subject pairs are processed ############# 
+      
+      ### process dataTable_ISC ###
       dataTable_ISC[nrow(dataTable_ISC),ncol(dataTable_ISC)] <- NA # no // for last column
       dataTable_ISC_dummy[nrow(dataTable_ISC_dummy),ncol(dataTable_ISC_dummy)] <- NA # no // for last column
       rm(fillerTable)
@@ -1701,7 +1699,7 @@ for (s in seq_along(subjects)){
       names(dataTable_ISC) <- c("Subj1", "Subj2", "grp", "InputFile", "\\")
       names(dataTable) <- c("Subj1", "Subj2", dataTablenames)
       
-      
+      ### process dataTable_ISC_dummy ###
       # create vector with all column names for ISC table
       for (mem in 1:length(memoryLevels)) {
         if (mem == 1){
@@ -1719,29 +1717,6 @@ for (s in seq_along(subjects)){
         ISC_table_names <-  c(ISC_table_names, paste0("curCor_", memoryLabels[mem], collapse = ", "))
         ISC_table_names <-  c(ISC_table_names, paste0("grCurCor_", memoryLabels[mem], collapse = ", "))
       }
-      
-      # add column names to ISC table dummy
-      names(dataTable_ISC_dummy) <- c("Subj1", "Subj2", "grp", "corr_curiosity", "grCorr_curiosity", "corr_confidence", "grCorr_confidence",
-                                      ISC_table_names,
-                                      "uniqueCurAboveAvgConf", "grpUniqueCurAboveAvgConf", "uniqueMemAboveAvgConf", "grpUniqueMemAboveAvgConf", "uniqueConfidence", "grpUniqueConfidence",
-                                      "InputFile", "\\")
-      
-      # determine the unique contribution of curiosity, memory and confidence
-      uniqueCurAboveAvgConf <- lm(dataTable_ISC_dummy$corr_curiosity ~ dataTable_ISC_dummy$corr_aboveAvgConf)
-      #plot(predict(uniqueCurAboveAvgConf), rstandard(uniqueCurAboveAvgConf))
-      dataTable_ISC_dummy[,nextCol] <- residuals(uniqueCurAboveAvgConf)
-      dataTable_ISC_dummy[,nextCol+1] <- dataTable_ISC_dummy[,nextCol] * dataTable_ISC_dummy[,3] 
-      
-      uniqueMemAboveAvgConf <- lm(dataTable_ISC_dummy$corr_aboveAvgConf ~ dataTable_ISC_dummy$corr_curiosity)
-      plot(predict(uniqueMemAboveAvgConf), rstandard(uniqueMemAboveAvgConf))
-      dataTable_ISC_dummy[,nextCol+2] <- residuals(uniqueMemAboveAvgConf)
-      dataTable_ISC_dummy[,nextCol+3] <- dataTable_ISC_dummy[,nextCol+2] * dataTable_ISC_dummy[,3] 
-      
-      uniqueConf <- lm(dataTable_ISC_dummy$corr_confidence ~ dataTable_ISC_dummy$corr_allConf)
-      plot(predict(uniqueConf), rstandard(uniqueConf))
-      dataTable_ISC_dummy[,nextCol+4] <- residuals(uniqueConf)
-      dataTable_ISC_dummy[,nextCol+5] <- dataTable_ISC_dummy[,nextCol+4] * dataTable_ISC_dummy[,3] 
-      
       # round values
       for (cc in (seq_along(colnames(dataTable_ISC_dummy)))){
         currentCol <- colnames(dataTable_ISC_dummy)[cc]
@@ -1749,11 +1724,92 @@ for (s in seq_along(subjects)){
           dataTable_ISC_dummy[names(dataTable_ISC_dummy)==currentCol] <- round(dataTable_ISC_dummy[names(dataTable_ISC_dummy)==currentCol], digits = 5)
         }
       }
+      # add column names to ISC table dummy
+      names(dataTable_ISC_dummy) <- c("Subj1", "Subj2", "grp", "corr_curiosity", "grCorr_curiosity", "corr_confidence", "grCorr_confidence",
+                                      ISC_table_names, "InputFile", "\\")
       
-      #save files
+      ### create data table with unique effects of curiosity, memory and their interaction ###
+      dataTable_ISC_controlled <- dataTable_ISC_dummy[, c("Subj1", "Subj2", "grp")] # copy some columns from dataTable_ISC_dummy
+      
+      # unique confidence
+      uniqueConfidence <- lm(dataTable_ISC_dummy$corr_confidence ~ dataTable_ISC_dummy$corr_allConf)
+      dataTable_ISC_controlled[,4] <- round(residuals(uniqueConfidence), digits = 5) # residuals from models
+      dataTable_ISC_controlled[,5] <- dataTable_ISC_controlled[,4] * dataTable_ISC_controlled[,3] # interaction
+      
+      addCol2 <- 0
+      for (mem in 1:length(memoryLevels)) {
+        # unique curiosity
+        curCol <- 6 + (12*addCol2) # add more columns
+        uniqueCuriosity <- lm(dataTable_ISC_dummy$corr_curiosity ~ dataTable_ISC_dummy[[paste0("corr_", memoryLabels[mem])]])
+        dataTable_ISC_controlled[,curCol] <- round(residuals(uniqueCuriosity), digits = 5) # residuals from models
+        dataTable_ISC_controlled[,curCol+1] <- dataTable_ISC_controlled[,curCol] * dataTable_ISC_controlled[,3] # interaction
+        
+        # unique memory
+        memCol <- curCol + 2 # add more columns
+        uniqueMemory <- lm(dataTable_ISC_dummy[[paste0("corr_", memoryLabels[mem])]] ~ dataTable_ISC_dummy$corr_curiosity)
+        dataTable_ISC_controlled[,memCol] <- round(residuals(uniqueMemory), digits = 5) # residuals from models
+        dataTable_ISC_controlled[,memCol+1] <- dataTable_ISC_controlled[,memCol] * dataTable_ISC_controlled[,3] # interaction
+        
+        # unique curiosity beta
+        uBetaCol <- memCol + 2 # add more columns
+        uniqueBeta <- lm(dataTable_ISC_dummy[[paste0("curBeta_", memoryLabels[mem])]]  ~ dataTable_ISC_dummy[[paste0("corr_", memoryLabels[mem])]] + dataTable_ISC_dummy$corr_curiosity)
+        dataTable_ISC_controlled[,uBetaCol] <- round(residuals(uniqueBeta), digits = 5) # residuals from models
+        dataTable_ISC_controlled[,uBetaCol+1] <- dataTable_ISC_controlled[,uBetaCol] * dataTable_ISC_controlled[,3] # interaction
+        
+        # unique curiosity beta only
+        uBetaOnlyCol <- uBetaCol + 2 # add more columns
+        uniqueBetaOnly <- lm(dataTable_ISC_dummy[[paste0("curBetaOnly_", memoryLabels[mem])]]  ~ dataTable_ISC_dummy[[paste0("corr_", memoryLabels[mem])]] + dataTable_ISC_dummy$corr_curiosity)
+        dataTable_ISC_controlled[,uBetaOnlyCol] <- round(residuals(uniqueBetaOnly), digits = 5) # residuals from models
+        dataTable_ISC_controlled[,uBetaOnlyCol+1] <- dataTable_ISC_controlled[,uBetaOnlyCol] * dataTable_ISC_controlled[,3] # interaction
+        
+        # unique curiosity benefit
+        uBenCol <- uBetaOnlyCol + 2 # add more columns
+        uniqueBenefit <- lm(dataTable_ISC_dummy[[paste0("curBen_", memoryLabels[mem])]]  ~ dataTable_ISC_dummy[[paste0("corr_", memoryLabels[mem])]] + dataTable_ISC_dummy$corr_curiosity)
+        dataTable_ISC_controlled[,uBenCol] <- round(residuals(uniqueBenefit), digits = 5) # residuals from models
+        dataTable_ISC_controlled[,uBenCol+1] <- dataTable_ISC_controlled[,uBenCol] * dataTable_ISC_controlled[,3] # interaction
+        
+        # unique curiosity correlation
+        uCorCol <- uBenCol + 2 # add more columns
+        uniqueCorrelation <- lm(dataTable_ISC_dummy[[paste0("curCor_", memoryLabels[mem])]]  ~ dataTable_ISC_dummy[[paste0("corr_", memoryLabels[mem])]] + dataTable_ISC_dummy$corr_curiosity)
+        dataTable_ISC_controlled[,uCorCol] <- round(residuals(uniqueCorrelation), digits = 5) # residuals from models
+        dataTable_ISC_controlled[,uCorCol+1] <- dataTable_ISC_controlled[,uCorCol] * dataTable_ISC_controlled[,3] # interaction
+        
+        addCol2 <- addCol2 + 1 # updates multiplier
+      }
+      
+      # add file name and back slashs
+      nextCol2 <- uCorCol + 2 # looks at current number of columns in object and adds 1
+      dataTable_ISC_controlled[,nextCol2] <- dataTable_ISC_dummy[, "InputFile"]
+      dataTable_ISC_controlled[,nextCol2+1] <- '\\' #add back slash at end of the row
+      dataTable_ISC_controlled[nrow(dataTable_ISC_controlled),ncol(dataTable_ISC_controlled)] <- NA # no // for last column
+      
+      for (mem in 1:length(memoryLevels)) {
+        if (mem == 1){
+          ISC_table_names <- c(paste0("uniqueCur_", memoryLabels[mem]))
+        } else {
+          ISC_table_names <-  c(ISC_table_names, paste0("uniqueCur_", memoryLabels[mem], collapse = ", "))
+        }
+        ISC_table_names <-  c(ISC_table_names, paste0("grUniqueCur_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("uniqueMem_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("grUniqueMem_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("uniqueBeta_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("grUniqueBeta_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("uniqueBetaOnly_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("grUniqueBetaOnly_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("uniqueBen_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("grUniqueBen_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("uniqueCor_", memoryLabels[mem], collapse = ", "))
+        ISC_table_names <-  c(ISC_table_names, paste0("grUniqueCor_", memoryLabels[mem], collapse = ", "))
+      }
+      # add column names to dataTable_ISC_controlled
+      names(dataTable_ISC_controlled) <- c("Subj1", "Subj2", "grp", "unique_confidence", "grUnique_confidence",
+                                      ISC_table_names, "InputFile", "\\")
+      
+      ### save all dataTables ###
       setwd(preprocessedEventsRootDir)
       write.table(dataTable_ISC, file="dataTable_magictrickwatching.txt", quote=FALSE, sep="\t", row.names = FALSE, na = "")
       write.table(dataTable_ISC_dummy, file="dataTable_magictrickwatching_memo.txt", quote=FALSE, sep="\t", row.names = FALSE, na = "")
+      write.table(dataTable_ISC_controlled, file="dataTable_magictrickwatching_unique.txt", quote=FALSE, sep="\t", row.names = FALSE, na = "")
       write.table(dataTable, file="dataTable_pairwise_memoryScore.csv", quote=FALSE, sep=",", row.names = FALSE, na = "NA")
       
       for (mem in seq_along(memoryLabels)){
@@ -1779,3 +1835,30 @@ for (s in seq_along(subjects)){
 #corrCoefficients <- dataTable_ISC_dummy[, c("corrCuriosity", "corrConfidence", "corrAllConf", "corrHighConf", "corrAboveAvgConf", "cuBetaAllConf", "cuBetaHighConf", "cuBetaAboveAvgConf")]
 #corrCoefficients <- dataTable_ISC_dummy[, c("corrCuriosity", "corrConfidence", "corrAllConf", "corrAboveAvgConf", "cuBetaAllConf", "cuBetaAboveAvgConf")]
 #cor(corrCoefficients)
+
+
+#df[,c( "curBeta_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBen_aboveAvgConf", "curCor_aboveAvgConf")] <- as.numeric(df[,c( "curBeta_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBen_aboveAvgConf", "curCor_aboveAvgConf")])
+
+cor(dataTable_ISC_dummy[,c( "curBeta_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBen_aboveAvgConf", "curCor_aboveAvgConf")])
+cor(MAGMOT[,c("curBeta_aboveAvgConf", "curBeta_c_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBetaOnly_c_aboveAvgConf", "curBen_rel_aboveAvgConf", "curCor_aboveAvgConf", "lmBeta_aboveAvgConf")])
+
+# par(mfrow=c(2,2))
+# r <- cor(MAGMOT$curBeta_aboveAvgConf, MAGMOT$curCor_aboveAvgConf, method = "pearson")
+# plot(MAGMOT$curBeta_aboveAvgConf, MAGMOT$curCor_aboveAvgConf,main = paste("LME beta & correlation, r = ", round(r, digits = 5)))
+# abline(lm(MAGMOT$curCor_aboveAvgConf ~ MAGMOT$curBeta_aboveAvgConf))
+# 
+# r <- cor(MAGMOT$curBeta_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf, method = "pearson")
+# plot(MAGMOT$curBeta_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf,main = paste("LME beta & lm beta, r = ", round(r, digits = 5)))
+# abline(lm(MAGMOT$lmBeta_aboveAvgConf ~ MAGMOT$curBeta_aboveAvgConf))
+# 
+# r <- cor(MAGMOT$curCor_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf, method = "pearson")
+# plot(MAGMOT$curCor_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf,main = paste("correlation & lm beta, r = ", round(r, digits = 5)))
+# abline(lm(MAGMOT$lmBeta_aboveAvgConf ~ MAGMOT$curCor_aboveAvgConf))
+# 
+# cor(MAGMOT[,c("curBeta_aboveAvgConf", "curBeta_c_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBetaOnly_c_aboveAvgConf", "curBen_rel_aboveAvgConf", "curCor_aboveAvgConf", "lmBeta_aboveAvgConf")], method = "spearman")
+# 
+# MAGMOT$ID[[which(min(MAGMOT$lmBeta_aboveAvgConf)==MAGMOT$lmBeta_aboveAvgConf)]]
+# MAGMOT$ID[[which(min(MAGMOT$lmBeta_aboveAvgConf)==MAGMOT$lmBeta_aboveAvgConf)]]
+# 
+# MAGMOT2 <- subset(MAGMOT, MAGMOT$ID != "18")
+# cor(MAGMOT2[,c("curBeta_aboveAvgConf", "curBeta_c_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBetaOnly_c_aboveAvgConf", "curBen_rel_aboveAvgConf", "curCor_aboveAvgConf", "lmBeta_aboveAvgConf")])
