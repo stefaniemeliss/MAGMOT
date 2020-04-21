@@ -9,7 +9,7 @@
 #### setups ####
 #empty work space, load libraries and functions
 rm(list=ls())
-source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
+devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/rbindcolumns.R?raw=TRUE")
 
 # define necessary directories
 mainDir <- "~/Dropbox/Reading/PhD/Magictricks/behavioural_study"
@@ -44,6 +44,7 @@ ifelse(dir.exists(preprocessedDir), unlink(preprocessedDir, recursive = TRUE), F
 dir.create(preprocessedDir)
 dir.create(file.path(preprocessedDir, "wide"))
 dir.create(file.path(preprocessedDir, "long"))
+dir.create(file.path(preprocessedDir, "share"))
 
 # # read in the file that contains information about the stimuli used
 # setwd(file.path(mainDir, "stimuli"))
@@ -680,7 +681,7 @@ for (l in seq_along(group)) {
     }
     
     # save dataWide and dataLong
-    setwd(preprocessedDir)
+    setwd(file.path(preprocessedDir, "share"))
     xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
     write.table(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
     xlsx::write.xlsx(dataWide, file=paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
