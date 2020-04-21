@@ -1,120 +1,9 @@
 #empty work space, load libraries and functions
 rm(list=ls())
 
-compareDataCollections <- 0
-doISCprep <- 1
+doISCprep <- 0
 debug <- 1
 
-####################################################################################################################################
-##################################################  COMPARISON DATA COLLECTIONS   ##################################################
-####################################################################################################################################
-# note: this code can probably be moved
-
-if (compareDataCollections == 1){
-  
-  # this is the third data collection investigating the effects of reward and curiosity on memory
-  # the following code is used to look at whether the magic tricks got similar curiosity ratings and memory performances across data collections 
-  
-  
-  # define all three data collections
-  datasets <- c("MAGMOT", "kittenv2", "fin")
-  
-  # read in the data in long format for all three data collections
-  long_MAGMOT <- xlsx::read.xlsx("~/Dropbox/Reading/PhD/Magictricks/fmri_study/Data/preprocessed/long_MAGMOT.xlsx", sheetName = "Sheet1")
-  #names(long_MAGMOT)[names(long_MAGMOT)=="responseCuriosity"] <- "curiosity" # to make things easier, rename responseCuriosity
-  long_fin <- xlsx::read.xlsx("~/Dropbox/Reading/PhD/Magictricks/behavioural_study/data_fin/MagicBehavioural_preprocessed/long_MagicBehavioural_fin.xlsx", sheetName = "Sheet1")
-  long_kittenv2 <- xlsx::read.xlsx("~/Dropbox/Reading/PhD/Magictricks/behavioural_study/data_kittenv2/MagicBehavioural_preprocessed/long_MagicBehavioural_kittenv2.xlsx", sheetName = "Sheet1")
-  
-  # dedine the indices of interest
-  indicesPerTrick <- c("curiosity", "curiosityGroupMeanCentered",
-                       "recognition", "recognitionConfLevel_4_5_6",
-                       "confidence", "confidenceCorrectTrials")
-  indicesPerTrickMean <- c( "meanCuriosity", "meanCuriosityGroupMeanCentered",
-                            "meanRecognition", "meanRecognitionConfLevel_4_5_6", 
-                            "meanConfidence", "meanConfidenceCorrectTrials" )
-  
-  # create a df for each of the indices per trick for each data collection
-  for (i in seq_along(indicesPerTrick)){
-    assign(paste0(indicesPerTrick[i],"_fin"), reshape::cast(long_fin, ID~stimID,value=paste0(indicesPerTrick[i])))
-    assign(paste0(indicesPerTrick[i],"_kittenv2"), reshape::cast(long_kittenv2, ID~stimID,value=paste0(indicesPerTrick[i])))
-    assign(paste0(indicesPerTrick[i],"_MAGMOT"), reshape::cast(long_MAGMOT, ID~stimID,value=paste0(indicesPerTrick[i])))
-  }
-  
-  # create list of tricks
-  tricks <- as.character(levels(long_MAGMOT$stimID)) 
-  
-  # calculate mean values for each magic trick for each index
-  for (iMean in seq_along(indicesPerTrickMean)){
-    for (data in seq_along(datasets)){
-      assign(paste0(indicesPerTrickMean[iMean],"_",datasets[data]), numeric(length(tricks))) # creates object meanCuriosity num[1:36]
-      currentMean <- numeric(length(tricks))
-      
-      currentIndex <- indicesPerTrick[iMean] # get current index
-      currentIndex <- paste0(indicesPerTrick[iMean], "_", datasets[data]) # get current index
-      meansPerTrick <-   colMeans(get(currentIndex), na.rm = T) # calculate mean for each magic trick
-      
-      # combine all means in one data frame
-      if (iMean == 1 && data == 1){
-        dfMeans <- data.frame(meansPerTrick)
-        names(dfMeans) <- paste0(indicesPerTrickMean[iMean], "_", datasets[data])
-        dfMeans$stimID <- row.names(dfMeans)
-      } else {
-        dfMeans_temp <- data.frame(meansPerTrick)
-        names(dfMeans_temp) <- paste0(indicesPerTrickMean[iMean], "_", datasets[data])
-        dfMeans_temp$stimID <- row.names(dfMeans_temp)
-        dfMeans <- merge(dfMeans, dfMeans_temp, by = "stimID")
-        rm(dfMeans_temp)
-      }
-    }
-  }
-  
-  long_MAGMOT$vidDurCalc <- long_MAGMOT$displayVidOffset - long_MAGMOT$mockOffset
-  
-  dur_MAGMOT <- reshape::cast(long_MAGMOT, ID~stimID,value="vidDurCalc")
-  avgDur_MAGMOT <- colMeans(dur_MAGMOT, na.rm = T) 
-  
-  dfMeans_temp <- data.frame(avgDur_MAGMOT)
-  names(dfMeans_temp) <- "avgVidDur_MAGMOT"
-  dfMeans_temp$stimID <- row.names(dfMeans_temp)
-  dfMeans <- merge(dfMeans, dfMeans_temp, by = "stimID")
-  rm(dfMeans_temp, dur_MAGMOT, avgDur_MAGMOT)
-  
-  # remove all variables no longer needd
-  rm(list=ls(pattern = "_MAGMOT"))
-  rm(list=ls(pattern = "_fin"))
-  rm(list=ls(pattern = "_kittenv2"))
-  
-  # compute standardised curiosity ratings, get the rank for each magictrick for each data collection and calculate median splits
-  dfMeans$meanCuriosityStandardised_MAGMOT <- (dfMeans$meanCuriosity_MAGMOT - mean(dfMeans$meanCuriosity_MAGMOT)) / sd(dfMeans$meanCuriosity_MAGMOT)
-  dfMeans$mediansplitCuriosity_MAGMOT <- ifelse(dfMeans$meanCuriosity_MAGMOT > median(dfMeans$meanCuriosity_MAGMOT), "above", 
-                                                ifelse(dfMeans$meanCuriosity_MAGMOT < median(dfMeans$meanCuriosity_MAGMOT), "below", "median")) 
-  #dfMeans$mediansplitCuriosityGroupMeanCentered_MAGMOT <- ifelse(dfMeans$meanCuriosityGroupMeanCentered_MAGMOT > median(dfMeans$meanCuriosityGroupMeanCentered_MAGMOT), "above", 
-  #                                              ifelse(dfMeans$meanCuriosityGroupMeanCentered_MAGMOT < median(dfMeans$meanCuriosityGroupMeanCentered_MAGMOT), "below", "median")) 
-  dfMeans$rankedCuriosity_MAGMOT <- rank(dfMeans$meanCuriosityGroupMeanCentered_MAGMOT)
-  
-  dfMeans$meanCuriosityStandardised_kittenv2 <- (dfMeans$meanCuriosity_kittenv2 - mean(dfMeans$meanCuriosity_kittenv2)) / sd(dfMeans$meanCuriosity_kittenv2)
-  dfMeans$mediansplitCuriosity_kittenv2 <- ifelse(dfMeans$meanCuriosity_kittenv2 > median(dfMeans$meanCuriosity_kittenv2), "above", 
-                                                  ifelse(dfMeans$meanCuriosity_kittenv2 < median(dfMeans$meanCuriosity_kittenv2), "below", "median")) 
-  dfMeans$rankedCuriosity_kittenv2 <- rank(dfMeans$meanCuriosity_kittenv2)
-  
-  dfMeans$meanCuriosityStandardised_fin <- (dfMeans$meanCuriosity_fin - mean(dfMeans$meanCuriosity_fin)) / sd(dfMeans$meanCuriosity_fin)
-  dfMeans$mediansplitCuriosity_fin <- ifelse(dfMeans$meanCuriosity_fin > median(dfMeans$meanCuriosity_fin), "above", 
-                                             ifelse(dfMeans$meanCuriosity_fin < median(dfMeans$meanCuriosity_fin), "below", "median")) 
-  dfMeans$rankedCuriosity_fin <- rank(dfMeans$meanCuriosity_fin)
-  
-  # compare mediansplits across different data collections
-  dfMeans$differentSplits_MAGMOT_kittenv2 <- ifelse(dfMeans$mediansplitCuriosity_MAGMOT != dfMeans$mediansplitCuriosity_kittenv2, "different", "same") 
-  dfMeans$stimID[dfMeans$differentSplits_MAGMOT_kittenv2 == "different"]
-  dfMeans$differentSplits_MAGMOT_fin <- ifelse(dfMeans$mediansplitCuriosity_MAGMOT != dfMeans$mediansplitCuriosity_fin, "different", "same") 
-  dfMeans$stimID[dfMeans$differentSplits_MAGMOT_fin == "different"]
-  dfMeans$differentSplits_kittenv2_fin <- ifelse(dfMeans$mediansplitCuriosity_fin != dfMeans$mediansplitCuriosity_kittenv2, "different", "same") 
-  dfMeans$stimID[dfMeans$differentSplits_kittenv2_fin == "different"]
-  
-  # save this overview
-  setwd("~/Dropbox/Reading/PhD/Magictricks/fmri_study/Analysis/Tricks/")
-  xlsx::write.xlsx(dfMeans, file="MAGMOT_recognitionAndCuriosity_perTrick.xlsx", sheetName = "Sheet1", row.names = F)
-  
-}
 
 
 
@@ -122,14 +11,14 @@ if (compareDataCollections == 1){
 ############################################################  SET UPS   ############################################################
 ####################################################################################################################################
 
-source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
+devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/rbindcolumns.R?raw=TRUE")
 library(lme4)
 
 
 # define core variables
-version = "fmri"
 blockstring <- c("_firstBlock", "_secondBlock", "_thirdBlock", "")
 SME_outcome <- c("bothRemembered", "bothForgotten", "differentResponses")
+SME_outcome <- c("bothRemembered", "bothForgotten")
 TR = 2
 memoryLevels <- c("cuedRecallStrict", "cuedRecallLenient", 
                   "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
@@ -138,6 +27,9 @@ memoryLabels <- c("cuedRecallStrict", "cuedRecallLenient",
                   "allConf", "highConf", "aboveAvgConf", 
                   "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
 
+# define version 
+version <- "MAGMOT"
+version_official <- "fmri"
 
 # define whether data on VM should be overwritten
 overwrite = "no"
@@ -154,27 +46,31 @@ brainDir <- file.path(mainDir, "Data", "brain_activation")
 dataMemoryDir <- file.path(mainDir, "Data", "magicmemory_fmri", "decrypted")
 codedDir <- file.path(mainDir, "Data", "magicmemory_fmri", "coded")
 preprocessedDir <- file.path(mainDir, "Data", "preprocessed")
+preprocessedDir <- "~/Dropbox/Reading/PhD/Magictricks/preprocessed_data/fmri" #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_preprocessed"
+
 preprocessedQuestDir <- file.path(preprocessedDir, "quest")
 preprocessedMemoryDir <- file.path(preprocessedDir, "memory")
 preprocessedLongDir <- file.path(preprocessedDir, "long")
 
-preprocessedconcatDir <- file.path(preprocessedDir, "BIDS_eventfiles")
+#preprocessedEventsRootDir <- file.path(preprocessedDir, "BIDS_eventfiles") # needed?!
 preprocessedEventsRootDir <- file.path(mainDir, "derivatives", "magictrickwatching", "concat")
+preprocessedEventsRootDir <- file.path(preprocessedDir, "concat") 
+preprocessedEventsRootDir <- file.path(preprocessedDir, "BIDS_eventfiles")
+concatRootDir <- file.path(preprocessedDir, "concat") 
 
-dirVM <- '/Users/stefaniemeliss/cinn/2018/MAGMOT'
-BIDSdirVM <- file.path(dirVM, "MAGMOT_BIDS")
-preprocessedEventsRootDirVM <-  file.path(dirVM, "derivatives", "magictrickwatching")
+dataTableDir <- file.path(preprocessedDir, "dataTable") 
 
 
 # check whether directories for preprocessed data exist, if so empty them and recreate
 ifelse(dir.exists(preprocessedDir), unlink(preprocessedDir, recursive = TRUE), FALSE)
-ifelse(dir.exists(preprocessedEventsRootDir), unlink(preprocessedEventsRootDir, recursive = TRUE), FALSE)
 ifelse(!dir.exists(preprocessedDir), dir.create(preprocessedDir), FALSE)
 ifelse(!dir.exists(preprocessedQuestDir), dir.create(preprocessedQuestDir), FALSE)
 ifelse(!dir.exists(preprocessedMemoryDir), dir.create(preprocessedMemoryDir), FALSE)
 ifelse(!dir.exists(preprocessedLongDir), dir.create(preprocessedLongDir), FALSE)
 ifelse(!dir.exists(preprocessedEventsRootDir), dir.create(preprocessedEventsRootDir), FALSE)
-ifelse(!dir.exists(preprocessedconcatDir), dir.create(preprocessedconcatDir), FALSE)
+ifelse(!dir.exists(concatRootDir), dir.create(concatRootDir), FALSE)
+ifelse(!dir.exists(dataTableDir), dir.create(dataTableDir), FALSE)
+#ifelse(!dir.exists(preprocessedEventsRootDir), dir.create(preprocessedEventsRootDir), FALSE)
 
 # read in data on curuiosity mean split
 if (exists("dfMeans") == F) {
@@ -591,7 +487,7 @@ for (s in seq_along(subjects)){
   
   # assign names to question
   quest$IMI <- ifelse(quest$question == "It was fun to do the experiment.", "post1",
-                      ifelse(quest$question == "It was boring to do the experiment.", "post2",
+                      ifelse(quest$question == "It was boring to do the experiment.", "post2", #reverse
                              ifelse(quest$question == "It was enjoyable to do the experiment.", "post3",
                                     ifelse(quest$question == "I was totally absorbed in the experiment.", "post4",
                                            ifelse(quest$question == "I lost track of time.", "post5",
@@ -603,13 +499,13 @@ for (s in seq_along(subjects)){
                                                                                      ifelse(quest$question == "I found the experiment fairly dull.", "post11",
                                                                                             ifelse(quest$question == "I got bored." , "post12",
                                                                                                    ifelse(quest$question == "I put a lot of effort into this.", "post13",
-                                                                                                          ifelse(quest$question == "I did not try very hard\\nto do well at this activity.", "post14",
+                                                                                                          ifelse(quest$question == "I did not try very hard\\nto do well at this activity.", "post14", #reverse
                                                                                                                  ifelse(quest$question == "I tried very hard on this activity.", "post15",
                                                                                                                         ifelse(quest$question == "It was important to me to do well at this task.", "post16",
-                                                                                                                               ifelse(quest$question == "I did not put much energy into this.", "post17",
-                                                                                                                                      ifelse(quest$question == "I did not feel nervous at all while doing this.", "post18",
+                                                                                                                               ifelse(quest$question == "I did not put much energy into this.", "post17", #reverse
+                                                                                                                                      ifelse(quest$question == "I did not feel nervous at all while doing this.", "post18", #reverse
                                                                                                                                              ifelse(quest$question == "I felt very tense while doing this activity." , "post19",
-                                                                                                                                                    ifelse(quest$question == "I was very relaxed in doing this experiment.", "post20",
+                                                                                                                                                    ifelse(quest$question == "I was very relaxed in doing this experiment.", "post20", #reverse
                                                                                                                                                            ifelse(quest$question == "I was anxious while working on this task." , "post21",
                                                                                                                                                                   ifelse(quest$question == "I felt pressured while doing this task.", "post22",
                                                                                                                                                                          ifelse(quest$question == "I tried to find out how many people\\nwill be able to find the solution.", "post23",
@@ -1061,20 +957,20 @@ for (s in seq_along(subjects)){
       }
       
       setwd(preprocessedEventsSubjDir)
-      write.table(events_BIDS, file=BIDSfilename, quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-      write.table(events_BIDS, file=file.path(preprocessedconcatDir, BIDSfilename), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+      write.table(events_BIDS, file=BIDSfilename, quote = F, sep="\t", row.names = F, na = "n/a")
+      #write.table(events_BIDS, file=file.path(preprocessedEventsRootDir, BIDSfilename), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
       
       
       # if connected to VM, save it there too
-      if (dir.exists(dirVM)==T & overwrite == "yes"){
-        setwd(file.path(BIDSdirVM, BIDSstring, 'func'))
-        write.table(events_BIDS, file=BIDSfilename, quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-        setwd(preprocessedEventsSubjDir)
-      } else {
-        if (feedback == "yes"){
-          print(paste("Trying to save", BIDSfilename, ", but not connected to study drive!!!"))
-        }
-      }
+      # if (dir.exists(dirVM)==T & overwrite == "yes"){
+      #   setwd(file.path(BIDSdirVM, BIDSstring, 'func'))
+      #   write.table(events_BIDS, file=BIDSfilename, quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+      #   setwd(preprocessedEventsSubjDir)
+      # } else {
+      #   if (feedback == "yes"){
+      #     print(paste("Trying to save", BIDSfilename, ", but not connected to study drive!!!"))
+      #   }
+      # }
       
       # crate file for concatenation of BOLD data: mockOffset and onsets have to be translated
       run_BIDS$run <- b
@@ -1145,21 +1041,21 @@ for (s in seq_along(subjects)){
     if (feedback == "yes"){
       print(paste("total Duration is", sum(BIDS_concat$duration)))
     }
-    write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-    write.table(BIDS_concat, file=file.path(preprocessedconcatDir, paste0(BIDSstring, "_task-magictrickwatching_concat.tsv")), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    #write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    write.table(BIDS_concat, file=file.path(concatRootDir, paste0(BIDSstring, "_task-magictrickwatching_concat.tsv")), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
-    # if connected to VM, save it there too
-    if (dir.exists(dirVM)==T & overwrite == "yes"){
-      preprocessedEventsSubjDirVM <- file.path(preprocessedEventsRootDirVM, "concat", BIDSstring)
-      ifelse(!dir.exists(preprocessedEventsSubjDirVM), dir.create(preprocessedEventsSubjDirVM), FALSE)
-      setwd(preprocessedEventsSubjDirVM)
-      write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-      setwd(preprocessedEventsSubjDir)
-    } else {
-      if (feedback == "yes" & overwrite == "yes"){
-        print("Trying to save concat.tsv, but not connected to study drive!!!")
-      }
-    }
+    # # if connected to VM, save it there too
+    # if (dir.exists(dirVM)==T & overwrite == "yes"){
+    #   preprocessedEventsSubjDirVM <- file.path(preprocessedEventsRootDirVM, "concat", BIDSstring)
+    #   ifelse(!dir.exists(preprocessedEventsSubjDirVM), dir.create(preprocessedEventsSubjDirVM), FALSE)
+    #   setwd(preprocessedEventsSubjDirVM)
+    #   write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    #   setwd(preprocessedEventsSubjDir)
+    # } else {
+    #   if (feedback == "yes" & overwrite == "yes"){
+    #     print("Trying to save concat.tsv, but not connected to study drive!!!")
+    #   }
+    # }
   }
   
   # delete no longer needed variables
@@ -1309,15 +1205,15 @@ for (s in seq_along(subjects)){
     setwd(preprocessedEventsRootDir)
     write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
-    if (dir.exists(dirVM)==T & overwrite == "yes"){
-      setwd(file.path(preprocessedEventsRootDirVM, 'scripts'))
-      write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-      setwd(preprocessedEventsSubjDir)
-    } else {
-      if (feedback == "yes" & overwrite == "yes"){
-        print("Trying to save information about scan duration, but not connected to study drive!!!")
-      }
-    }
+    # if (dir.exists(dirVM)==T & overwrite == "yes"){
+    #   setwd(file.path(preprocessedEventsRootDirVM, 'scripts'))
+    #   write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    #   setwd(preprocessedEventsSubjDir)
+    # } else {
+    #   if (feedback == "yes" & overwrite == "yes"){
+    #     print("Trying to save information about scan duration, but not connected to study drive!!!")
+    #   }
+    # }
     
     
     #### combine single _long.csv files to one file ####
@@ -1335,7 +1231,8 @@ for (s in seq_along(subjects)){
       }
     }
     setwd(preprocessedDir)
-    xlsx::write.xlsx(dataLong, file="long_MAGMOT.xlsx", sheetName = "Sheet1", row.names = F) 
+    xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    write.table(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")    
     
     # compute the glmer models to extract the slopes
     for (mem in 1:length(memoryLevels)) {
@@ -1380,7 +1277,15 @@ for (s in seq_along(subjects)){
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
     
     setwd(preprocessedDir)
-    xlsx::write.xlsx(MAGMOT, file="wide_MAGMOT.xlsx", sheetName = "Sheet1", row.names = F)
+    xlsx::write.xlsx(dataWide, file=paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    write.table(dataWide, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
+    
+    # upload the csv files to OSF
+    osfr::osf_auth() # log into OSF
+    project <- osfr::osf_retrieve_node("fhqb7")
+    target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
+    sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+    osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
     
     #################### as a last step, create the files we need for concatenation ####################
     
@@ -1426,9 +1331,11 @@ for (s in seq_along(subjects)){
           subjectsToCorrelate <-subjectsCorr[-c(1:s)]
           
           # read in concat for subjectsCorr[s]
-          preprocessedEventsSubjDir_s <- file.path(preprocessedEventsRootDir, subjectsCorr[s])
-          setwd(preprocessedEventsSubjDir_s)
-          file_s <- list.files(pattern = "concat")
+          # concatSubjDir_s <- file.path(concatRootDir, subjectsCorr[s])
+          # setwd(preprocessedEventsSubjDir_s)
+          setwd(concatRootDir)
+          #file_s <- list.files(pattern = "concat")
+          file_s <- list.files(pattern = paste0(subjectsCorr[s], "_task-magictrickwatching_concat.tsv"))
           
           events_s <- read.delim(file = file_s, header = T, sep="\t", na = "n/a")
           
@@ -1451,9 +1358,15 @@ for (s in seq_along(subjects)){
           for(ss in seq_along(subjectsToCorrelate)){
             
             # read in concat for subjectsToCorrelate[ss]
-            preprocessedEventsSubjDir_ss <- file.path(preprocessedEventsRootDir, paste(subjectsToCorrelate[ss]))
-            setwd(preprocessedEventsSubjDir_ss)
-            file_ss <- list.files(pattern = "concat")
+            # concatSubjDir_s <- file.path(concatRootDir, subjectsCorr[s])
+            # setwd(preprocessedEventsSubjDir_s)
+            setwd(concatRootDir)
+            #file_s <- list.files(pattern = "concat")
+            file_ss <- list.files(pattern = paste0(subjectsToCorrelate[ss], "_task-magictrickwatching_concat.tsv"))
+            
+            # preprocessedEventsSubjDir_ss <- file.path(preprocessedEventsRootDir, paste(subjectsToCorrelate[ss]))
+            # setwd(preprocessedEventsSubjDir_ss)
+            # file_ss <- list.files(pattern = "concat")
             
             events_ss <- read.delim(file = file_ss, header = T, sep="\t", na = "n/a")
             
@@ -1601,11 +1514,10 @@ for (s in seq_along(subjects)){
                   
                   # save data for each of the subjects
                   if(dim(SME_events_outcome)[1]>0){
-                    preprocessedEventsPairDir <- file.path(preprocessedEventsRootDir, paste0(subjectsCorr[s],subjectsToCorrelate[ss]))
-                    ifelse(!dir.exists(preprocessedEventsPairDir), dir.create(preprocessedEventsPairDir), FALSE)
-                    setwd(preprocessedEventsPairDir)
-                    
-                    #write.table(SME_events_outcome, file = paste0(subjectsCorr[s], subjectsToCorrelate[ss], "_", pair[p], "_", SME_outcome[o], "_", memoryLabels[mem], "_SME_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+                    concatPairDir <- file.path(concatRootDir, paste0(subjectsCorr[s],subjectsToCorrelate[ss]))
+                    ifelse(!dir.exists(concatPairDir), dir.create(concatPairDir), FALSE)
+                    setwd(concatPairDir)
+                    write.table(SME_events_outcome, file = paste0(subjectsCorr[s], subjectsToCorrelate[ss], "_", pair[p], "_", SME_outcome[o], "_", memoryLabels[mem], "_SME_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
                     
                     
                     # # if study drive is connected, save it there too
@@ -1802,11 +1714,11 @@ for (s in seq_along(subjects)){
         ISC_table_names <-  c(ISC_table_names, paste0("grUniqueCor_", memoryLabels[mem], collapse = ", "))
       }
       # add column names to dataTable_ISC_controlled
-      names(dataTable_ISC_controlled) <- c("Subj1", "Subj2", "grp", "unique_confidence", "grUnique_confidence",
+      names(dataTable_ISC_controlled) <- c("Subj1", "Subj2", "grp", "uniqueConf", "grpUniqueConf",
                                       ISC_table_names, "InputFile", "\\")
       
       ### save all dataTables ###
-      setwd(preprocessedEventsRootDir)
+      setwd(dataTableDir)
       write.table(dataTable_ISC, file="dataTable_magictrickwatching.txt", quote=FALSE, sep="\t", row.names = FALSE, na = "")
       write.table(dataTable_ISC_dummy, file="dataTable_magictrickwatching_memo.txt", quote=FALSE, sep="\t", row.names = FALSE, na = "")
       write.table(dataTable_ISC_controlled, file="dataTable_magictrickwatching_unique.txt", quote=FALSE, sep="\t", row.names = FALSE, na = "")
@@ -1816,18 +1728,18 @@ for (s in seq_along(subjects)){
         write.table(get(paste0("dataTable_", memoryLabels[mem])), file=paste0("dataTable_",   memoryLabels[mem], ".txt"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
       }
       
+      # if (dir.exists(dirVM)==T & overwrite == "yes"){
+      #   setwd(file.path(dirVM, 'derivatives', 'magictrickwatching', 'analyses'))
+      #   write.table(dataTable, file=file.path("ISC_magictrickwatching","dataTable.txt"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
+      #   write.table(dataTable_aboveAvgConf, file=file.path("ISC_SME_aboveAvgConf","dataTable_aboveAvgConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
+      #   write.table(dataTable_highConf, file=file.path("ISC_SME_highConf","dataTable_highConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
+      #   write.table(dataTable_allConf, file=file.path("ISC_SME_allConf","dataTable_allConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
+      # } else {
+      #   if (feedback == "yes" & overwrite == "yes"){
+      #     print("Trying to save information for 3dISC -dataTable, but not connected to study drive!!!")
+      #   }
+      # }
       
-      if (dir.exists(dirVM)==T & overwrite == "yes"){
-        setwd(file.path(dirVM, 'derivatives', 'magictrickwatching', 'analyses'))
-        write.table(dataTable, file=file.path("ISC_magictrickwatching","dataTable.txt"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-        write.table(dataTable_aboveAvgConf, file=file.path("ISC_SME_aboveAvgConf","dataTable_aboveAvgConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-        write.table(dataTable_highConf, file=file.path("ISC_SME_highConf","dataTable_highConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-        write.table(dataTable_allConf, file=file.path("ISC_SME_allConf","dataTable_allConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-      } else {
-        if (feedback == "yes" & overwrite == "yes"){
-          print("Trying to save information for 3dISC -dataTable, but not connected to study drive!!!")
-        }
-      }
     } # end doISCprep
   }
 }
