@@ -11,7 +11,7 @@
 
 #empty work space, load libraries and functions
 rm(list=ls())
-source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
+devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/rbindcolumns.R?raw=TRUE")
 
 # define necessary directories
 mainDir <- "~/Dropbox/Reading/PhD/Magictricks/behavioural_study"
@@ -24,41 +24,60 @@ memoryDir <- file.path(dataDir, "MagicBehavioural_memory") #"~/Dropbox/Reading/P
 preprocessedDir <- file.path(dataDir, "MagicBehavioural_preprocessed") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_preprocessed"
 codedDir <- file.path(memoryDir, "preprocessed") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/coded/preprocessing"
 
+# directories linked to OSF
+mainDir <- "~/Dropbox/Reading/PhD/Magictricks/behavioural_study"
+subDirData <- "data_kittenv2"
+dataDir <- file.path(mainDir, subDirData) #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin"
+groupDir <- file.path(dataDir, "MagicBehavioural_") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_"
+contDir <- file.path(dataDir, "MagicBehavioural_cont") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_cont"
+expDir <- file.path(dataDir, "MagicBehavioural_exp") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_exp"
+memoryDir <- file.path(dataDir, "MagicBehavioural_memory") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_memory"
+codedDir <- file.path(memoryDir, "preprocessed") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/coded/preprocessing"
+preprocessedDir <- "~/Dropbox/Reading/PhD/Magictricks/preprocessed_data/main" #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_preprocessed"
 
-# check whether these directories exist, if not create them
-ifelse(!dir.exists(dataDir), dir.create(dataDir), FALSE)
-ifelse(!dir.exists(contDir), dir.create(contDir), FALSE)
-ifelse(!dir.exists(expDir), dir.create(expDir), FALSE)
-ifelse(!dir.exists(memoryDir), dir.create(memoryDir), FALSE)
+# # check whether these directories exist, if not create them
+# ifelse(!dir.exists(dataDir), dir.create(dataDir), FALSE)
+# ifelse(!dir.exists(contDir), dir.create(contDir), FALSE)
+# ifelse(!dir.exists(expDir), dir.create(expDir), FALSE)
+# ifelse(!dir.exists(memoryDir), dir.create(memoryDir), FALSE)
 
-# check whether directories for preprocessed data exist, if so empty them and recreate
-ifelse(dir.exists(preprocessedDir), unlink(preprocessedDir, recursive = TRUE), FALSE) 
-ifelse(!dir.exists(preprocessedDir), dir.create(preprocessedDir), FALSE) 
-ifelse(dir.exists(paste0(contDir, "/preprocessed/")), unlink(paste0(contDir, "/preprocessed/"), recursive = T), FALSE)
-ifelse(!dir.exists(paste0(contDir, "/preprocessed/")), dir.create(paste0(contDir, "/preprocessed/")), FALSE)
-ifelse(dir.exists(paste0(expDir, "/preprocessed/")), unlink(paste0(expDir, "/preprocessed/"), recursive = T), FALSE)
-ifelse(!dir.exists(paste0(expDir, "/preprocessed/")), dir.create(paste0(expDir, "/preprocessed/")), FALSE)
-ifelse(!dir.exists(file.path(preprocessedDir, "wide")), dir.create(file.path(preprocessedDir, "wide")), FALSE)
-ifelse(!dir.exists(file.path(preprocessedDir, "long")), dir.create(file.path(preprocessedDir, "long")), FALSE)
+# delete preprocessed directory (must add recursive = TRUE) and recreate the folders
+ifelse(dir.exists(preprocessedDir), unlink(preprocessedDir, recursive = TRUE), FALSE)
+dir.create(preprocessedDir)
+dir.create(file.path(preprocessedDir, "wide"))
+dir.create(file.path(preprocessedDir, "long"))
+dir.create(file.path(preprocessedDir, "share"))
+
+# # check whether directories for preprocessed data exist, if so empty them and recreate
+# ifelse(dir.exists(preprocessedDir), unlink(preprocessedDir, recursive = TRUE), FALSE) 
+# ifelse(!dir.exists(preprocessedDir), dir.create(preprocessedDir), FALSE) 
+# ifelse(dir.exists(paste0(contDir, "/preprocessed/")), unlink(paste0(contDir, "/preprocessed/"), recursive = T), FALSE)
+# ifelse(!dir.exists(paste0(contDir, "/preprocessed/")), dir.create(paste0(contDir, "/preprocessed/")), FALSE)
+# ifelse(dir.exists(paste0(expDir, "/preprocessed/")), unlink(paste0(expDir, "/preprocessed/"), recursive = T), FALSE)
+# ifelse(!dir.exists(paste0(expDir, "/preprocessed/")), dir.create(paste0(expDir, "/preprocessed/")), FALSE)
+# ifelse(!dir.exists(file.path(preprocessedDir, "wide")), dir.create(file.path(preprocessedDir, "wide")), FALSE)
+# ifelse(!dir.exists(file.path(preprocessedDir, "long")), dir.create(file.path(preprocessedDir, "long")), FALSE)
 
 
-# read in the file that contains information about the stimuli used
-setwd(file.path(mainDir, "stimuli"))
-info_old <- xlsx::read.xlsx("magic_selection.xlsx", sheetName = "preselection", showWarnings = FALSE) # recomment this file!
-info_old <- subset(info_old, info_old$stimID != "H4_long" ) #practice trial
-info_old <- subset(info_old, info_old$stimID != "K23") #practice trial
-info_old <- info_old[,c("stimID", "length")]
-info <- xlsx::read.xlsx("stimuli_MagicBehavioural_kittenv2_2019-03-27.xlsx", sheetName = "Sheet1", showWarnings = FALSE) # mistake in code detected on 2019-03-27, previously 2019-02-22 used
-info <- info[,c("stimID", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya",  "meanCuriosity", "meanCuriosityStandardisedSample", "mediansplitCuriositySample")]
-names(info) <- c("stimID", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya", "meanCuriositySample", "meanCuriosityStandardisedSample", "mediansplitCuriositySample")
-
-info <- merge(info, info_old, by = "stimID")
+# # read in the file that contains information about the stimuli used
+# setwd(file.path(mainDir, "stimuli"))
+# info_old <- xlsx::read.xlsx("magic_selection.xlsx", sheetName = "preselection", showWarnings = FALSE) # recomment this file!
+# info_old <- subset(info_old, info_old$stimID != "H4_long" ) #practice trial
+# info_old <- subset(info_old, info_old$stimID != "K23") #practice trial
+# info_old <- info_old[,c("stimID", "length")]
+# info <- xlsx::read.xlsx("stimuli_MagicBehavioural_kittenv2_2019-03-27.xlsx", sheetName = "Sheet1", showWarnings = FALSE) # mistake in code detected on 2019-03-27, previously 2019-02-22 used
+# info <- info[,c("stimID", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya",  "meanCuriosity", "meanCuriosityStandardisedSample", "mediansplitCuriositySample")]
+# names(info) <- c("stimID", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya", "meanCuriositySample", "meanCuriosityStandardisedSample", "mediansplitCuriositySample")
+# 
+# info <- merge(info, info_old, by = "stimID")
 
 # define experimental groups
 group <- c("cont", "exp")
 
 # define version 
 version <- "kittenv2"
+version_official <- "main"
+
 # define block names
 blockstring <- c("_firstBlock", "_secondBlock", "_thirdBlock", "")
 
@@ -192,7 +211,7 @@ for (l in seq_along(group)) {
     main$itemMain <- main$itemMain-1 # because stimulus sheet starts with 2
     
     # merge the response file of each participant with the info for each magic trick
-    main <- merge(main, info, by = "stimID", all.y = T) # include all.y = T to produce NA if a participant has not completed the task
+    #main <- merge(main, info, by = "stimID", all.y = T) # include all.y = T to produce NA if a participant has not completed the task
     main$username <- subjects[s]
     main$group <- group[l]
     main$groupEffectCoded <-ifelse(main$group == "exp", 1, -1) 
@@ -222,12 +241,9 @@ for (l in seq_along(group)) {
     }
     
     # reduce main to relevant variables only
-    main <- main[, c("username", "ID", "group", "groupEffectCoded", "stimID", "length", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya", 
-                     "meanCuriositySample", "meanCuriosityStandardisedSample", "mediansplitCuriositySample", "mediansplitCuriosityWithinSubject",
-                     "trialMain", "itemMain", "decision", "decisionRT", "curiosity", "curiosityGroupMeanCentered", "curiosity_dich", "curiosityRT", "rewardByCuriosity")]
-    
-    main[, c("username", "ID", "group", "groupEffectCoded", "stimID", "length", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya",
-             "meanCuriositySample", "meanCuriosityStandardisedSample", "mediansplitCuriositySample", "mediansplitCuriosityWithinSubject",
+    main <- main[, c("username", "ID", "group", "groupEffectCoded", "stimID", #"length", "meanCuriosityStandardisedAya", "mediansplitCuriosityAya",
+             #"meanCuriositySample", "meanCuriosityStandardisedSample", "mediansplitCuriositySample", 
+             "mediansplitCuriosityWithinSubject",
              "trialMain", "itemMain", "decision", "decisionRT", "curiosity", "curiosityGroupMeanCentered", "curiosity_dich",  "curiosityRT", "rewardByCuriosity")]
     
     # create variable for block
@@ -278,7 +294,7 @@ for (l in seq_along(group)) {
       setwd(codedDir)
       if (file.exists(f_coded)) { #if the recall performance has already been coded, the recall df gets overwritten
         cuedRecall_coded <- read.csv(f_coded)
-        cuedRecall_coded <- cuedRecall_coded[1:nrow(info),] # reduce cuedRecall_coded to only those rows that relate to stimuli
+        cuedRecall_coded <- cuedRecall_coded[1:nrow(main),] # reduce cuedRecall_coded to only those rows that relate to stimuli
         for (j in 1:nrow(cuedRecall_coded)){ # Cristina has inserted some FALSE as coding, this will be replaced with NA to make sure that the script still runs
           if (cuedRecall_coded$cuedRecallStrict[j] == "FALSE") {  
             cuedRecall_coded$cuedRecallStrict[j] = NA
@@ -349,7 +365,7 @@ for (l in seq_along(group)) {
     # all.x = T makes sure that NA are produced if a pps has not completed the full task
     recall <- merge(cuedRecall, recognition, by = c("username", "stimID"), all.x = T)
     
-    data <- merge(main, recall, by = c("Username", "stimID"), all.x = T)
+    data <- merge(main, recall, by = c("username", "stimID"), all.x = T)
     if (is.factor(data$cuedRecallLenient) == T){
       print(paste0(subjects[s], "_cuedRecall_CP.csv has cuedRecallLenient as factor"))
       data$cuedRecallLenient <- as.numeric(as.character(data$cuedRecallLenient))
@@ -626,7 +642,7 @@ for (l in seq_along(group)) {
     
     # compute the glmer models to extract the slopes
     for (mem in 1:length(memoryLevels)) {
-      LMEmodel <- glmer(dataLong[, memoryLevels[mem]] ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
+      LMEmodel <- lme4::glmer(dataLong[, memoryLevels[mem]] ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
       # create dataframe with beta coefficients
       coef <- as.data.frame(coef(LMEmodel)$ID)
       coef <- round(coef, digits = 5)
@@ -640,75 +656,19 @@ for (l in seq_along(group)) {
     }
     
     # save dataWide and dataLong
-    setwd(preprocessedDir)
-    xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1", row.names = F) 
-    xlsx::write.xlsx(dataWide, file=paste0("wide_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    setwd(file.path(preprocessedDir, "share"))
+    xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    write.table(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
+    xlsx::write.xlsx(dataWide, file=paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    write.table(dataWide, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
     
+    # upload the csv files to OSF
+    osfr::osf_auth() # log into OSF
+    project <- osfr::osf_retrieve_node("fhqb7")
+    target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
+    sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+    osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
     
-    # compute summary statistics for measurements of memory
-    recognitionPerformanceVars <- c("recognitionConfLevel_1", "recognitionConfLevel_above_1", "recognitionConfLevel_1_2", "recognitionConfLevel_1_2_3", "recognitionConfLevel_2",
-                                    "recognitionConfLevel_above_2", "recognitionConfLevel_3", "recognitionConfLevel_above_3", "recognitionConfLevel_3_4", "recognitionConfLevel_4", "recognitionConfLevel_above_4",
-                                    "recognitionConfLevel_5", "recognitionConfLevel_above_5", "recognitionConfLevel_5_6", "recognitionConfLevel_6",
-                                    "meanConfidence", "meanConfidenceCorrectTrials")
-    
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_abs"))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0(memoryLabels, "_rel"))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_cont_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_dich_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBen_rel_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curCor_",memoryLabels))
-    recognitionPerformanceVars <- c(recognitionPerformanceVars, paste0("curBeta_",memoryLabels))
-    
-    # create a data frame that shows the summary statistics for each score, for the whole population
-    dataWideRecognitionPerformance <- dataWide[,recognitionPerformanceVars]
-    df_mean <- data.frame(apply(dataWideRecognitionPerformance, 2, mean, na.rm = T), recognitionPerformanceVars)
-    df_sd <- data.frame(apply(dataWideRecognitionPerformance, 2, sd, na.rm = T), recognitionPerformanceVars)
-    df_min <- data.frame(apply(dataWideRecognitionPerformance, 2, min, na.rm = T), recognitionPerformanceVars)
-    df_max <- data.frame(apply(dataWideRecognitionPerformance, 2, max, na.rm = T), recognitionPerformanceVars)
-    
-    descriptivesRecognitionPerformance <- merge(df_mean, df_sd, by = "recognitionPerformanceVars")
-    descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_min, by = "recognitionPerformanceVars")
-    descriptivesRecognitionPerformance <- merge(descriptivesRecognitionPerformance, df_max, by = "recognitionPerformanceVars")
-    rm(df_mean, df_sd, df_min, df_max)
-    
-    names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
-    
-    setwd(preprocessedDir)
-    xlsx::write.xlsx(descriptivesRecognitionPerformance, file= paste0("memoryPerformance_MagicBehavioural_", version, ".xlsx"), sheetName = "Sheet1", row.names = F) 
-
-    # compute mean memory performance for each magic trick
-    # define variables for which the mean per trick should be calculated
-    indicesPerTrick <- c("decision", "decisionRT", "curiosity", "curiosityRT",
-                         memoryLevels,
-                         "confidence", "confidenceCorrectTrials")
-    indicesPerTrickMean <- paste0("mean_", indicesPerTrick)
-    
-    # calculate mean values for each magic trick for each index
-    for (iMean in seq_along(indicesPerTrickMean)){
-      
-      # put data from long into wide format
-      assign(paste(indicesPerTrick[iMean]), reshape::cast(dataLong, ID~stimID,value=paste0(indicesPerTrick[iMean])))
-      
-      # calculate mean value for each magic trick
-      meansPerTrick <-   colMeans(get(indicesPerTrick[iMean]), na.rm = T) # calculate mean for each magic trick
-      
-      # combine all means in one data frame
-      if (iMean == 1){
-        dfMeans <- data.frame(meansPerTrick)
-        names(dfMeans) <- indicesPerTrickMean[iMean]
-        dfMeans$stimID <- row.names(dfMeans)
-      } else {
-        dfMeans_temp <- data.frame(meansPerTrick)
-        names(dfMeans_temp) <- indicesPerTrickMean[iMean]
-        dfMeans_temp$stimID <- row.names(dfMeans_temp)
-        dfMeans <- merge(dfMeans, dfMeans_temp, by = "stimID")
-        rm(dfMeans_temp)
-      }
-    }
-    
-    setwd(file.path(mainDir, "stimuli"))
-    write.xlsx(dfMeans, file= paste0("stimuli_MagicBehavioural_memoryPerformance_",version,  ".xlsx"), sheetName = "Sheet1", row.names = F)
-
   }
   
 }
