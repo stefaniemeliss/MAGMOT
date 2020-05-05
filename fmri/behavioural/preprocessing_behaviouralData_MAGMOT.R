@@ -51,6 +51,7 @@ preprocessedDir <- "~/Dropbox/Reading/PhD/Magictricks/preprocessed_data/fmri" #"
 preprocessedQuestDir <- file.path(preprocessedDir, "quest")
 preprocessedMemoryDir <- file.path(preprocessedDir, "memory")
 preprocessedLongDir <- file.path(preprocessedDir, "long")
+preprocessedShareDir <- file.path(preprocessedDir, "share")
 
 #preprocessedEventsRootDir <- file.path(preprocessedDir, "BIDS_eventfiles") # needed?!
 preprocessedEventsRootDir <- file.path(mainDir, "derivatives", "magictrickwatching", "concat")
@@ -67,6 +68,7 @@ ifelse(!dir.exists(preprocessedDir), dir.create(preprocessedDir), FALSE)
 ifelse(!dir.exists(preprocessedQuestDir), dir.create(preprocessedQuestDir), FALSE)
 ifelse(!dir.exists(preprocessedMemoryDir), dir.create(preprocessedMemoryDir), FALSE)
 ifelse(!dir.exists(preprocessedLongDir), dir.create(preprocessedLongDir), FALSE)
+ifelse(!dir.exists(preprocessedShareDir), dir.create(preprocessedShareDir), FALSE)
 ifelse(!dir.exists(preprocessedEventsRootDir), dir.create(preprocessedEventsRootDir), FALSE)
 ifelse(!dir.exists(concatRootDir), dir.create(concatRootDir), FALSE)
 ifelse(!dir.exists(dataTableDir), dir.create(dataTableDir), FALSE)
@@ -512,9 +514,6 @@ for (s in seq_along(subjects)){
                                                                                                                                                                                 ifelse(quest$question == "I was able to see the magic tricks properly.", "post24",
                                                                                                                                                                                        NA))))))))))))))))))))))))
   
-  
-  
-  
   # recode items questionnaire
   items <- c("post2", "post14", "post17", "post18", "post20") #items to recode
   quest$score <- quest$endValue
@@ -671,20 +670,20 @@ for (s in seq_along(subjects)){
   #################################################### read in memory data  ####################################################
   setwd(dataMemoryDir)
   
-  f <- paste0("magicmemory_", version, "_", subjects[s], ".csv")
+  f <- paste0("magicmemory_", version_official, "_", subjects[s], ".csv")
   if (file.exists(f)){
     memory <- read.csv(f, header = T)
     memory$memoryFile <- f
   } else { # if file does not exist, print into console and check other spelling of file
-    print(paste0("magicmemory_", version, "_", subjects[s], ".csv does not exist"))
+    print(paste0("magicmemory_", version_official, "_", subjects[s], ".csv does not exist"))
     
     subjectsAlt <- gsub("0", "", subjects[s])
-    f <- paste0("magicmemory_", version, "_", subjectsAlt, ".csv")
+    f <- paste0("magicmemory_", version_official, "_", subjectsAlt, ".csv")
     if (file.exists(f)){
       memory <- read.csv(f, header = T)
       memory$memoryFile <- f
     } else { # if file does not exist, print into console and use filler file to create NAs
-      print(paste0("magicmemory_", version, "_", subjectsAlt, ".csv does not exist either"))
+      print(paste0("magicmemory_", version_official, "_", subjectsAlt, ".csv does not exist either"))
       rm(subjectsAlt)
       
       # CREATE MEMORY FILLER!! actually, that might not even be necessary
@@ -1230,7 +1229,7 @@ for (s in seq_along(subjects)){
         rm(temp_datalang)
       }
     }
-    setwd(preprocessedDir)
+    setwd(preprocessedShareDir)
     xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
     write.table(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")    
     
@@ -1276,9 +1275,9 @@ for (s in seq_along(subjects)){
     
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
     
-    setwd(preprocessedDir)
-    xlsx::write.xlsx(dataWide, file=paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
-    write.table(dataWide, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
+    setwd(preprocessedShareDir)
+    xlsx::write.xlsx(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    write.table(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
     
     # upload the csv files to OSF
     osfr::osf_auth() # log into OSF
@@ -1518,25 +1517,6 @@ for (s in seq_along(subjects)){
                     ifelse(!dir.exists(concatPairDir), dir.create(concatPairDir), FALSE)
                     setwd(concatPairDir)
                     write.table(SME_events_outcome, file = paste0(subjectsCorr[s], subjectsToCorrelate[ss], "_", pair[p], "_", SME_outcome[o], "_", memoryLabels[mem], "_SME_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-                    
-                    
-                    # # if study drive is connected, save it there too
-                    # if (dir.exists(dirVM)==T && overwrite == "yes"){
-                    #   preprocessedEventsPairDirVM <- file.path(preprocessedEventsRootDirVM,"concat", paste0(subjectsCorr[s],subjectsToCorrelate[ss]))
-                    #   ifelse(!dir.exists(preprocessedEventsPairDirVM), dir.create(preprocessedEventsPairDirVM), FALSE)
-                    #   setwd(preprocessedEventsPairDirVM)
-                    #   if (SME_outcome[o] != "differentResponses"){
-                    #     write.table(SME_events_outcome, file = paste0(subjectsCorr[s], subjectsToCorrelate[ss], "_", pair[p], "_", SME_outcome[o], "_", memoryLabels[mem], "_SME_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-                    #     setwd(preprocessedEventsPairDir)                      
-                    #   }
-                    #   if (o == 1 && p == 1 && c == 1){
-                    #     print(paste0("saving SME files for pair ",subjectsCorr[s],subjectsToCorrelate[ss], " to VM..."))
-                    #   }
-                    # } else if (dir.exists(dirVM)==F && o == 1){
-                    #   print(paste0("trying to save SME files for pair ",subjectsCorr[s],subjectsToCorrelate[ss], " to VM, but not connected to study drive"))
-                    # } else if (overwrite == "no"){
-                    #   print(paste0("trying to save SME files for pair ",subjectsCorr[s],subjectsToCorrelate[ss], " to VM, but cannot overwrite files on VM"))
-                    # }
                     
                     # for the first subject in each for
                     if (p == 1){
