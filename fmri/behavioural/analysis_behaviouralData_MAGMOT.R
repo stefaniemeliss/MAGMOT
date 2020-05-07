@@ -1,55 +1,72 @@
-## analysis of MAGMOT DATA
+## analysis of fmri data set
 
 #### setups ####
 #empty work space, load libraries and functions
 rm(list=ls())
 
 # define necessary directories
-mainDir <- "~/Dropbox/Reading/PhD/Magictricks/fmri_study"
-subDirData <- "Data"
-version <- "MAGMOT"
-dataDir <- file.path(mainDir, subDirData) #"~/Dropbox/Reading/PhD/Magic tricks/fmri_study/Data"
-preprocessedDir <- file.path(dataDir, "preprocessed") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/MagicBehavioural_preprocessed"
-codedDir <- file.path(dataDir, "magicmemory_fmri", "coded") #"~/Dropbox/Reading/PhD/Magic tricks/behavioural_study/data_fin/coded/preprocessing"
+analysisDir <- getwd()
+ratingsDir <- file.path(analysisDir, "ratings")
+memoryDir <- file.path(analysisDir, "memory")
+tricksDir <- file.path(analysisDir, "tricks")
+brainDir <- file.path(analysisDir, "brain")
 
-analysisDir <- file.path(mainDir, "Analysis")
-ratingsDir <- file.path(analysisDir, "Ratings")
-memoryDir <- file.path(ratingsDir, "Memory")
-brainDir <- file.path(ratingsDir, "BrainBehaviour")
-questDir <- file.path(ratingsDir, "Questionnaires")
-tricksDir <- file.path(analysisDir, "Tricks")
-
-pooledDir <-  "~/Dropbox/Reading/PhD/Magictricks/pooled_analyses"
-
-pooled <- 1
+setwd('..') # moves up in relative path
+rootDir <- getwd()
+pooledDir <-  file.path(rootDir, "pooled")
+setwd(analysisDir)
 
 # check whether these directories exist, if not create them
 ifelse(!dir.exists(ratingsDir), dir.create(ratingsDir), FALSE) 
 ifelse(!dir.exists(memoryDir), dir.create(memoryDir), FALSE) 
-ifelse(!dir.exists(questDir), dir.create(questDir), FALSE) 
-ifelse(!dir.exists(brainDir), dir.create(brainDir), FALSE) 
-ifelse(!dir.exists(analysisDir), dir.create(analysisDir), FALSE) 
 ifelse(!dir.exists(tricksDir), dir.create(tricksDir), FALSE) 
+ifelse(!dir.exists(brainDir), dir.create(brainDir), FALSE) 
+ifelse(!dir.exists(pooledDir), dir.create(pooledDir), FALSE) 
 
+# helper functions and packages #
+devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/errorbars.R?raw=TRUE")
+devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/rbindcolumns.R?raw=TRUE")
+
+library(lmerTest)
+library(psych)
+library(ggplot2)
+library(dplyr)
+
+# define version 
+version <- "MAGMOT"
+version_official <- "fmri"
 
 memoryLevels <- c("cuedRecallStrict", "cuedRecallLenient", 
                   "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
                   "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
+
 memoryLabels <- c("cuedRecallStrict", "cuedRecallLenient", 
                   "allConf", "highConf", "aboveAvgConf", 
                   "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
 
-#helper functions and packages #
-source("~/Dropbox/Reading/Codes and functions/R/errorbars.R")
-source("~/Dropbox/Reading/Codes and functions/R/rbindcolumns.R")
-library(ggplot2)
-library(lmerTest)
-library(reshape2)
+pooled <- 1
+
+dataCoded <- 1
+
+
+
+
+### downlaod data sets from OSF ###
+osfr::osf_auth() # log into OSF
+project <- osfr::osf_retrieve_node("fhqb7")
+target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
+sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+
+osfr::osf_ls_files(sub_dir, pattern = ".xlsx") %>%
+  osfr::osf_download(conflicts = "overwrite")
+
+osfr::osf_ls_files(sub_dir, pattern = ".txt") %>%
+  osfr::osf_download(conflicts = "overwrite")
 
 ### read in data sets ###
-setwd(preprocessedDir)
-dfWide <- xlsx::read.xlsx("wide_MAGMOT.xlsx", sheetName = "Sheet1")
-dfLong <- xlsx::read.xlsx("long_MAGMOT.xlsx", sheetName = "Sheet1")
+dfWide <- xlsx::read.xlsx(paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
+dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
+dfROI <- read.delim("ISC_ROI.txt")
 
 
 #####################################################################################################################################
@@ -58,13 +75,11 @@ dfLong <- xlsx::read.xlsx("long_MAGMOT.xlsx", sheetName = "Sheet1")
 
 ########## 1. get descriptives for curiosity and memory for whole sample as well as for each group individually ########## 
 if (exists("dfLong") == F) {
-  setwd(preprocessedDir)
-  dfLong <- xlsx::read.xlsx("long_MAGMOT.xlsx", sheetName = "Sheet1")#,  showWarnings = FALSE)
+  dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")#,  showWarnings = FALSE)
 }
 
 # define dependent variables
-workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
-if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
+if(dataCoded == 0) { # if data is not coded yet, only look at recognition performance
   dependentVariables <- c("responseCuriosity", "rtCuriosity", "rtAnswer",
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
                           "confidence", "confidenceCorrectTrials")
@@ -103,10 +118,10 @@ for(DV in 1:length(dependentVariables)) {
 # round result and save
 descriptives <- round(descriptives, digit = 3)
 setwd(ratingsDir)
-write.csv(descriptives, paste0("Descriptives_dependentVariables_", version, ".csv"))
+write.csv(descriptives, paste0("Descriptives_dependentVariables_", version_official, ".csv"))
 if (pooled == 1){
   setwd(pooledDir)
-  xlsx::write.xlsx(descriptives, file="Descriptives_dependentVariables.xlsx", sheetName = paste(version), append = T) # note: row.names contain variables
+  xlsx::write.xlsx(descriptives, file="Descriptives_dependentVariables.xlsx", sheetName = paste(version_official), append = T) # note: row.names contain variables
 }
 rm(descriptives)
 
@@ -142,11 +157,11 @@ for (iMean in seq_along(indicesPerTrickMean)){
   }
 }
 
-setwd(file.path(analysisDir))
-write.csv(dfMeans, paste0("stimuli_MagicBehavioural_memoryPerformance_", version, ".csv"), row.names = F)
+setwd(file.path(tricksDir))
+write.csv(dfMeans, paste0("stimuli_MagicBehavioural_memoryPerformance_", version_official, ".csv"), row.names = F)
 if (pooled == 1){
   setwd(pooledDir)
-  xlsx::write.xlsx(dfMeans, file="stimuli_MagicBehavioural_memoryPerformance.xlsx", sheetName = paste(version), row.names = F, append = T)
+  xlsx::write.xlsx(dfMeans, file="stimuli_MagicBehavioural_memoryPerformance.xlsx", sheetName = paste(version_official), row.names = F, append = T)
 }
 rm(dfMeans, meansPerTrick, indicesPerTrick, indicesPerTrickMean)
 
@@ -155,7 +170,7 @@ rm(dfMeans, meansPerTrick, indicesPerTrick, indicesPerTrickMean)
 ########## 3. Compute lmer model predicting memory performance using curiosity as a continous variable and group effect coded ########## 
 
 # define dependent variables 
-if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
+if(dataCoded == 0) { # if data is not coded yet, only look at recognition performance
   DV_LME <- c("recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
               "confidence", "confidenceCorrectTrials")
 } else {
@@ -196,10 +211,10 @@ for (DV in 1:length(DV_LME)){
 LMEresults <- round(LMEresults, digits = 5)
 
 setwd(memoryDir)
-write.csv(LMEresults, paste0("LME_Results_curiosityByReward_", version, ".csv"))
+write.csv(LMEresults, paste0("LME_Results_curiosityByReward_", version_official, ".csv"))
 if (pooled == 1){
   setwd(pooledDir)
-  xlsx::write.xlsx(LMEresults, file="LME_Results_curiosityByReward.xlsx", sheetName = paste(version), append = T)
+  xlsx::write.xlsx(LMEresults, file="LME_Results_curiosityByReward.xlsx", sheetName = paste(version_official), append = T)
 }
 
 
@@ -249,7 +264,7 @@ for (cov in 1:length(controlVar)){
   }
   # round results and save
   LMEresultsControlled <- round(LMEresultsControlled, digits = 5)
-  write.csv(LMEresultsControlled, paste0("LME_Results_curiosityByReward_", version, "_controlledFor_", controlVar[cov], ".csv"))
+  write.csv(LMEresultsControlled, paste0("LME_Results_curiosityByReward_", version_official, "_controlledFor_", controlVar[cov], ".csv"))
 }
 
 # When there seem to be an interaction effect like nback, you can test a model like memory~nback*group to see if the interaction is indeed significant. If it is significant, there might be a way to show that memory performance is different for s particular subset of participants (e.g. those who are low in the nback task). Given that reward group showed numerically lower memory performance but it is still informative for us.
@@ -320,7 +335,7 @@ for (DV in 1:length(DV_LME)){
 # round results and save
 LMEresults <- round(LMEresults, digits = 5)
 setwd(memoryDir)
-write.csv(LMEresults, paste0("LME_Results_curiosityByReward_", version, "_subset.csv"))
+write.csv(LMEresults, paste0("LME_Results_curiosityByReward_", version_official, "_subset.csv"))
 
 
 
@@ -353,13 +368,12 @@ for (DV in 1:length(DV_LME)){
 # round results and save
 LMEresults <- round(LMEresults, digits = 5)
 setwd(memoryDir)
-write.csv(LMEresults, paste0("LME_Results_curiosityOnly_", version, "_subset.csv"))
+write.csv(LMEresults, paste0("LME_Results_curiosityOnly_", version_official, "_subset.csv"))
 
 
 ########## 4. Create barplots to visualise the effects of curiosity and reward on memory performance ########## 
 if (exists("dfLong") == F) {
-  setwd(preprocessedDir)
-  dfLong <- xlsx::read.xlsx("long_MAGMOT.xlsx", sheetName = "Sheet1")#,  showWarnings = FALSE)
+  xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
 } 
 
 # create a dichomotised curiosity variable using mean-cenetred curiosity
@@ -420,7 +434,7 @@ for (DV in DV_barplot){
   graph <- ggplot(output, aes(x=group, y=get(DV), fill=cutoff)) +
     geom_bar(stat="identity", position="dodge") + geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=get(DV)-se, ymax=get(DV)+se)) +
     scale_x_discrete(limits=c("No reward", "Reward")) + 
-    labs(x="Between Group manipulation", y="Performance index", fill = "Curiosity category", title = paste(version, ":", DV ))  +
+    labs(x="Between Group manipulation", y="Performance index", fill = "Curiosity category", title = paste(version_official, ":", DV ))  +
     theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"), legend.title = element_text(size=20), legend.text = element_text(size = 20)) +
     theme_classic() + scale_fill_manual(values = cols) +
     facet_grid(. ~ groupingvar)     
@@ -470,7 +484,7 @@ for (DV in DV_hist){
     scale_color_brewer(palette="Dark2", limits = c("remembered", "forgotten")) + scale_fill_brewer(palette="Dark2", limits = c("remembered", "forgotten")) +
     facet_grid(group ~ .) +
     coord_cartesian(xlim = c(-5, 5), ylim = c(0, 1)) +
-    labs(x="curiosity group mean centered", y="Density", title = paste(version, DV)) +
+    labs(x="curiosity group mean centered", y="Density", title = paste(version_official, DV)) +
     theme(legend.position="bottom") + theme(legend.title = element_blank()) + 
     theme(axis.text=element_text(size=14), axis.title=element_text(size=16, face="bold"), title=element_text(size =20, face="bold"), strip.text = element_text(size = 16)) 
   
@@ -485,7 +499,7 @@ for (DV in DV_hist){
     theme_classic() + 
     facet_grid(get(DV) ~ .) +
     coord_cartesian(xlim = c(-5, 5), ylim = c(0, 1)) +
-    labs(x="curiosity group mean centered", y="Density", title = paste(version, DV)) +
+    labs(x="curiosity group mean centered", y="Density", title = paste(version_official, DV)) +
     theme(legend.position="bottom") + theme(legend.title = element_blank()) + 
     theme(axis.text=element_text(size=14), axis.title=element_text(size=16, face="bold"), title=element_text(size =20, face="bold"), strip.text = element_text(size = 16)) 
   
@@ -507,7 +521,7 @@ output <- as.data.frame(rbind(output$cont, output$exp))
 output$mot <- rep(c("cont","exp"), each = 1)
 
 outg <- ggplot(output, aes(mot, mean, fill = mot))
-outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("exp","cont")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version)) + theme_classic() + scale_fill_discrete(guide=FALSE)
+outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + scale_x_discrete(limits=c("exp","cont")) + labs(x="Experimental condition", y="Age", fill = "Experimental Condition", title = paste("demogs I", version_official)) + theme_classic() + scale_fill_discrete(guide=FALSE)
 
 t.test(dfWide$age ~ dfWide$group)
 
@@ -517,7 +531,7 @@ output <- plyr::count(dfWide, vars = c("gender","group"))
 
 # output <- count(df, c('gender','cond'))
 outg <- ggplot(output, aes(group, freq, fill = gender))
-outg + geom_bar(stat="identity", position="fill")+ scale_x_discrete(limits=c("cont","exp")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version)) + theme_classic() 
+outg + geom_bar(stat="identity", position="fill")+ scale_x_discrete(limits=c("cont","exp")) + labs(x="Experimental condition", y="Frequency", fill = "Gender", title = paste("demogs II", version_official)) + theme_classic() 
 
 
 ########## 2. Look at the effectiveness of reward manipulation ########## 
@@ -604,7 +618,7 @@ for (q in seq_along(allQ)){
   outg <- ggplot(rating, aes(vars, mean, fill = mot))
   outg <- outg + geom_bar(stat="identity", position="dodge") + 
     geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(0.9))  + 
-    labs(x="Scales", y="Rating", fill = "Experimental Condition", title = paste(allQ[q], "questionnaire",version)) + 
+    labs(x="Scales", y="Rating", fill = "Experimental Condition", title = paste(allQ[q], "questionnaire",version_official)) + 
     theme_classic() + #coord_cartesian(ylim = c(0, 7)) +
     scale_x_discrete(limits=get(allQ[q])) +
     theme(legend.position="bottom") 
@@ -665,10 +679,10 @@ for(scale in 1:length(scales)) {
 }
 rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
 setwd(ratingsDir)
-write.csv(effectsizesScales, paste0("effectsizesScales_", version, ".csv"))
+write.csv(effectsizesScales, paste0("effectsizesScales_", version_official, ".csv"))
 if (pooled == 1){
   setwd(pooledDir)
-  xlsx::write.xlsx(effectsizesScales, file="effectsizesScales.xlsx", sheetName = paste(version), append = T)
+  xlsx::write.xlsx(effectsizesScales, file="effectsizesScales.xlsx", sheetName = paste(version_official), append = T)
 }
 
 
@@ -698,9 +712,9 @@ cor_cont <- round(cor_cont, digits = 3)
 cor_exp <- round(cor_exp, digits = 3)
 
 setwd(ratingsDir)
-xlsx::write.xlsx(cor_all, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_all", row.names = F) 
-xlsx::write.xlsx(cor_cont, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_cont", row.names = F, append = T) 
-xlsx::write.xlsx(cor_exp, file=paste0("Intercorrelation_", version, ".xlsx"), sheetName = "cor_exp", row.names = F, append = T) 
+xlsx::write.xlsx(cor_all, file=paste0("Intercorrelation_", version_official, ".xlsx"), sheetName = "cor_all", row.names = F) 
+xlsx::write.xlsx(cor_cont, file=paste0("Intercorrelation_", version_official, ".xlsx"), sheetName = "cor_cont", row.names = F, append = T) 
+xlsx::write.xlsx(cor_exp, file=paste0("Intercorrelation_", version_official, ".xlsx"), sheetName = "cor_exp", row.names = F, append = T) 
 
 
 ########## 6. Compute summary statistics for measurements of memory (subject sum scores) ########## 
@@ -733,10 +747,10 @@ rm(df_mean, df_sd, df_min, df_max)
 names(descriptivesRecognitionPerformance) <- c("recognitionPerformanceVar", "mean", "sd", "min", "max")
 
 setwd(memoryDir)
-write.csv(descriptivesRecognitionPerformance, paste0("subjectSumscore_performance_memory_", version, ".csv"), row.names = F)
+write.csv(descriptivesRecognitionPerformance, paste0("subjectSumscore_performance_memory_", version_official, ".csv"), row.names = F)
 if (pooled == 1){
   setwd(pooledDir)
-  xlsx::write.xlsx(descriptivesRecognitionPerformance, file="subjectSumscore_performance_memory.xlsx", sheetName = paste(version), row.names = F, append = T)
+  xlsx::write.xlsx(descriptivesRecognitionPerformance, file="subjectSumscore_performance_memory.xlsx", sheetName = paste(version_official), row.names = F, append = T)
 }
 rm(dataWideRecognitionPerformance, descriptivesRecognitionPerformance)
 
@@ -803,14 +817,14 @@ for(DV in 1:length(DV_wide)) {
 rm(data, cohen, means, t.stats, ttest, d, w.stats, wilcox)
 effectsizesMemory <- round(effectsizesMemory, digits = 3)
 setwd(memoryDir)
-write.csv(effectsizesMemory, paste0("effectsizesMemory_", version, ".csv"))
+write.csv(effectsizesMemory, paste0("effectsizesMemory_", version_official, ".csv"))
 if (pooled == 1){
   setwd(pooledDir)
-  xlsx::write.xlsx(effectsizesMemory, file="effectsizesMemory.xlsx", sheetName = paste(version), append = T)
+  xlsx::write.xlsx(effectsizesMemory, file="effectsizesMemory.xlsx", sheetName = paste(version_official), append = T)
 }
 effectsizes <- rbind.all.columns(effectsizesScales, effectsizesMemory)
 setwd(ratingsDir)
-write.csv(effectsizes, paste0("effectsizesAll_", version, ".csv"))
+write.csv(effectsizes, paste0("effectsizesAll_", version_official, ".csv"))
 
 ########## 8. Create violin plots for sum scores of memory measures in each group ########## 
 # subset dataWide
@@ -917,7 +931,7 @@ for(p in 1:length(plotVars)) {
     geom_boxplot(width=0.1) +
     geom_jitter(size = 1, shape=1, position=position_jitter(0.2)) +
     theme_classic() +
-    labs(x="Experimental Condition", y="Sum score", title = paste(version, plot)) +
+    labs(x="Experimental Condition", y="Sum score", title = paste(version_official, plot)) +
     theme(legend.position="none") +
     theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) 
   # change facet grid depending on dependent variable
@@ -1074,7 +1088,7 @@ for(DV in 1:length(DV_wide)) {
     facet_grid(measure ~., scales = "free_y") +
     theme_classic() + scale_color_manual(values = cols) +
     scale_x_discrete(limits=c("1", "2", "3", "all")) +
-    labs(x="Task block", y="Value", group = "", title = paste(version, "Proportial effect over time",DV_wide[DV])) +
+    labs(x="Task block", y="Value", group = "", title = paste(version_official, "Proportional effect over time",DV_wide[DV])) +
     theme(legend.title = element_blank()) +
     theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) 
   
@@ -1364,3 +1378,45 @@ for(p in 1:length(plotVars)) {
   ggsave(paste0("Scatterplot_", plot, ".jpeg"))
   
 }
+
+##########################################################################################################################
+############################################### ANALYSIS BASED ON ISC DATA ############################################### 
+##########################################################################################################################
+
+# add group column 
+dfROI$group <- ifelse(grepl(glob2rx("*cont*cont*"), dfROI$ISC_map), "ISC_within_control_group", 
+                      ifelse(grepl(glob2rx("*cont*exp*"), dfROI$ISC_map), "ISC_between_groups", 
+                             ifelse(grepl(glob2rx("*exp*exp*"), dfROI$ISC_map), "ISC_within_reward_group", NA)))
+
+DV_ISC <- c("max_corr", "ROI_1_V1", "ROI_1_V2", "ROI_2_A1", "ROI_3_Caudate")
+
+
+# loop over dependent variables to histograms
+for (DV in DV_ISC){
+  
+  graph <- ggplot(dfROI, aes(x=get(DV), col = group, fill = group)) + 
+    #geom_histogram(aes(y=..density..), binwidth = 0.01, alpha=0.2, position="dodge") +
+    geom_histogram(binwidth = 0.01, alpha=0.2, position="dodge") +
+    #geom_density(alpha=.1) +
+    theme_classic() + 
+    facet_grid(group ~ .) +
+    #coord_cartesian(xlim = c(0, 1), ylim = c(0, 100)) +
+    labs(x="Correlation value", y="Count", title = paste(DV)) +
+    theme(legend.position="bottom") + theme(legend.title = element_blank()) + 
+    theme(axis.text=element_text(size=14), axis.title=element_text(size=16, face="bold"), title=element_text(size =20, face="bold"), strip.text = element_text(size = 12)) 
+  
+  print(graph)
+  
+}
+
+
+# Basic violin plot
+# graph <- ggplot(get(paste0("output_",plot)), aes(x=group, y=performance, fill = group)) + 
+graph <- ggplot(get(paste0("output_plot")), aes(x=group, y=performance, fill = group)) + 
+  geom_violin(trim=FALSE) +
+  geom_boxplot(width=0.1) +
+  geom_jitter(size = 1, shape=1, position=position_jitter(0.2)) +
+  theme_classic() +
+  labs(x="Experimental Condition", y="Sum score", title = paste(version_official, plot)) +
+  theme(legend.position="none") +
+  theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) 
