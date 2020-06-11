@@ -31,6 +31,7 @@ library(lmerTest)
 library(psych)
 library(ggplot2)
 library(dplyr)
+library(reshape2)
 
 # define version 
 version <- "MAGMOT"
@@ -1148,7 +1149,7 @@ names(output) <- c("ID", "group", "run", "coefficient", "RSFC")
 graph <- ggplot(data = output, aes(x = run, y = RSFC, group = ID, col = group)) + 
   geom_line() +
   facet_grid(. ~ coefficient) +
-  stat_summary(aes(group = group), geom = "point", fun.y = mean, size = 6) +
+  stat_summary(aes(group = group), geom = "point", fun = mean, size = 6) +
   theme_classic() +
   labs(x="resting state run", y="RSFC", title = "HPC-VTA RSFC") +
   theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold"))
@@ -1187,74 +1188,80 @@ ggsave(paste0("Violinplot_HPCVTA_RSFC_changes.jpeg")) # save plot
 DV_wide <- c(paste0(memoryLabels, "_abs")) # absolute sum scores
 DV_wide <- c(DV_wide, paste0("curBeta_",memoryLabels)) # betas
 DV_wide <- c(DV_wide, paste0("curCor_",memoryLabels)) # correlation
-for (mem in 1:length(memoryLevels)) { # benefits
-  DV_wide <- c(DV_wide, paste0("curBen_cont_", memoryLabels[mem], collapse = ", "))
-  DV_wide <- c(DV_wide, paste0("curBen_dich_", memoryLabels[mem], collapse = ", "))
-  DV_wide <- c(DV_wide, paste0("curBen_rel_", memoryLabels[mem], collapse = ", "))
-}
+DV_wide <- c(DV_wide, paste0("curBen_dich_",memoryLabels)) # dichotomised curiosity benefit
+DV_wide <- c(DV_wide, paste0("curBen_cont_",memoryLabels)) # continuous curiosity benefit
+DV_wide <- c(DV_wide, paste0("curBen_rel_",memoryLabels)) # relative curiosity benefit
+# for (mem in 1:length(memoryLevels)) { # benefits
+#   DV_wide <- c(DV_wide, paste0("curBen_cont_", memoryLabels[mem], collapse = ", "))
+#   DV_wide <- c(DV_wide, paste0("curBen_dich_", memoryLabels[mem], collapse = ", "))
+#   DV_wide <- c(DV_wide, paste0("curBen_rel_", memoryLabels[mem], collapse = ", "))
+# }
 
 # for all dependent variables compute correlation between changes in RSFC and memory for whole sample as well as in each group
 df_cor <- data.frame(var   = character(length(DV_wide)),
-                     pearson = numeric(length(DV_wide)),
-                     p_value_pearson = numeric(length(DV_wide)),
-                     pearson_noR = numeric(length(DV_wide)),
-                     p_value_pearson_noR = numeric(length(DV_wide)),
-                     pearson_R = numeric(length(DV_wide)),
-                     p_value_pearson_R = numeric(length(DV_wide)),
-                     corrDiff_pearson = numeric(length(DV_wide)),
-                     p_value_corrDiff_pearson = numeric(length(DV_wide)),
-                     spearman = numeric(length(DV_wide)),
-                     p_value_spearman = numeric(length(DV_wide)),
-                     spearman_noR = numeric(length(DV_wide)),
-                     p_value_spearman_noR = numeric(length(DV_wide)),
-                     spearman_R = numeric(length(DV_wide)),
-                     p_value_spearman_R = numeric(length(DV_wide)),
-                     corrDiff_spearman = numeric(length(DV_wide)),
-                     p_value_corrDiff_spearman = numeric(length(DV_wide)),
+                     cor_p = numeric(length(DV_wide)),
+                     pval_p = numeric(length(DV_wide)),
+                     cor_p_noR = numeric(length(DV_wide)),
+                     pval_cor_p_noR = numeric(length(DV_wide)),
+                     cor_p_R = numeric(length(DV_wide)),
+                     pval_cor_p_R = numeric(length(DV_wide)),
+                     corrDiff_p = numeric(length(DV_wide)),
+                     pval_corrDiff_p = numeric(length(DV_wide)),
+                     
+                     cor_s = numeric(length(DV_wide)),
+                     pval_s = numeric(length(DV_wide)),
+                     cor_s_noR = numeric(length(DV_wide)),
+                     pval_cor_s_noR = numeric(length(DV_wide)),
+                     cor_s_R = numeric(length(DV_wide)),
+                     pval_cor_s_R = numeric(length(DV_wide)),
+                     corrDiff_s = numeric(length(DV_wide)),
+                     pval_corrDiff_s = numeric(length(DV_wide)),
+                     
                      stringsAsFactors=FALSE)
+
 for(DV in 1:length(DV_wide)) {
   # paste variable
   df_cor$var[DV] <- paste(DV_wide[DV])
   # compute correlarion with FC computed with pearson
   cor <- cor.test(dfWide[[paste(DV_wide[DV])]], dfWide$RSFC_VTAHPC_diff)
-  df_cor$pearson[DV] <- cor$estimate # correlation
-  df_cor$p_value_pearson[DV] <- cor$p.value # p value
+  df_cor$cor_p[DV] <- cor$estimate # correlation
+  df_cor$pval_p[DV] <- cor$p.value # p value
   cor_noR <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="cont"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="cont"])
-  df_cor$pearson_noR[DV] <- cor_noR$estimate # correlation
-  df_cor$p_value_pearson_noR[DV] <-cor_noR$p.value # p value
+  df_cor$cor_p_noR[DV] <- cor_noR$estimate # correlation
+  df_cor$pval_cor_p_noR[DV] <-cor_noR$p.value # p value
   cor_R <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="exp"], dfWide$RSFC_VTAHPC_diff[dfWide$group=="exp"])
-  df_cor$pearson_R[DV] <- cor_R$estimate # correlation
-  df_cor$p_value_pearson_R[DV] <-cor_R$p.value # p value
-  # check for group diff in correlation
-  corDiff <- cocor::cocor.indep.groups(cor_noR$estimate, cor_R$estimate, 25, 25, alternative = "two.sided",
-                            test = "all", alpha = 0.05, conf.level = 0.95, null.value = 0,
-                            data.name = NULL, var.labels = NULL, return.htest = FALSE)
-  attributes(corDiff)
-  
-  df_cor$corrDiff_pearson[DV] <- corDiff@diff
-  df_cor$p_value_corrDiff_pearson[DV] <- corDiff@fisher1925$p.value
-  
-  # compute correlarion with FC computed with spearman (using spearman)
-  cor <- cor.test(dfWide[[paste(DV_wide[DV])]], dfWide$RSFC_VTAHPC_diff_spearman, method = "spearman")
-  df_cor$spearman[DV] <- cor$estimate # correlation
-  df_cor$p_value_spearman[DV] <- cor$p.value # p value
-  cor_noR <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="cont"], dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group=="cont"], method = "spearman")
-  df_cor$spearman_noR[DV] <- cor_noR$estimate # correlation
-  df_cor$p_value_spearman_noR[DV] <-cor_noR$p.value # p value
-  cor_R <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="exp"], dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group=="exp"], method = "spearman")
-  df_cor$spearman_R[DV] <- cor_R$estimate # correlation
-  df_cor$p_value_spearman_R[DV] <-cor_R$p.value # p value
+  df_cor$cor_p_R[DV] <- cor_R$estimate # correlation
+  df_cor$pval_cor_p_R[DV] <-cor_R$p.value # p value
   # check for group diff in correlation
   corDiff <- cocor::cocor.indep.groups(cor_noR$estimate, cor_R$estimate, 25, 25, alternative = "two.sided",
                                        test = "all", alpha = 0.05, conf.level = 0.95, null.value = 0,
                                        data.name = NULL, var.labels = NULL, return.htest = FALSE)
-  attributes(corDiff)
+  df_cor$corrDiff_p[DV] <- corDiff@diff
+  df_cor$pval_corrDiff_p[DV] <- corDiff@fisher1925$p.value
   
-  df_cor$corrDiff_spearman[DV] <- corDiff@diff
-  df_cor$p_value_corrDiff_spearman[DV] <- corDiff@fisher1925$p.value
+  # compute correlarion with FC computed with spearman (using spearman)
+  cor <- cor.test(dfWide[[paste(DV_wide[DV])]], dfWide$RSFC_VTAHPC_diff_spearman, method = "spearman")
+  df_cor$cor_s[DV] <- cor$estimate # correlation
+  df_cor$pval_s[DV] <- cor$p.value # p value
+  cor_noR <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="cont"], dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group=="cont"], method = "spearman")
+  df_cor$cor_s_noR[DV] <- cor_noR$estimate # correlation
+  df_cor$pval_cor_s_noR[DV] <-cor_noR$p.value # p value
+  cor_R <- cor.test(dfWide[[paste(DV_wide[DV])]][dfWide$group=="exp"], dfWide$RSFC_VTAHPC_diff_spearman[dfWide$group=="exp"], method = "spearman")
+  df_cor$cor_s_R[DV] <- cor_R$estimate # correlation
+  df_cor$pval_cor_s_R[DV] <-cor_R$p.value # p value
+  # check for group diff in correlation
+  corDiff <- cocor::cocor.indep.groups(cor_noR$estimate, cor_R$estimate, 25, 25, alternative = "two.sided",
+                                       test = "all", alpha = 0.05, conf.level = 0.95, null.value = 0,
+                                       data.name = NULL, var.labels = NULL, return.htest = FALSE)
+  df_cor$corrDiff_s[DV] <- corDiff@diff
+  df_cor$pval_corrDiff_s[DV] <- corDiff@fisher1925$p.value
 }
 # 
 df_cor[, 2:17] <- round(df_cor[, 2:17], digits = 5)
+
+df_cor_p <- df_cor[, 1:9]
+df_cor_s <- df_cor[, c(1,10:17)]
+
 setwd(brainDir)
 write.csv(df_cor, file = "Correlation_RSFC_changes_memory.csv", row.names = F)
 
@@ -1336,7 +1343,7 @@ for(p in 1:length(plotVars)) {
   # create scatter plot
   graph <- ggplot(get(paste0("output_plot")), aes(x=RSFC_change, y=performance, col = group)) + 
     geom_point() +
-    geom_smooth(method=lm, aes(fill=group), alpha = 0.3, fullrange = T) +
+    geom_smooth(formula = y ~ x, method=lm, aes(fill=group), alpha = 0.3, fullrange = T) +
     theme_classic() +
     labs(x="Difference in HPC-VTA RSFC (post > pre)", y="Performance index", title = paste("RSFC changes and", plot), fill = "Group", col  = "Group") +
     theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) #+
