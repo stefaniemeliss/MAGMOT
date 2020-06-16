@@ -1,6 +1,10 @@
 #!/bin/bash
-
 source ~/.bashrc
+
+# load modules
+module load afni19.3.03
+# load anaconda - this is necessary to have all python libraries available
+module load anaconda3
 
 #define path
 path="/storage/shared/research/cinn/2018/MAGMOT"
@@ -12,7 +16,6 @@ cd "$path"/MAGMOT_BIDS/
 subjects=($(ls -d sub*))
 
 # define which subjects should be excluded
-subjects_excl=(sub-experimental016)
 subjects_excl=(sub-experimental000)
 
 # exclude subjects: compare the elements of subjects_excl and subjects
@@ -29,7 +32,7 @@ for e in ${!subjects_excl[@]}; do
 done
 
 #subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006) # script development
-#subjects=(sub-control039) # script development
+#subjects=(sub-control041) # script development
 
 
 # for each subject in the subjects array
@@ -44,10 +47,13 @@ for subject in "${subjects[@]}"; do
 
 	# copy task files
 	cd $fildirTASK
-	filesTASK=($(ls -d *magictrickwatching*concat.nii))
+	filesTASK=($(ls -d *magictrickwatching*concat.nii.gz))
 	for fileTASK in "${filesTASK[@]}"; do
-		3dcopy $fildirTASK/$fileTASK $fildirQC/$fileTASK
-	done
+		searchstring="nii.gz"
+		replacestring="nii"	
+		fileTASK_new="${fileTASK/$searchstring/$replacestring}"	
+		3dcopy $fildirTASK/$fileTASK $fildirQC/$fileTASK_new
+	done	
 
 	# copy rest files
 	cd $fildirREST
@@ -59,16 +65,18 @@ for subject in "${subjects[@]}"; do
 		3dcopy $fildirREST/$fileREST $fildirQC/$fileREST_new
 	done
 
-	# cd into QC subject folder
-	cd $fildir
-
-	# define files
-	files=($(ls -d sub*.nii*))
-
-	# loop through the files
+	# create files array with nifti files
 	cd $fildirQC
 	files=($(ls -d sub*.nii*))
+
+	# loop through the files that have been copied over
 	for file in "${files[@]}"; do
+
+		cd $fildirQC
+
+		#########################
+		### MOTION CORRECTION ###
+		#########################
 
 		# define file prefix for motion corrected files
 		searchstring="sub"
@@ -79,7 +87,7 @@ for subject in "${subjects[@]}"; do
 		replaceending=""
 		volreg_prefix="${file/$searchstring/$replacestring_3d}"	
 		file_suffix="${file/$searchending/$replaceending}" 
-		motionfile_prefix="${file_suffix/$searchstring/$replacestring_1d}"	
+		motionfile_prefix="${file_suffix/$searchstring/$replacestring_1d}".1D	
 		plot_prefix="${file_suffix/$searchstring/$replacestring_plot}"
 
 		# run motion correction
@@ -87,6 +95,36 @@ for subject in "${subjects[@]}"; do
 
 		# look at the 1dplot
 		1dplot -volreg -sepsc1 -png $plot_prefix $motionfile_prefix &
+
+
+		##########################
+		###### CREATE MASK  ######
+		##########################
+
+		# define file prefix for mask
+		searchstring="sub"
+		replacestring_mask="mask_sub"	
+		mask_prefix="${file/$searchstring/$replacestring_mask}"	
+
+		# use 3dAutomask to perform skull-stripping and masking on EPI data (default in pre-processing)
+		3dAutomask -prefix $mask_prefix $file
+
+		##########################
+		###### RUN pyfMRIqc ######
+		##########################
+
+		# change directory to pyfMRIqc-master
+		cd /storage/shared/research/cinn/2018/MAGMOT/software/pyfMRIqc-fix-rm
+
+		# define input parameters
+		func_nift_file=$fildirQC/"${file}"
+		SNR_voxel_perc=25
+		#mask_threshold=200
+		motion_file=$fildirQC/"${motionfile_prefix}"
+		mask_nift_file=$fildirQC/"${mask_prefix}"
+
+		#python pyfMRIqc.py -n $func_nift_file -s $SNR_voxel_perc -m $motion_file -k $mask_nift_file
+		python pyfMRIqc.py -n $func_nift_file -s $SNR_voxel_perc -m $motion_file -k $mask_nift_file
 
 	done 
 
