@@ -1,10 +1,6 @@
-###################################
-### analysis of pyfMRIqc output ###
-###################################
-
-###########################################
-# 1. extract information from the txt files
-###########################################
+##################################################################
+### extract information from the txt files created by pyfMRIqc ###
+##################################################################
 
 # determine directories
 path="/storage/shared/research/cinn/2018/MAGMOT"
@@ -15,8 +11,6 @@ qc_dir=file.path(path, "derivatives", "pyfMRIqc")
 setwd(qc_dir)
 subjects <- list.dirs(recursive = F)
 subjects <- gsub('./', '', subjects)
-
-#subjects <- subjects[1] # debug
 
 # loop over subjects
 for (s in seq_along(subjects)){
@@ -70,7 +64,7 @@ for (s in seq_along(subjects)){
     # determine values to extract
     extract <- c("SNR_voxel_MEAN", "SNR_voxel_STD", "SNR_voxel_value_range", "Mean", "Mean_(mask)", "SD_(mask)", 
                  "Min_Slice_SNR", "Max_Slice_SNR", "Mean_voxel_SNR", "Mean_absolute_Movement", "Max_absolute_Movement", 
-                 "Max_relative_Movement", "Relative_movements_(>0.1mm)", "Relative_movements_(>0.5mm)", "Relataive_movements_(>voxelsize)") 
+                 "Max_relative_Movement", "Relative_movements_(>0.1mm)", "Relative_movements_(>0.5mm)", "Relative_movements_(>voxelsize)") 
     
     
     # create data frame
@@ -109,11 +103,11 @@ for (s in seq_along(subjects)){
     scanparam$value <-ifelse(scanparam$param != "SNR_voxel_value_range", as.numeric(scanparam$value), NA)
     
     # save data in csv
+    setwd(qc_dir)
+    write.csv(scanparam, file = "pyfMRIqc_output.csv")
     
   }
 }
-
-# save
 
 #######################################
 # 2. analyse information from txt files
@@ -121,5 +115,9 @@ for (s in seq_along(subjects)){
 
 motion <- subset(scanparam, scanparam$param == "Mean_absolute_Movement")
 motion <- subset(scanparam, scanparam$param == "Max_relative_Movement")
+motion <- subset(scanparam, scanparam$param == "Relative_movements_(>0.1mm)")
+motion <- subset(scanparam, scanparam$param == "Relative_movements_(>0.5mm)")
+
+
 
 
