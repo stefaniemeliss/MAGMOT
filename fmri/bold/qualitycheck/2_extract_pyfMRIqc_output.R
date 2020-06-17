@@ -20,7 +20,7 @@ for (s in seq_along(subjects)){
   
   # create variable with file names
   files <- list.files(pattern = ".txt", recursive = T)
-
+  
   # loop over txt files
   for (f in seq_along(files)) {
     
@@ -37,6 +37,13 @@ for (s in seq_along(subjects)){
     param[1,] <- gsub('__', '', param[1,]) # remove double underscore
     colnames(param) <- param[1,] # use first row to determine column names
     param <- param[-1,] # delete first row
+    
+    # determine group
+    if (grepl("control", subjects[s])){
+      group <- "control"
+    } else {
+      group <- "experimental"
+    }
     
     # determine file name etc
     if (grepl("magictrickwatching_run-1", files[f])){
@@ -69,6 +76,7 @@ for (s in seq_along(subjects)){
     
     # create data frame
     df <- data.frame(subject = subjects[s],
+                     group = group,
                      task = task,
                      run = run,
                      BOLD = BOLD,
