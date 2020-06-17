@@ -104,20 +104,7 @@ for (s in seq_along(subjects)){
     
     # save data in csv
     setwd(qc_dir)
-    write.csv(scanparam, file = "pyfMRIqc_output.csv")
+    write.csv(scanparam, file = "pyfMRIqc_output.csv", row.names = F)
     
   }
 }
-
-#######################################
-# 2. analyse information from txt files
-#######################################
-
-motion <- subset(scanparam, scanparam$param == "Mean_absolute_Movement")
-motion <- subset(scanparam, scanparam$param == "Max_relative_Movement")
-motion <- subset(scanparam, scanparam$param == "Relative_movements_(>0.1mm)")
-motion <- subset(scanparam, scanparam$param == "Relative_movements_(>0.5mm)")
-
-
-
-
