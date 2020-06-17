@@ -54,6 +54,14 @@ for (s in seq_along(subjects)){
       task <- "magictrickwatching"
       run <- 2
       BOLD <- "magictrickwatching_run-2"
+    } else if (grepl("magictrickwatching_acq-1_run-2", files[f])){
+      task <- "magictrickwatching"
+      run <- 2
+      BOLD <- "magictrickwatching_run-2_acq-1"
+    } else if (grepl("magictrickwatching_acq-2_run-2", files[f])){
+      task <- "magictrickwatching"
+      run <- 2
+      BOLD <- "magictrickwatching_run-2_acq-2"
     } else if (grepl("magictrickwatching_run-3", files[f])){
       task <- "magictrickwatching"
       run <- 3
