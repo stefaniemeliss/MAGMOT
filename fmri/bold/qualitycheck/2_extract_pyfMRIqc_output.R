@@ -77,7 +77,7 @@ for (s in seq_along(subjects)){
     }  
     
     # determine values to extract
-    extract <- c("SNR_voxel_MEAN", "SNR_voxel_STD", "SNR_voxel_value_range", "Mean", "Mean_(mask)", "SD_(mask)", 
+    extract <- c("SNR_voxel_MEAN", "SNR_voxel_STD", "SNR_voxel_value_range", "Mean", "Mean_(mask)", "SD", "SD_(mask)", 
                  "Min_Slice_SNR", "Max_Slice_SNR", "Mean_voxel_SNR", "Mean_absolute_Movement", "Max_absolute_Movement", 
                  "Max_relative_Movement", "Relative_movements_(>0.1mm)", "Relative_movements_(>0.5mm)", "Relative_movements_(>voxelsize)") 
     
