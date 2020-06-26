@@ -76,6 +76,9 @@ for (s in seq_along(subjects)){
       BOLD <- "rest_run-2"
     }  
     
+    # determine scan
+    scan <- paste0(subjects[s], "_task-", BOLD)
+    
     # determine values to extract
     extract <- c("SNR_voxel_MEAN", "SNR_voxel_STD", "SNR_voxel_value_range", "Mean", "Mean_(mask)", "SD", "SD_(mask)", 
                  "Min_Slice_SNR", "Max_Slice_SNR", "Mean_voxel_SNR", "Mean_absolute_Movement", "Max_absolute_Movement", 
@@ -88,6 +91,7 @@ for (s in seq_along(subjects)){
                      task = task,
                      run = run,
                      BOLD = BOLD,
+                     scan = scan,
                      param = character(length(extract)),
                      value = numeric(length(extract)),
                      stringsAsFactors=FALSE)
@@ -118,8 +122,37 @@ for (s in seq_along(subjects)){
     scanparam$range <-ifelse(scanparam$param == "SNR_voxel_value_range", scanparam$value, NA)
     scanparam$value <-ifelse(scanparam$param != "SNR_voxel_value_range", as.numeric(scanparam$value), NA)
     
-    # save data in csv
+    # add censor information
     setwd(qc_dir)
+    censor <- read.delim("afni_volreg_censor_count.tsv")
+    censor$scan <- gsub("_bold_concat.nii", "", censor$scan)
+    censor$scan <- gsub("_bold.nii", "", censor$scan)
+    
+    # transform from wide into long format
+    long <- reshape2::melt(censor, id.vars = c("subject", "scan"))
+    names(long) <- c("subject", "scan", "param", "value")
+    
+    # add columns
+    long$group <- ifelse(grepl("control", long$subject), "control", "experimenal")
+    
+    long$task <- ifelse(grepl("magictrickwatching", long$scan), "magictrickwatching", "rest")
+    long$run <- ifelse(grepl("run-1", long$scan), 1, 
+                       ifelse(grepl("run-2", long$scan), 2, 3))
+    long$BOLD <- ifelse(grepl("magictrickwatching_run-1", long$scan), "magictrickwatching_run-1", 
+                        ifelse(grepl("magictrickwatching_run-2", long$scan), "magictrickwatching_run-2", 
+                               ifelse(grepl("magictrickwatching_run-3", long$scan), "magictrickwatching_run-3", 
+                                      ifelse(grepl("rest_run-1", long$scan), "rest_run-1", 
+                                             ifelse(grepl("rest_run-2", long$scan), "rest_run-2",
+                                                    NA)))))
+    long$range <- NA
+
+    # merge
+    scanparam <- rbind(scanparam, long)
+    
+    # order rows
+    scanparam <- scanparam[order(scanparam$subject, scanparam$BOLD),]
+    
+    # save data in csv
     write.csv(scanparam, file = "pyfMRIqc_output.csv", row.names = F)
     
   }
