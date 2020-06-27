@@ -133,7 +133,7 @@ for (s in seq_along(subjects)){
     names(long) <- c("subject", "scan", "param", "value")
     
     # add columns
-    long$group <- ifelse(grepl("control", long$subject), "control", "experimenal")
+    long$group <- ifelse(grepl("control", long$subject), "control", "experimental")
     
     long$task <- ifelse(grepl("magictrickwatching", long$scan), "magictrickwatching", "rest")
     long$run <- ifelse(grepl("run-1", long$scan), 1, 
@@ -143,9 +143,11 @@ for (s in seq_along(subjects)){
                                ifelse(grepl("magictrickwatching_run-3", long$scan), "magictrickwatching_run-3", 
                                       ifelse(grepl("rest_run-1", long$scan), "rest_run-1", 
                                              ifelse(grepl("rest_run-2", long$scan), "rest_run-2",
-                                                    NA)))))
+                                                    ifelse(grepl("magictrickwatching_acq-1_run-2", long$scan), "magictrickwatching_acq-1_run-2",
+                                                           ifelse(grepl("magictrickwatching_acq-2_run-2", long$scan), "magictrickwatching_acq-2_run-2",
+                                                                  NA)))))))
     long$range <- NA
-
+    
     # merge
     scanparam <- rbind(scanparam, long)
     
