@@ -58,7 +58,10 @@ DV_plot <- c("Mean", "Mean_(mask)", "SD", "SD_(mask)",
              "SNR_voxel_MEAN", "SNR_voxel_STD", 
              "Min_Slice_SNR", "Max_Slice_SNR", "Mean_voxel_SNR", 
              "Mean_absolute_Movement", "Max_absolute_Movement", 
-             "Max_relative_Movement", "Relative_movements_(>0.1mm)", "Relative_movements_(>0.5mm)") 
+             "Max_relative_Movement", "Relative_movements_(>0.1mm)", "Relative_movements_(>0.5mm)",
+             "volumes", "threshold_02mm", "fraction_02mm", 
+             "threshold_03mm", "fraction_03mm", 
+             "threshold_05mm", "fraction_05mm") 
 
 definitions <- c(
   "Mean voxel (all voxels) intensity over time using **all** voxels. The tool also provides a 2D png image (axial slices) as output for the mean voxel intensity. It can be used to see if there is any general signal loss.",
@@ -87,7 +90,17 @@ definitions <- c(
   
   "Absolute values of relative movement are compared against threshold of 0.1mm. Output captures number of movements, rather than number of slices affected.",
   
-  "Absolute values of relative movement are compared against threshold of 0.5mm. Output captures number of movements, rather than number of slices affected.")
+  "Absolute values of relative movement are compared against threshold of 0.5mm. Output captures number of movements, rather than number of slices affected.",
+  
+  "Volumes captures the number of volumes each scan has and has been determined using AFNI's *3dinfo*. Because the magictricks vary in length and were displayed pseudo-randomly across blocks, the number of volumes shows somw variation.",
+  
+  "Using the method described above, this parameter shows the absolute number of volumes above the 0.3 motion limit.",
+  
+  "Using the method described above, this parameter shows the percentage of volumes above the 0.3 motion limit.",
+  
+  "Using the method described above, this parameter shows the absolute number of volumes above the 0.5 motion limit.",
+  
+  "Using the method described above, this parameter shows the percentage of volumes above the 0.5 motion limit.")
 
 interpretation <- c(
   "Mean voxel intensity across all voxels is fairly normally distributed across the sample as well as within each task and group. The mean and SD are also comparable. The outliers sub-control003 and sub-experimental014 have been screened in more detail, but the mean image does not suggest any signal loss for either of them. sub-experimental014 has a large head which could have contributed to high mean values. The spaghetti plot suggests that the mean voxel intensity across time is similar across scans, so that there is no evidence scanner issues during the course of an experiment. This is also reflected by a low mean and SD of the subjectwise SD, i.e. the SD of the values for each subject.",
@@ -116,8 +129,21 @@ interpretation <- c(
   
   "When interpreting these numbers, it needs to be considered that the reflect the number of movements in any of the 6 slices rather than the number of volumes affected. Some subjects have a high number of movements > 0.1mm, but again, both groups and tasks are affected. Again, there are changes throughout the duration of the experimentn and it seems that people were moving more as the experiment proceeded.", 
   
-  "When looking at relative movements > 0.5mm, luckily the average number drops and again, the number reflects movements in any of the 6 parameters rather than slices affected. Both tasks and groups are affected and values change throughout the experiment."
-)
+  "When looking at relative movements > 0.5mm, luckily the average number drops and again, the number reflects movements in any of the 6 parameters rather than slices affected. Both tasks and groups are affected and values change throughout the experiment.",
+  
+  "Volumes for resting state are constant at 300. For the task blocks, they sum up to 1140, but show some variation. The values are the same for both groups though as each pseudo-randomised trial order was used once within the reward group and once within the control group. The only difference there is is caused by the fact that the scanner needed to be restarted for one subject (sub-experimental016). Average volumes per slice are comparable across task blocks.",
+  
+  "threshold_02mm...",
+  
+  "fraction_02mm...",
+  
+  "threshold_03mm...",
+  
+  "fraction_03mm...",
+  
+  "threshold_05mm...",
+  
+  "fraction_05mm...")
 
 
 # determine font sizes
@@ -164,7 +190,28 @@ In total, there are the following **output parameters**:
 * Relative_movements_(>0.5mm)
 * Relative_movements_(>voxelsize) - There was no relative movement > voxelsize, the output was hence omitted.
 
+I have added the following parameter now:
 
+* Volumes  
+* threshold_02mm  
+* fraction_02mm  
+* threshold_03mm  
+* fraction_03mm  
+* threshold_05mm  
+* fraction_05mm  
+
+To determine number/percentage of volumes affected by motion above a certain threshold, AFNI's *1d_tool.py -quick_censor_count* was used. This program uses the motion file created using *3dvolreg*, computes the temporal derivative of each vector (done as first backward difference): "Take the backward differences at each time point.  For each index > 0, value[index] = value[index] - value[index-1], and value[0] = 0", that is, it calculates the relative motion. Additionally, the columns (i.e. the 6 motion parameters) are then collapsed using "euclidean_norm" method (sqrt(sum squares)). This combines rotations (in degrees) with shifts (in mm) as if they had the same weight:
+
+"Note that assuming rotations are about the center of mass (which should produce a minimum average distance), then the average arc length (averaged over the brain mask) of a voxel rotated by 1 degree (about the CM) is the following (for the given datasets):
+TT_N27+tlrc:        0.967 mm (average radius = 55.43 mm)
+MNIa_caez_N27+tlrc: 1.042 mm (average radius = 59.69 mm)
+MNI_avg152T1+tlrc:  1.088 mm (average radius = 62.32 mm)
+The point of these numbers is to suggest that equating degrees and mm should be fine. The average distance caused by a 1 degree rotation is very close to 1 mm (in an adult human)."
+[Please note at this point that both pyfMRIqc & MRIQC assume a 50mm head radius in their translation from radians to mm.]  
+  
+The Euclidean norm of the relative motion is then compared against the defined limits (i.e. 0.2, 0.3 and 0.5) and outliers (in volumes) are counted, i.e. if >= limit or <= limit, result is 1.
+  
+  
 Below, each of these parameters will be defined. Additionally, for each of these parameters, **four graphs** have been created to explore them in the sample:  
 
 a) Histogram for all scans  
