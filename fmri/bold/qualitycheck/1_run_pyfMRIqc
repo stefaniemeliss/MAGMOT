@@ -32,11 +32,12 @@ for e in ${!subjects_excl[@]}; do
 done
 
 #subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006) # script development
-#subjects=(sub-control041) # script development
+#subjects=(sub-control037) # script development
 
 
 # create file to save censor values
-printf "subject\tscan\tvolumes\tthreshold_02mm\tfraction_02mm\tthreshold_03mm\tfraction_03mm\tthreshold_05mm\tfraction_05mm\tthreshold_1mm\tfraction_1mm" > "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv #file header
+#printf "subject\tscan\tvolumes\tthreshold_02mm\tfraction_02mm\tthreshold_03mm\tfraction_03mm\tthreshold_05mm\tfraction_05mm\tthreshold_1mm\tfraction_1mm" > "$path"/derivatives/pyfMRIqc/afni_volreg_quick_censor_count.tsv #file header
+printf "subject\tscan\tvolumes\tthreshold_02\tfraction_02\tthreshold_03\tfraction_03\tthreshold_05\tfraction_05\tthreshold_1\tfraction_1" > "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv #file header
 
 
 # for each subject in the subjects array
@@ -101,10 +102,19 @@ for subject in "${subjects[@]}"; do
 		1dplot -volreg -sepsc1 -png $plot_prefix $motionfile_prefix &
 
 		# extract number of censored TRs for different thresholds
-		thresh_02=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.2)
-		thresh_03=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.3)
-		thresh_05=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.5)
-		thresh_1=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 1)
+		# using -quick_censor_count is akin to -censor_motion, but it only outputs the number of TRs that would be censored
+        # This option essentially replaces these: -derivative -demean -collapse_cols euclidean_norm -censor_prev_TR -verb 0 -show_censor_count -moderate_mask 0 LIMIT
+		# but censor_prev_TR is not needed
+		# thresh_02=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.2)
+		# thresh_03=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.3)
+		# thresh_05=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.5)
+		# thresh_1=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 1)
+
+		thresh_02=$(1d_tool.py -infile $motionfile_prefix -derivative -demean -collapse_cols euclidean_norm -verb 0 -show_censor_count -moderate_mask 0 0.2)
+		thresh_03=$(1d_tool.py -infile $motionfile_prefix -derivative -demean -collapse_cols euclidean_norm -verb 0 -show_censor_count -moderate_mask 0 0.3)
+		thresh_05=$(1d_tool.py -infile $motionfile_prefix -derivative -demean -collapse_cols euclidean_norm -verb 0 -show_censor_count -moderate_mask 0 0.5)
+		thresh_1=$(1d_tool.py -infile $motionfile_prefix -derivative -demean -collapse_cols euclidean_norm -verb 0 -show_censor_count -moderate_mask 0 1)
+
 
 		# calculate percentage of censored volumes
 		num_vols=$(3dinfo -nt $file)
@@ -115,8 +125,8 @@ for subject in "${subjects[@]}"; do
 
 
 		# print values to file
-		printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05\t$thresh_1\t$frac_1" >> "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv # cor for run-1
-
+		# printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05\t$thresh_1\t$frac_1" >> "$path"/derivatives/pyfMRIqc/afni_volreg_quick_censor_count.tsv
+		printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05\t$thresh_1\t$frac_1" >> "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv
 
 		##########################
 		###### CREATE MASK  ######
