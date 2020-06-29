@@ -54,7 +54,7 @@ scanparam$acq <- gsub("_acq-2", "", scanparam$acq)
 DV_plot <- c("SNR_voxel_MEAN", "SNR_voxel_STD", "Mean", "Mean_(mask)", "SD", "SD_(mask)", 
              "Min_Slice_SNR", "Max_Slice_SNR", "Mean_voxel_SNR", "Mean_absolute_Movement", "Max_absolute_Movement", 
              "Max_relative_Movement", "Relative_movements_(>0.1mm)", "Relative_movements_(>0.5mm)", "Relative_movements_(>voxelsize)",
-             "volumes", "threshold_02mm", "fraction_02mm", "threshold_03mm", "fraction_03mm", "threshold_05mm", "fraction_05mm")
+             "volumes", "threshold_02mm", "fraction_02mm", "threshold_03mm", "fraction_03mm", "threshold_05mm", "fraction_05mm", "threshold_1mm", "fraction_1mm")
 
 # determine font sizes
 text_size <- 8
