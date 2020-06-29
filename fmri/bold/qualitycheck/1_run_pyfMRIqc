@@ -36,7 +36,7 @@ done
 
 
 # create file to save censor values
-printf "subject\tscan\tvolumes\tthreshold_02mm\tfraction_02mm\tthreshold_03mm\tfraction_03mm\tthreshold_05mm\tfraction_05mm" > "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv #file header
+printf "subject\tscan\tvolumes\tthreshold_02mm\tfraction_02mm\tthreshold_03mm\tfraction_03mm\tthreshold_05mm\tfraction_05mm\tthreshold_1mm\tfraction_1mm" > "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv #file header
 
 
 # for each subject in the subjects array
@@ -104,16 +104,18 @@ for subject in "${subjects[@]}"; do
 		thresh_02=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.2)
 		thresh_03=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.3)
 		thresh_05=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 0.5)
+		thresh_1=$(1d_tool.py -infile $motionfile_prefix -quick_censor_count 1)
 
 		# calculate percentage of censored volumes
 		num_vols=$(3dinfo -nt $file)
 		frac_02=$(bc <<<"scale=5; $thresh_02 / $num_vols")
 		frac_03=$(bc <<<"scale=5; $thresh_03 / $num_vols")
 		frac_05=$(bc <<<"scale=5; $thresh_05 / $num_vols")
+		frac_1=$(bc <<<"scale=5; $thresh_1 / $num_vols")
 
 
 		# print values to file
-		printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05" >> "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv # cor for run-1
+		printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05\t$thresh_1\t$frac_1" >> "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv # cor for run-1
 
 
 		##########################
