@@ -59,10 +59,10 @@ DV_plot <- c("Mean", "Mean_(mask)", "SD", "SD_(mask)",
              "Min_Slice_SNR", "Max_Slice_SNR", "Mean_voxel_SNR", 
              "Mean_absolute_Movement", "Max_absolute_Movement", 
              "Max_relative_Movement", "Relative_movements_(>0.1mm)", "Relative_movements_(>0.5mm)",
-             "volumes", "threshold_02mm", "fraction_02mm", 
-             "threshold_03mm", "fraction_03mm", 
-             "threshold_05mm", "fraction_05mm",
-             "threshold_1mm", "fraction_1mm") 
+             "volumes", "threshold_02", "fraction_02", 
+             "threshold_03", "fraction_03", 
+             "threshold_05", "fraction_05",
+             "threshold_1", "fraction_1") 
 
 definitions <- c(
   "Mean voxel (all voxels) intensity over time using **all** voxels. The tool also provides a 2D png image (axial slices) as output for the mean voxel intensity. It can be used to see if there is any general signal loss.",
@@ -144,19 +144,19 @@ interpretation <- c(
   
   "The average number of volumes above the 0.2 movement threshold is moderately high, but shows considerable variation within the sample as well as depending on group and task. Additionally, similarily to the other motion parameters, there is a lot of variation within each subject across the scans.",
   
-  "When looking at the percentage of volumes above 0.2 motion, the average is 10% (though the median is lower and the mean is influenced by outliers). We see some strong outliers across tasks and groups (some up to 60%). Again, there is considerable variation across the experiment and subjects.",
+  "When looking at the percentage of volumes above 0.2 motion, the average is 7% (though the median is lower and the mean is influenced by outliers). We see some strong outliers across tasks and groups (some up to 50%). Again, there is considerable variation across the experiment and subjects.",
   
-  "As expected, the absolute numbers are lower for the 0.3 threshold compared to the previous one and the motion drops to half of what it was (even though the threshold was not doubled). The number of outliers also decreases, but the same extreme outliers can be identified.",
+  "As expected, the absolute numbers are lower for the 0.3 threshold compared to the previous one. The number of outliers also decreases, but the same extreme outliers can still be identified.",
   
-  "Mean drops to 5% when looking at the percentage of volumes above the 0.3 threshold. Additionally, this threshold seems to be less influenced by group and task.",
+  "Mean drops to 3% when looking at the percentage of volumes above the 0.3 threshold. Additionally, this threshold seems to be less influenced by group and task.",
   
-  "Again, the absolute number of volumes above the 0.5 threshold drops further in comparison to the previous threshold, but is still influenced by outliers in both groups and tasks and varies over the course of the experiment and across subjects.",
+  "Again, the absolute number of volumes above the 0.5 threshold drops further in comparison to the previous threshold, but is still influenced by outliers in both groups and tasks and varies over the course of the experiment and across subjects. Interestingly, there seems to be less head motion during resting state compared to the task.",
   
-  "The percentage of volumes above 0.5 motion drops to around 2%, but there are subjects across both tasks and groups with up to 30% volumes affected.",
+  "The percentage of volumes above 0.5 motion drops to around 1%, but there are subjects across both tasks and groups with up to 20% volumes affected.",
   
-  "Only a small number of volumes have motion above the threshold of 1 and most subjects do not exceed this threshold at all. Those that do are labelled as outliers.",
+  "Only a very small number of volumes have motion above the threshold of 1 and most subjects do not exceed this threshold at all. Those that do are labelled as outliers.",
   
-  "On average, there are 0% of volumes affected by motion above 1mm, but some scans are affected by this with up to 10%.")
+  "On average, there are 0% of volumes affected by motion above 1mm, but some scans are affected by this with up to 5%.")
 
 
 # determine font sizes
@@ -205,30 +205,19 @@ In total, there are the following **output parameters**:
 
 I have added the following parameters now to further investigate the motion issues:
 
-* Volumes  
-* threshold_02mm  
-* fraction_02mm  
-* threshold_03mm  
-* fraction_03mm  
-* threshold_05mm  
-* fraction_05mm  
-* threshold_1mm  
-* fraction_1mm  
+* volumes  
+* threshold_02  
+* fraction_02  
+* threshold_03  
+* fraction_03  
+* threshold_05  
+* fraction_05  
+* threshold_1  
+* fraction_1  
 
-threshold/fraction capture the absolute/relative **number of volumes** above a given threshold. pyfMRIqc, in comparison, captures the number of movements across all 6 motion parameters that exceed a given threshold. To determine number/percentage of volumes affected by motion above a certain threshold, AFNI's *1d_tool.py -quick_censor_count* was used. This program is akin to -censor_motion (""), but it only outputs the number of TRs that would be censored.
-
-
-        that would be censored.  It does not actually create a censor file.
-
-        This option essentially replaces these:
-
-           -derivative -demean -collapse_cols euclidean_norm
-           -censor_prev_TR -verb 0 -show_censor_count 
-           -moderate_mask 0 LIMIT
-
-
-
-This program uses the motion file created using *3dvolreg*, demeans it and computes the temporal derivative of each vector (done as first backward difference): "Take the backward differences at each time point.  For each index > 0, value[index] = value[index] - value[index-1], and value[0] = 0", that is, it calculates the relative motion. Additionally, the columns (i.e. the 6 motion parameters) are then collapsed using "euclidean_norm" method (sqrt(sum squares)). This combines rotations (in degrees) with shifts (in mm) as if they had the same weight:
+threshold/fraction capture the absolute/relative **number of volumes** above a given threshold. pyfMRIqc, in comparison, captures the number of movements across all 6 motion parameters that exceed a given threshold. To determine number/percentage of volumes affected by motion above a certain threshold, AFNI's *1d_tool.py -infile $motionfile_prefix -derivative -demean -collapse_cols euclidean_norm -verb 0 -show_censor_count -moderate_mask 0 THRESHOLD* was used.  
+  
+This program uses the motion file $motionfile_prefix created using *3dvolreg*, computes the temporal derivative of each vector (done as first backward difference): "Take the backward differences at each time point.  For each index > 0, value[index] = value[index] - value[index-1], and value[0] = 0", that is, it calculates the relative motion and demeans that. Additionally, the columns (i.e. the 6 motion parameters) are then collapsed using "euclidean_norm" method (sqrt(sum squares)). This combines rotations (in degrees) with shifts (in mm) as if they had the same weight:
 
 "Note that assuming rotations are about the center of mass (which should produce a minimum average distance), then the average arc length (averaged over the brain mask) of a voxel rotated by 1 degree (about the CM) is the following (for the given datasets):  
 TT_N27+tlrc:        0.967 mm (average radius = 55.43 mm)  
@@ -237,7 +226,7 @@ MNI_avg152T1+tlrc:  1.088 mm (average radius = 62.32 mm)
 The point of these numbers is to suggest that equating degrees and mm should be fine. The average distance caused by a 1 degree rotation is very close to 1 mm (in an adult human)."  
 [Please note at this point that both pyfMRIqc & MRIQC assume a 50mm head radius in their translation from radians to mm.]  
   
-The Euclidean norm of the relative motion is then compared against the defined limits (i.e. 0.2, 0.3, 0.5 and 1) and outliers (in volumes) are counted, i.e. if >= limit or <= limit, result is 1.
+The Euclidean norm of the relative motion is then compared against the defined THRESHOLDS (i.e. 0.2, 0.3, 0.5 and 1) and outliers (in volumes) are counted, i.e. if >= limit or <= limit, result is 1.
   
   
 Below, each of these parameters will be defined. Additionally, for each of these parameters, **four graphs** have been created to explore them in the sample:  
