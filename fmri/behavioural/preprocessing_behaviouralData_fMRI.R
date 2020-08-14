@@ -615,6 +615,13 @@ for (s in seq_along(subjects)){
   ptbdata$rewardByCuriosity <- ptbdata$curiosityGroupMeanCentered * ptbdata$groupEffectCoded
   ptbdata$rewardByCuriosity_updated <- ptbdata$curiosityGroupMeanCentered_updated * ptbdata$groupEffectCoded
   
+  # process answer to the question how many people will be able to find a solution to the magic trick --> variable "estimate"
+  ptbdata$responseEstimate <- ifelse(ptbdata$responseAnswer == "0 to 10", 0,
+                                     ifelse(ptbdata$responseAnswer == "11 to 20", 1,
+                                            ifelse(ptbdata$responseAnswer == "21 to 30", 2,
+                                                   ifelse(ptbdata$responseAnswer == "31 or more", 3, NaN))))
+  ptbdata$rtEstimate <- ptbdata$rtAnswer
+  
   # define number of blocks
   numBlocks <- max(ptbdata$block)
   
@@ -836,7 +843,7 @@ for (s in seq_along(subjects)){
     # calculate curiosity-driven memory memory benefit (dichotomous, absolute)  --> range: [-1; 1]
     MEMO[[paste0("curBen_dich_", memoryLabels[mem])]] <- MEMO$curiosity_dich * MEMO[[paste0(memoryLevels[mem])]]
   }
-
+  
   # save data in long format
   setwd(preprocessedLongDir)
   filenameLong <- paste0(BIDSstring,"_long.csv")
@@ -864,11 +871,11 @@ for (s in seq_along(subjects)){
       # pick relevant onset variables and create data in long format
       onset <- run_acq[,c("trial","vidFileName", "displayVidOnset", "mockOffset", "displayVidOffset", "fixationPostVidOnset",
                           "displayAnswerOnset", "responseAnswer", "timestampAnswer", "fixationPostAnswerOnset",
-                          "displayCuriosityOnset", "responseCuriosity", "timestampCuriosity", "fixationPostCuriosityOnset",
-                          "cuedRecallStrict", "cuedRecallLenient", 
+                          "displayCuriosityOnset", "responseCuriosity", "timestampCuriosity", "fixationPostCuriosityOnset", 
+                          "description", "cuedRecallStrict", "cuedRecallLenient", 
+                          "answer", "confidence",
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
-                          "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
-                          "confidence")]
+                          "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")]
       
       onset$timestampVidOnset <- onset$displayVidOnset
       onset$timestampMockOffset <- onset$mockOffset
@@ -876,10 +883,10 @@ for (s in seq_along(subjects)){
       # onset <- reshape2::melt(onset, id.vars=c("vidFileName", "trial", "mockOffset", "displayVidOffset", "timestampPostVidFixation", "vidDurCalc", "cuedRecallStrict", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
       #                                          "responseAnswer", "timestampAnswer", "responseCuriosity", "timestampCuriosity"), value.name = "onset")
       onset <- reshape2::melt(onset, id.vars=c("vidFileName", "trial", "timestampVidOnset", "timestampMockOffset", "displayVidOffset", "timestampPostVidFixation",
-                                               "cuedRecallStrict", "cuedRecallLenient", 
+                                               "description", "cuedRecallStrict", "cuedRecallLenient", 
+                                               "answer", "confidence",
                                                "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
                                                "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
-                                               "confidence",
                                                "responseAnswer", "timestampAnswer", "responseCuriosity", "timestampCuriosity"), value.name = "onset")
       
       # recode variable (for later merging)
@@ -917,9 +924,9 @@ for (s in seq_along(subjects)){
         # code memory performance and trial type (remembered vs forgotten)
         run_BIDS[[paste0(memoryLabels[mem])]] <- ifelse(run_BIDS$variable == "displayVid", run_BIDS[[paste0(memoryLevels[mem])]], "not applicable")
         # Define trial types for each memory cut off seperately 
-        run_BIDS[[paste0("trial_type_", memoryLabels[mem])]] <-  ifelse(run_BIDS[[paste0(memoryLevels[mem])]] == 1, "remembered", 
-                                                                        ifelse(run_BIDS[[paste0(memoryLevels[mem])]] == 0, "forgotten",
-                                                                               ifelse(run_BIDS[[paste0(memoryLevels[mem])]] == "not applicable", "not applicable",
+        run_BIDS[[paste0("trial_type_", memoryLabels[mem])]] <-  ifelse(run_BIDS[[paste0(memoryLabels[mem])]] == 1, "remembered", 
+                                                                        ifelse(run_BIDS[[paste0(memoryLabels[mem])]] == 0, "forgotten",
+                                                                               ifelse(run_BIDS[[paste0(memoryLabels[mem])]] == "not applicable", "not applicable",
                                                                                       "undefined")))
       }
       
@@ -936,6 +943,10 @@ for (s in seq_along(subjects)){
       run_BIDS$responseCuriosity <- ifelse(run_BIDS$variable == "displayCuriosity", run_BIDS$responseCuriosity, "not applicable")
       run_BIDS$timestampCuriosity <- ifelse(run_BIDS$variable == "displayCuriosity", run_BIDS$timestampCuriosity, "not applicable")
       
+      run_BIDS$description <-  ifelse(run_BIDS$variable == "displayVid", as.character(run_BIDS$description), "not applicable")
+      run_BIDS$answer <-  ifelse(run_BIDS$variable == "displayVid", run_BIDS$answer, "not applicable")
+      run_BIDS$confidence <-  ifelse(run_BIDS$variable == "displayVid", run_BIDS$confidence, "not applicable")
+      
       # change col names of data frame according to BIDS specification
       names(run_BIDS)[names(run_BIDS)=="vidFileName"] <- "stim_file"
       names(run_BIDS)[names(run_BIDS)=="variable"] <- "event"
@@ -944,7 +955,8 @@ for (s in seq_along(subjects)){
       run_BIDS$duration <- round(run_BIDS$duration, digits = 3)
       
       events_BIDS <- run_BIDS[, c("onset", "duration", "trial", "stim_file", "event", "response", "response_timestamp", 
-                                  "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
+                                  "description","trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
+                                  "answer", "confidence",
                                   "trial_type_allConf", "trial_type_highConf", "trial_type_aboveAvgConf",
                                   "trial_type_rememberedStrictAboveAvg", "trial_type_rememberedLenientAboveAvg", "trial_type_rememberedStrictHigh", "trial_type_rememberedLenientHigh")]
       
@@ -958,18 +970,6 @@ for (s in seq_along(subjects)){
       setwd(preprocessedEventsSubjDir)
       write.table(events_BIDS, file=BIDSfilename, quote = F, sep="\t", row.names = F, na = "n/a")
       #write.table(events_BIDS, file=file.path(preprocessedEventsRootDir, BIDSfilename), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-      
-      
-      # if connected to VM, save it there too
-      # if (dir.exists(dirVM)==T & overwrite == "yes"){
-      #   setwd(file.path(BIDSdirVM, BIDSstring, 'func'))
-      #   write.table(events_BIDS, file=BIDSfilename, quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-      #   setwd(preprocessedEventsSubjDir)
-      # } else {
-      #   if (feedback == "yes"){
-      #     print(paste("Trying to save", BIDSfilename, ", but not connected to study drive!!!"))
-      #   }
-      # }
       
       # crate file for concatenation of BOLD data: mockOffset and onsets have to be translated
       run_BIDS$run <- b
@@ -1043,18 +1043,6 @@ for (s in seq_along(subjects)){
     #write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     write.table(BIDS_concat, file=file.path(concatRootDir, paste0(BIDSstring, "_task-magictrickwatching_concat.tsv")), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
-    # # if connected to VM, save it there too
-    # if (dir.exists(dirVM)==T & overwrite == "yes"){
-    #   preprocessedEventsSubjDirVM <- file.path(preprocessedEventsRootDirVM, "concat", BIDSstring)
-    #   ifelse(!dir.exists(preprocessedEventsSubjDirVM), dir.create(preprocessedEventsSubjDirVM), FALSE)
-    #   setwd(preprocessedEventsSubjDirVM)
-    #   write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-    #   setwd(preprocessedEventsSubjDir)
-    # } else {
-    #   if (feedback == "yes" & overwrite == "yes"){
-    #     print("Trying to save concat.tsv, but not connected to study drive!!!")
-    #   }
-    # }
   }
   
   # delete no longer needed variables
@@ -1204,15 +1192,19 @@ for (s in seq_along(subjects)){
     setwd(preprocessedEventsRootDir)
     write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
-    # if (dir.exists(dirVM)==T & overwrite == "yes"){
-    #   setwd(file.path(preprocessedEventsRootDirVM, 'scripts'))
-    #   write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-    #   setwd(preprocessedEventsSubjDir)
-    # } else {
-    #   if (feedback == "yes" & overwrite == "yes"){
-    #     print("Trying to save information about scan duration, but not connected to study drive!!!")
-    #   }
-    # }
+    # upload file to OSF
+    osfr::osf_auth() # log into OSF
+    project <- osfr::osf_retrieve_node("fhqb7")
+    target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
+    sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+    # check whether file already exists
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MAGMOT_informationAboutScanDuration.tsv")
+    if (dim(file_exists)[1] > 0){ # delete file if it exists
+      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+    }
+    # upload file
+    osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite")
+    
     
     
     #### combine single _long.csv files to one file ####
@@ -1284,6 +1276,14 @@ for (s in seq_along(subjects)){
     project <- osfr::osf_retrieve_node("fhqb7")
     target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
     sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+    
+    # check whether file already exists
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
+    while (dim(file_exists)[1] > 0){ # delete files if they exists. use while loop because only the first row will be used
+      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+      file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
+    }
+    # upload file
     osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
     
     #################### as a last step, create the files we need for concatenation ####################
@@ -1313,7 +1313,7 @@ for (s in seq_along(subjects)){
       
       # create empty df for 3dISC -dataTable
       for (mem in seq_along(memoryLabels)){
-        assign(paste0("dataTable_",memoryLabels[mem]), data.frame()) # if effect sizes for a single block were of interest
+        assign(paste0("dataTable_",memoryLabels[mem]), data.frame()) # if effect sizes for a single block were of interest  
       }
       
       dataTable_ISC <- data.frame()
@@ -1478,7 +1478,7 @@ for (s in seq_along(subjects)){
             if(x < N) {
               dataTable_ISC_dummy[x,nextCol+1] <- '\\' #add back slash at end of the row
             }
-
+            
             ### create SME dataTables ###
             for (p in seq_along(pair)) {
               
@@ -1695,7 +1695,7 @@ for (s in seq_along(subjects)){
       }
       # add column names to dataTable_ISC_controlled
       names(dataTable_ISC_controlled) <- c("Subj1", "Subj2", "grp", "uniqueConf", "grpUniqueConf",
-                                      ISC_table_names, "InputFile", "\\")
+                                           ISC_table_names, "InputFile", "\\")
       
       ### save all dataTables ###
       setwd(dataTableDir)
@@ -1708,49 +1708,6 @@ for (s in seq_along(subjects)){
         write.table(get(paste0("dataTable_", memoryLabels[mem])), file=paste0("dataTable_",   memoryLabels[mem], ".txt"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
       }
       
-      # if (dir.exists(dirVM)==T & overwrite == "yes"){
-      #   setwd(file.path(dirVM, 'derivatives', 'magictrickwatching', 'analyses'))
-      #   write.table(dataTable, file=file.path("ISC_magictrickwatching","dataTable.txt"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-      #   write.table(dataTable_aboveAvgConf, file=file.path("ISC_SME_aboveAvgConf","dataTable_aboveAvgConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-      #   write.table(dataTable_highConf, file=file.path("ISC_SME_highConf","dataTable_highConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-      #   write.table(dataTable_allConf, file=file.path("ISC_SME_allConf","dataTable_allConf"), quote=FALSE, sep="\t", row.names = FALSE, na = "")
-      # } else {
-      #   if (feedback == "yes" & overwrite == "yes"){
-      #     print("Trying to save information for 3dISC -dataTable, but not connected to study drive!!!")
-      #   }
-      # }
-      
     } # end doISCprep
   }
 }
-
-#corrCoefficients <- dataTable_ISC_dummy[, c("corrCuriosity", "corrConfidence", "corrAllConf", "corrHighConf", "corrAboveAvgConf", "cuBetaAllConf", "cuBetaHighConf", "cuBetaAboveAvgConf")]
-#corrCoefficients <- dataTable_ISC_dummy[, c("corrCuriosity", "corrConfidence", "corrAllConf", "corrAboveAvgConf", "cuBetaAllConf", "cuBetaAboveAvgConf")]
-#cor(corrCoefficients)
-
-
-#df[,c( "curBeta_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBen_aboveAvgConf", "curCor_aboveAvgConf")] <- as.numeric(df[,c( "curBeta_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBen_aboveAvgConf", "curCor_aboveAvgConf")])
-
-cor(dataTable_ISC_dummy[,c( "curBeta_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBen_aboveAvgConf", "curCor_aboveAvgConf")])
-cor(MAGMOT[,c("curBeta_aboveAvgConf", "curBeta_c_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBetaOnly_c_aboveAvgConf", "curBen_rel_aboveAvgConf", "curCor_aboveAvgConf", "lmBeta_aboveAvgConf")])
-
-# par(mfrow=c(2,2))
-# r <- cor(MAGMOT$curBeta_aboveAvgConf, MAGMOT$curCor_aboveAvgConf, method = "pearson")
-# plot(MAGMOT$curBeta_aboveAvgConf, MAGMOT$curCor_aboveAvgConf,main = paste("LME beta & correlation, r = ", round(r, digits = 5)))
-# abline(lm(MAGMOT$curCor_aboveAvgConf ~ MAGMOT$curBeta_aboveAvgConf))
-# 
-# r <- cor(MAGMOT$curBeta_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf, method = "pearson")
-# plot(MAGMOT$curBeta_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf,main = paste("LME beta & lm beta, r = ", round(r, digits = 5)))
-# abline(lm(MAGMOT$lmBeta_aboveAvgConf ~ MAGMOT$curBeta_aboveAvgConf))
-# 
-# r <- cor(MAGMOT$curCor_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf, method = "pearson")
-# plot(MAGMOT$curCor_aboveAvgConf, MAGMOT$lmBeta_aboveAvgConf,main = paste("correlation & lm beta, r = ", round(r, digits = 5)))
-# abline(lm(MAGMOT$lmBeta_aboveAvgConf ~ MAGMOT$curCor_aboveAvgConf))
-# 
-# cor(MAGMOT[,c("curBeta_aboveAvgConf", "curBeta_c_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBetaOnly_c_aboveAvgConf", "curBen_rel_aboveAvgConf", "curCor_aboveAvgConf", "lmBeta_aboveAvgConf")], method = "spearman")
-# 
-# MAGMOT$ID[[which(min(MAGMOT$lmBeta_aboveAvgConf)==MAGMOT$lmBeta_aboveAvgConf)]]
-# MAGMOT$ID[[which(min(MAGMOT$lmBeta_aboveAvgConf)==MAGMOT$lmBeta_aboveAvgConf)]]
-# 
-# MAGMOT2 <- subset(MAGMOT, MAGMOT$ID != "18")
-# cor(MAGMOT2[,c("curBeta_aboveAvgConf", "curBeta_c_aboveAvgConf", "curBetaOnly_aboveAvgConf", "curBetaOnly_c_aboveAvgConf", "curBen_rel_aboveAvgConf", "curCor_aboveAvgConf", "lmBeta_aboveAvgConf")])

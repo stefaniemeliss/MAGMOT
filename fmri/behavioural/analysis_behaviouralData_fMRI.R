@@ -74,6 +74,7 @@ dfROI <- read.delim("ISC_ROI.txt")
 ############################################### ANALYSIS BASED ON DATA IN LONG FORMAT ############################################### 
 #####################################################################################################################################
 
+
 ########## 1. get descriptives for curiosity and memory for whole sample as well as for each group individually ########## 
 if (exists("dfLong") == F) {
   dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")#,  showWarnings = FALSE)
@@ -81,11 +82,11 @@ if (exists("dfLong") == F) {
 
 # define dependent variables
 if(dataCoded == 0) { # if data is not coded yet, only look at recognition performance
-  dependentVariables <- c("responseCuriosity", "rtCuriosity", "rtAnswer",
+  dependentVariables <- c("responseCuriosity", "rtCuriosity", "responseEstimate", "rtEstimate",
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
                           "confidence", "confidenceCorrectTrials")
 } else {
-  dependentVariables <- c("responseCuriosity", "rtCuriosity", "rtAnswer",
+  dependentVariables <- c("responseCuriosity", "rtCuriosity", "responseEstimate", "rtEstimate",
                           "cuedRecallStrict", "cuedRecallLenient", 
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
                           "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
@@ -128,7 +129,7 @@ rm(descriptives)
 
 ########## 2. compute mean memory performance for each magic trick ########## 
 # define variables for which the mean per trick should be calculated
-indicesPerTrick <- c("answerRT", "responseCuriosity", "rtCuriosity",
+indicesPerTrick <- c( "responseEstimate", "rtEstimate", "responseCuriosity", "rtCuriosity",
                      memoryLevels,
                      "confidence", "confidenceCorrectTrials")
 indicesPerTrickMean <- paste0("mean_", indicesPerTrick)
@@ -1427,3 +1428,4 @@ graph <- ggplot(get(paste0("output_plot")), aes(x=group, y=performance, fill = g
   labs(x="Experimental Condition", y="Sum score", title = paste(version_official, plot)) +
   theme(legend.position="none") +
   theme(axis.text=element_text(size=20), axis.title=element_text(size=20, face="bold"), title=element_text(size =20, face="bold")) 
+
