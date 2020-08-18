@@ -165,6 +165,23 @@ if (pooled == 1){
   setwd(pooledDir)
   xlsx::write.xlsx(dfMeans, file="stimuli_MagicBehavioural_memoryPerformance.xlsx", sheetName = paste(version_official), row.names = F, append = T)
 }
+
+# merge the means etc with the information about the magictricks
+
+osfr::osf_auth() # log into OSF
+project <- osfr::osf_retrieve_node("fhqb7")
+stim_dir <- osfr::osf_ls_files(project, pattern = "stimuli") # looks at all files and directories in the project and defines the match with "data"
+cue_dir <- osfr::osf_mkdir(stim_dir, path = "cue_images_memory_test") # looks at all files and directories in the project and defines the match with "data"
+sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+
+osfr::osf_ls_files(stim_dir, pattern = ".xlsx") %>%
+  osfr::osf_download(conflicts = "overwrite")
+
+osfr::osf_ls_files(sub_dir, pattern = ".txt") %>%
+  osfr::osf_download(conflicts = "overwrite")
+
+
+
 rm(dfMeans, meansPerTrick, indicesPerTrick, indicesPerTrickMean)
 
 
