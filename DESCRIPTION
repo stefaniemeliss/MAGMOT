@@ -1,0 +1,40 @@
+Type: Compendium
+Package: Investigating the effects of monetary reward and
+    curiosity on incidental memory encoding
+Title: What the Package Does (One Line, Title Case)
+Version: 0.0.1
+Authors@R: 
+    person(given = "Stef",
+           family = "Meliss",
+           role = c("aut", "cre"),
+           email = "s_meliss@outlook.com")
+Description: In this project, we examine the effects of monetary
+    reward on incidental learning and how this is influenced by
+    experiencing curiosity. This includes behavioural experiments
+    conducted online as well as an fMRI study to investigate the neural
+    underpinnings of the effects. We use dynamic stimuli (e.g. short movie
+    clips) to increase the ecological validity of our research.
+License: What license it uses
+Depends: 
+    cocor,
+    devtools,
+    dplyr,
+    ggplot2,
+    ggrepel,
+    grid,
+    holepunch,
+    lme4,
+    lmerTest,
+    osfr,
+    plyr,
+    psych,
+    remotes,
+    reshape,
+    reshape2,
+    rmarkdown,
+    rmatio,
+    xlsx
+Remotes: 
+    karthik/holepunch
+Encoding: UTF-8
+LazyData: true
