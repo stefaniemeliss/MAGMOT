@@ -1,7 +1,9 @@
 # this code creates the binder for the MAGMOT R analysis
 
-# 1. install packages
+# 1. install packages and set directory
 remotes::install_github("karthik/holepunch")
+git_dir <- "~/Dropbox/Reading/PhD/Magictricks/git/" # this is the directory for the local git repo
+setwd(git_dir)
 
 # 2. Setting up your project as a compendium
 library(holepunch)
@@ -9,7 +11,7 @@ write_compendium_description(package = "Investigating the effects of monetary re
                              description = "In this project, we examine the effects of monetary reward on incidental learning and how this is influenced by experiencing curiosity. This includes behavioural experiments conducted online as well as an fMRI study to investigate the neural underpinnings of the effects. We use dynamic stimuli (e.g. short movie clips) to increase the ecological validity of our research.")
 # to write a description, with dependencies. Be sure to fill in placeholder text
 
-write_dockerfile(maintainer = "Stef Meliss") 
+write_dockerfile(maintainer = "Stef Meliss", r_date = "2020-02-29") #realse date of R 3.6.3
 # To write a Dockerfile. It will automatically pick the date of the last 
 # modified file, match it to that version of R and add it here. You can 
 # override this by passing r_date to some arbitrary date
