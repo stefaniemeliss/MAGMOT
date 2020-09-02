@@ -1,8 +1,5 @@
 #!/usr/bin/python
 
-# load module
-module load anaconda3
-
 # Cutting fMRI data
 # This code is written to cut fMRI data along the 4th dimension, i.e. to reduce the number of volumes.
 # This is necessary because the scanner did not stop automatically at the end of each block of the experiment, but had to be stopped manually.
@@ -40,7 +37,7 @@ subjects = ['sub-control001', 'sub-control002']
 ### Use list to iterate through subjects and cut their fMRI data
 
 # define output root dir
-cut_root = os.path.join(main_path, 'derivatives', 'cut')
+cut_root = os.path.join(main_path, 'derivatives', 'magictrickwatching', 'cut')
 # create directory if it does not exist yet
 if os.path.exists(cut_root) is not True:
     os.mkdir(cut_root)
