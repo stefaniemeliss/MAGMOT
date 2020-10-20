@@ -13,6 +13,7 @@ debug <- 1
 
 devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/rbindcolumns.R?raw=TRUE")
 library(lme4)
+options(scipen=999) # suppresses scientific notation
 
 
 # define core variables
@@ -42,6 +43,7 @@ feedback = "no"
 mainDir <- "~/Dropbox/Reading/PhD/Magictricks/fmri_study"
 preDir <- file.path(mainDir, "Data", "MAGMOT_pre")
 postDir <- file.path(mainDir, "Data", "MAGMOT_post")
+PTBDir <- file.path(mainDir, "Data", "PTB")
 brainDir <- file.path(mainDir, "Data", "brain_activation")
 dataMemoryDir <- file.path(mainDir, "Data", "magicmemory_fmri", "decrypted")
 codedDir <- file.path(mainDir, "Data", "magicmemory_fmri", "coded")
@@ -185,10 +187,12 @@ names(MAGMOT_pre)[names(MAGMOT_pre)=="english_age.1"] <- "AgeEnglishAcquisition"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="health.1"] <- "health"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="neurodisorders.1"] <- "neurodisorders"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="participant"] <- "preFile"
-names(MAGMOT_pre)[names(MAGMOT_pre)=="TIME_start"] <- "startPre"
-names(MAGMOT_pre)[names(MAGMOT_pre)=="TIME_end"] <- "endPre"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="DOB.1"] <- "DOB"
 
+### compute duration of pre assessment
+MAGMOT_pre$startPre <- as.POSIXct(MAGMOT_pre$TIME_start, format = "%Y-%m-%d-%H-%M") # convert date-time format
+MAGMOT_pre$endPre <- as.POSIXct(MAGMOT_pre$TIME_end, format = "%Y-%m-%d-%H-%M") # convert date-time format
+MAGMOT_pre$durPre <- difftime(MAGMOT_pre$startPre, MAGMOT_pre$endPre)
 
 #### MRI screening: any yes?
 items <- c("screening_MRI.1", "screening_MRI.2", "screening_MRI.3", "screening_MRI.4", "screening_MRI.5", "screening_MRI.6", "screening_MRI.7", "screening_MRI.8", "screening_MRI.9", "screening_MRI.10",
@@ -268,7 +272,7 @@ MAGMOT_pre$TraitCuriosity <- MAGMOT_pre$TraitCuriosity.1 + MAGMOT_pre$TraitCurio
   MAGMOT_pre$TraitCuriosity.15 + MAGMOT_pre$TraitCuriosity.16 + MAGMOT_pre$TraitCuriosity.17 + MAGMOT_pre$TraitCuriosity.18 + MAGMOT_pre$TraitCuriosity.19 + MAGMOT_pre$TraitCuriosity.20
 
 ### reduce MAGMOT_pre to relevant variables
-MAGMOT_pre <- MAGMOT_pre[, c("ID", "preFile", "startPre", "endPre", "corsi.1", "X2nback.1", "age", "DOB",  "gender", "ethnicity", "education", "yearsOfEducation", 
+MAGMOT_pre <- MAGMOT_pre[, c("ID", "preFile", "startPre", "endPre", "durPre", "corsi.1", "X2nback.1", "age", "DOB",  "gender", "ethnicity", "education", "yearsOfEducation", 
                              "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health", "neurodisorders", "screening_MRI",
                              "BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity")]
 
@@ -422,13 +426,16 @@ names(MAGMOT_post)[names(MAGMOT_post)=="sleep_average.1"] <- "sleepAverage"
 names(MAGMOT_post)[names(MAGMOT_post)=="alcohol_amount.1"] <- "alcoholAmount"
 names(MAGMOT_post)[names(MAGMOT_post)=="rewardEffort.1"] <- "rewardEffort"
 names(MAGMOT_post)[names(MAGMOT_post)=="rewardExpectations.1"] <- "rewardExpectations"
-names(MAGMOT_post)[names(MAGMOT_post)=="TIME_start"] <- "startPost"
-names(MAGMOT_post)[names(MAGMOT_post)=="TIME_end"] <- "endPost"
 names(MAGMOT_post)[names(MAGMOT_post)=="participant"] <- "postFile"
 names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.1"] <- "comment_ppt1"
 names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.2"] <- "comment_ppt2"
 names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.3"] <- "comment_ppt3"
 names(MAGMOT_post)[names(MAGMOT_post)=="comments_experimenter.1"] <- "comment_exp"
+
+### compute duration of post assessment
+MAGMOT_post$startPost <- as.POSIXct(MAGMOT_post$TIME_start, format = "%Y-%m-%d-%H-%M") # convert date-time format
+MAGMOT_post$endPost <- as.POSIXct(MAGMOT_post$TIME_end, format = "%Y-%m-%d-%H-%M") # convert date-time format
+MAGMOT_post$durPost <- difftime(MAGMOT_post$startPost, MAGMOT_post$endPost)
 
 ### State Curiosity: compute scale
 MAGMOT_post$StateCuriosity <- MAGMOT_post$StateCuriosity.1 + MAGMOT_post$StateCuriosity.2 + MAGMOT_post$StateCuriosity.3 + MAGMOT_post$StateCuriosity.4 + MAGMOT_post$StateCuriosity.5 + MAGMOT_post$StateCuriosity.6 + MAGMOT_post$StateCuriosity.7 +
@@ -436,7 +443,7 @@ MAGMOT_post$StateCuriosity <- MAGMOT_post$StateCuriosity.1 + MAGMOT_post$StateCu
   MAGMOT_post$StateCuriosity.15 + MAGMOT_post$StateCuriosity.16 + MAGMOT_post$StateCuriosity.17 + MAGMOT_post$StateCuriosity.18 + MAGMOT_post$StateCuriosity.19 + MAGMOT_post$StateCuriosity.20
 
 # select relevant rows from MAGMOT_post
-MAGMOT_post <- MAGMOT_post[,c("ID", "postFile", "startPost", "endPost", 
+MAGMOT_post <- MAGMOT_post[,c("ID", "postFile", "startPost", "endPost", "durPost",
                               "group", "groupEffectCoded", "StateCuriosity", 
                               "sleepLastNight", "sleepAverage", 
                               "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations", 
@@ -567,9 +574,8 @@ for (s in seq_along(subjects)){
   }
   
   #################################################### read in task data  ####################################################
-  MRIdataDir <- file.path(mainDir, "PsychToolBox_script", "behavioural_data", paste0(subjects[s]))
-  setwd(MRIdataDir)
-  taskfile <- list.files(pattern = glob2rx("MAGMOT*task_inclTimingCorrection*txt"))
+  setwd(PTBDir)
+  taskfile <- paste0("MAGMOT_", subjects[s], "_ptbdata.txt")
   ptbdata <- read.table(file = taskfile, sep = "\t", header = T)
   
   # change participant IDs
@@ -704,9 +710,24 @@ for (s in seq_along(subjects)){
   if("post_0_trial_end_date" %in% colnames(memory)){  # check whether the memory data set has information about when it has started/finished
     memory$startMemory <- memory$post_0_trial_end_date[2]
     memory$endMemory <- memory$post_0_trial_end_date[dim(memory)[2]]
+    
+    memory$startEpochMemory <- memory$post_0_trial_end_ms[2]
+    memory$endEpochMemory <- memory$post_0_trial_end_ms[dim(memory)[2]]
+    
+    memory$startEpochConv <- as.POSIXct(memory$startEpochMemory/1000, origin = "1970-01-01")
+    
+    check <- memory[,c("startMemory", "startEpochMemory", "startEpochConv")]
+    
+    ### compute duration of memory assessment
+    # memory$startMemory <- as.POSIXct(memory$startMemory, format = "%Y-%m-%d-%H-%M") # convert date-time format
+    # memory$endMemory <- as.POSIXct(memory$endMemory, format = "%Y-%m-%d-%H-%M") # convert date-time format
+    # memory$durMemory <- difftime(memory$startMemory, memory$endMemory)
+    
+    
   } else { # if not, add a note
     memory$startMemory <- "check manually"
     memory$endMemory <- "check manually"
+    memory$durMemory <- "check manually"
   }
   
   
