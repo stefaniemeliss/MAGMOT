@@ -8,7 +8,7 @@ source /usr/share/freesurfer/SetUpFreeSurfer.sh
 export FREESURFER_HOME=/usr/share/freesurfer/
 export SUBJECTS_DIR=/storage/shared/research/cinn/2018/MAGMOT/MAGMOT_BIDS
 
-# change directory to the raw NIFI files
+# change directory to the raw NIFTI files
 cd /storage/shared/research/cinn/2018/MAGMOT/MAGMOT_BIDS/
 
 
@@ -19,20 +19,22 @@ subjects=($(ls -d sub*))
 # for each subject in the subjects array
 for subject in "${subjects[@]}"; do
 
-# define subject dir
-sub_dir=/storage/shared/research/cinn/2018/MAGMOT/derivatives/FreeSurfer/"${subject}"/
-cd $sub_dir
+	# define subject dir
+	sub_dir=/storage/shared/research/cinn/2018/MAGMOT/derivatives/FreeSurfer/"${subject}"/
+	cd $sub_dir
 
-#viewing volumes with Freeview
-freeview -v \
-mri/T1.mgz \
-mri/wm.mgz \
-mri/brainmask.mgz \
-mri/aseg.mgz:colormap=lut:opacity=0.2 \
--f surf/lh.white:edgecolor=blue \
-surf/lh.pial:edgecolor=red \
-surf/rh.white:edgecolor=blue \
-surf/rh.pial:edgecolor=red \
+	# viewing volumes (-v) and surfaces (-f) with Freeview
+	freeview -v \
+	mri/brainmask.mgz \
+	mri/T1.mgz \
+	mri/wm.mgz:opacity=0.7 \
+	mri/aseg.mgz:colormap=lut:opacity=0.4 \
+	-f \
+	surf/lh.white:edgecolor=blue \
+	surf/rh.white:edgecolor=blue \
+	surf/lh.pial:annot=aparc.a2009s.annot:name=pial_aparc_des:visible=1 \
+	surf/rh.pial:annot=aparc.a2009s.annot:name=pial_aparc_des:visible=1 \
+	--viewport 3d --hide-3d-slices
 
 done
 
