@@ -192,7 +192,7 @@ names(MAGMOT_pre)[names(MAGMOT_pre)=="DOB.1"] <- "DOB"
 ### compute duration of pre assessment
 MAGMOT_pre$startPre <- as.POSIXct(MAGMOT_pre$TIME_start, format = "%Y-%m-%d-%H-%M") # convert date-time format
 MAGMOT_pre$endPre <- as.POSIXct(MAGMOT_pre$TIME_end, format = "%Y-%m-%d-%H-%M") # convert date-time format
-MAGMOT_pre$durPre <- difftime(MAGMOT_pre$startPre, MAGMOT_pre$endPre)
+MAGMOT_pre$durPre <- difftime(MAGMOT_pre$endPre, MAGMOT_pre$startPre, units='mins')
 
 #### MRI screening: any yes?
 items <- c("screening_MRI.1", "screening_MRI.2", "screening_MRI.3", "screening_MRI.4", "screening_MRI.5", "screening_MRI.6", "screening_MRI.7", "screening_MRI.8", "screening_MRI.9", "screening_MRI.10",
@@ -435,7 +435,7 @@ names(MAGMOT_post)[names(MAGMOT_post)=="comments_experimenter.1"] <- "comment_ex
 ### compute duration of post assessment
 MAGMOT_post$startPost <- as.POSIXct(MAGMOT_post$TIME_start, format = "%Y-%m-%d-%H-%M") # convert date-time format
 MAGMOT_post$endPost <- as.POSIXct(MAGMOT_post$TIME_end, format = "%Y-%m-%d-%H-%M") # convert date-time format
-MAGMOT_post$durPost <- difftime(MAGMOT_post$startPost, MAGMOT_post$endPost)
+MAGMOT_post$durPost <- difftime(MAGMOT_post$endPost, MAGMOT_post$startPost, units='mins')
 
 ### State Curiosity: compute scale
 MAGMOT_post$StateCuriosity <- MAGMOT_post$StateCuriosity.1 + MAGMOT_post$StateCuriosity.2 + MAGMOT_post$StateCuriosity.3 + MAGMOT_post$StateCuriosity.4 + MAGMOT_post$StateCuriosity.5 + MAGMOT_post$StateCuriosity.6 + MAGMOT_post$StateCuriosity.7 +
@@ -591,6 +591,21 @@ for (s in seq_along(subjects)){
   ptbdata$stimID <- gsub("^\\d\\d_", "", ptbdata$vidFileName)
   ptbdata$stimID <- gsub("_combined_small.mp4", "", ptbdata$stimID)
   
+  # convert timings
+  ptbdata$endExperiment_raw <- as.POSIXct(ptbdata$endExperiment, format = "%d-%m-%Y_%H:%M")
+  ptbdata$endExperiment_LDN <- as.POSIXct(ptbdata$endExperiment, format = "%d-%m-%Y_%H:%M", tz = "Europe/London")
+  ptbdata$endExperiment_UTC <- format(ptbdata$endExperiment_LDN, tz="GMT", usetz=TRUE)
+  
+  if (is.na(ptbdata$endPractice) == T) {
+    ptbdata$endPractice_raw <- NA
+    ptbdata$endPractice_LDN <- NA
+    ptbdata$endPractice_UTC <- NA
+  } else {
+    ptbdata$endPractice_raw <- as.POSIXct(ptbdata$endPractice, format = "%d-%m-%Y_%H:%M")
+    ptbdata$endPractice_LDN <- as.POSIXct(ptbdata$endPractice, format = "%d-%m-%Y_%H:%M", tz = "Europe/London")
+    ptbdata$endPractice_UTC <- format(ptbdata$endPractice_LDN, tz="GMT", usetz=TRUE)
+  }
+
   # add curiosity median split for MAGMOT sample (computed at beginning of script based on old MAGMOT_long.xlsx data set)
   ptbdata <- merge(ptbdata, dfMeans, by = "stimID")
   
@@ -706,27 +721,24 @@ for (s in seq_along(subjects)){
   # overwrite username to ensure that it is the same across all data sets
   memory$username <- subjects[s]
   
-  
+  # get time stamps
   if("post_0_trial_end_date" %in% colnames(memory)){  # check whether the memory data set has information about when it has started/finished
-    memory$startMemory <- memory$post_0_trial_end_date[2]
-    memory$endMemory <- memory$post_0_trial_end_date[dim(memory)[2]]
     
-    memory$startEpochMemory <- memory$post_0_trial_end_ms[2]
-    memory$endEpochMemory <- memory$post_0_trial_end_ms[dim(memory)[2]]
+    memory$startMemory <- memory$post_0_trial_end_date[2] # note: no post_0_trial_start_date available
+    memory$endMemory <- memory$post_0_trial_end_date[dim(memory)[1]]
     
-    memory$startEpochConv <- as.POSIXct(memory$startEpochMemory/1000, origin = "1970-01-01")
-    
-    check <- memory[,c("startMemory", "startEpochMemory", "startEpochConv")]
+    # memory$startMemory_UTC <- as.POSIXct(min(memory$post_0_trial_end_ms, na.rm = T)/1000, origin = "1970-01-01", tz = "GMT") # this command produces the same output as memory$startMemory <- memory$post_0_trial_end_date[2]
+    memory$startMemory_UTC <- as.POSIXct(min(memory$post_0_trial_start_ms, na.rm = T)/1000, origin = "1970-01-01", tz = "GMT")
+    memory$endMemory_UTC <- as.POSIXct(max(memory$post_0_trial_end_ms, na.rm = T)/1000, origin = "1970-01-01", tz = "GMT")
     
     ### compute duration of memory assessment
-    # memory$startMemory <- as.POSIXct(memory$startMemory, format = "%Y-%m-%d-%H-%M") # convert date-time format
-    # memory$endMemory <- as.POSIXct(memory$endMemory, format = "%Y-%m-%d-%H-%M") # convert date-time format
-    # memory$durMemory <- difftime(memory$startMemory, memory$endMemory)
-    
+    memory$durMemory <- difftime(memory$endMemory_UTC, memory$startMemory_UTC, units='mins')
     
   } else { # if not, add a note
     memory$startMemory <- "check manually"
+    memory$startMemory_UTC <- "check manually"
     memory$endMemory <- "check manually"
+    memory$endMemory_UTC <- "check manually"
     memory$durMemory <- "check manually"
   }
   
@@ -1075,11 +1087,11 @@ for (s in seq_along(subjects)){
   ########### process questionnaire data collected during memory part   ########### 
   
   postMemory <-subset(memory, trial.type == "surveycat")   # select relevant rows and columns of memory task questions data
-  postMemory <- postMemory[,c("username","startMemory", "endMemory", "memoryFile",
+  postMemory <- postMemory[,c("username","startMemory", "startMemory_UTC", "endMemory", "endMemory_UTC", "durMemory", "memoryFile",
                               "survey_sleep_response","survey_sleep_hours",
                               "survey_test_known_response", "survey_memory_intention_response", "survey_reward_belief_response",
                               "survey_magictrick_experience_response", "survey_connection_response", "survey_comment_response")]
-  names(postMemory) <- c("ID", "startMemory", "endMemory", "memoryFile",
+  names(postMemory) <- c("ID", "startMemory", "startMemory_UTC", "endMemory", "endMemory_UTC", "durMemory", "memoryFile",
                          "sleepBeforeMemoryTest","sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment")
   
   # recode rewardBelief
@@ -1094,6 +1106,17 @@ for (s in seq_along(subjects)){
   # add curiosity NAs to the data set in wide format
   postMemory$curiosityNAs <- curiosityNAs
   
+  # add endExperiment and endPractice
+  postMemory$endExperiment_raw <- ptbdata$endExperiment_raw[1]
+  postMemory$endExperiment_LDN <- ptbdata$endExperiment_LDN[1]
+  postMemory$endExperiment_UTC <- ptbdata$endExperiment_UTC[1]
+  postMemory$endPractice_raw <- ptbdata$endPractice_raw[1]
+  postMemory$endPractice_LDN <- ptbdata$endPractice_LDN[1]
+  postMemory$endPractice_UTC <- ptbdata$endPractice_UTC[1]
+  
+  # calculate time span between experiment and memory test
+  postMemory$durScanningSession <- difftime(postMemory$endExperiment_UTC, postMemory$endPractice_UTC, units = "mins")
+  postMemory$daysBetweenExpAndMemory <- difftime(postMemory$startMemory_UTC, postMemory$endExperiment_UTC)
   
   ########### add columns to postMemory data
   postMemory$BIDS <- BIDSstring
@@ -1108,6 +1131,10 @@ for (s in seq_along(subjects)){
       if (feedback == "yes"){
         print(paste("rows for each of the blocks:",nrow(data_subset)))
       }
+      
+      # duration of each block
+      postMemory[[paste0("durInSecs", blockstring[BLOCK])]] <- sum(data_subset$endBlock, na.rm = T) # using sum instead of max necessary because there were 2 acq for run2 in ppt 16
+      postMemory[[paste0("durInMins", blockstring[BLOCK])]] <- sum(data_subset$endBlock, na.rm = T)/60
       
       # average curiosity
       postMemory[[paste0("responseCuriosity", blockstring[BLOCK])]] <- mean(data_subset$responseCuriosity, na.rm = T)
@@ -1252,13 +1279,13 @@ for (s in seq_along(subjects)){
       LMEmodel <- glmer(dataLong[, memoryLevels[mem]] ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
       MAGMOT[[paste0("curBeta_", memoryLabels[mem])]] <-  coef(LMEmodel)$ID$curiosityGroupMeanCentered
       MAGMOT[[paste0("curBeta_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBeta_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBeta_", memoryLabels[mem])]])
-      
+
       # model with curiosity only
       LMEmodel2 <- glmer(dataLong[, memoryLevels[mem]] ~ curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
       MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] <-  coef(LMEmodel2)$ID$curiosityGroupMeanCentered
       MAGMOT[[paste0("curBetaOnly_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]])
     }
-    
+
     # add RSFC estimates between HPC & VTA (Pearson)
     setwd(brainDir)
     RSFC <- read.delim2("RSFC_VTA-HPC_pearson.txt") # read in data
@@ -1266,26 +1293,26 @@ for (s in seq_along(subjects)){
     names(RSFC)[names(RSFC)=="RSFC_run.2"] <- "RSFC_VTAHPC_run2" # change col name
     RSFC$RSFC_VTAHPC_run1 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1)) # change from factor to numeric
     RSFC$RSFC_VTAHPC_run2 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run2)) # change from factor to numeric
-    
+
     # fisher z transform correlations and compute RSFC change
     RSFC$RSFC_VTAHPC_run1_z <- atanh(RSFC$RSFC_VTAHPC_run1) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_run2_z <- atanh(RSFC$RSFC_VTAHPC_run2) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_diff <- RSFC$RSFC_VTAHPC_run2_z - RSFC$RSFC_VTAHPC_run1_z
-    
+
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
-    
+
     # add RSFC estimates between HPC & VTA (Spearman)
     RSFC <- read.delim2("RSFC_VTA-HPC_spearman.txt") # read in data
     names(RSFC)[names(RSFC)=="RSFC_run.1_spearman"] <- "RSFC_VTAHPC_run1_spearman" # change col name
     names(RSFC)[names(RSFC)=="RSFC_run.2_spearman"] <- "RSFC_VTAHPC_run2_spearman" # change col name
     RSFC$RSFC_VTAHPC_run1_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1_spearman)) # change from factor to numeric
     RSFC$RSFC_VTAHPC_run2_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run2_spearman)) # change from factor to numeric
-    
+
     # fisher z transform correlations and compute RSFC change
     RSFC$RSFC_VTAHPC_run1_z_spearman <- atanh(RSFC$RSFC_VTAHPC_run1_spearman) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_run2_z_spearman <- atanh(RSFC$RSFC_VTAHPC_run2_spearman) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_diff_spearman <- RSFC$RSFC_VTAHPC_run2_z_spearman - RSFC$RSFC_VTAHPC_run1_z_spearman
-    
+
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
     
     setwd(preprocessedShareDir)
@@ -1293,13 +1320,7 @@ for (s in seq_along(subjects)){
     write.table(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
     
     # upload the csv files to OSF
-    osfr::osf_auth() # log into OSF
-    project <- osfr::osf_retrieve_node("fhqb7")
-    target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
-    sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
-    
-    # check whether file already exists
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural") # check whether file already exists
     while (dim(file_exists)[1] > 0){ # delete files if they exists. use while loop because only the first row will be used
       osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
       file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
