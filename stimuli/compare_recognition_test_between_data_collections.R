@@ -1,5 +1,7 @@
 rm(list = ls())
 
+setwd("~/Dropbox/Reading/PhD/Magictricks/stimuli/")
+
 # download data from OSF
 osfr::osf_auth() # log into OSF
 project <- osfr::osf_retrieve_node("fhqb7")
@@ -91,6 +93,7 @@ memory$comments_option4 <- ifelse(all$option4_same_fmri_pilot == FALSE | all$opt
 
 # merge comments
 memory$deviation_in_pilot <- paste0(memory$comments_option1, memory$comments_option2, memory$comments_option3, memory$comments_option4)
+memory$deviation_in_pilot <- gsub(".M", ". M", memory$deviation_in_pilot)
 names(memory) <- c("stimID", "Cue image", "Recognition option 1", "Recognition option 2", "Recognition option 3", "Recognition option 4", "comments_option1", "comments_option2", "comments_option3", "comments_option4", "Different wording in pilot")
   
 # merge this file with the information from Ozono et al 2020
