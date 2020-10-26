@@ -386,11 +386,11 @@ MAGMOT_post$id.1 <- gsub("O", "", MAGMOT_post$id.1) #replace any O in the file n
 MAGMOT_post$id.1 <- ifelse(nchar(MAGMOT_post$id.1)==1, paste0("0", MAGMOT_post$id.1), MAGMOT_post$id.1) # add a zeo if not present in front of one digit numbers
 
 # delete reassigned ID's
-participantToDelete1 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == "09" & MAGMOT_post$TIME_start == "2019-05-13-19-20")]) # ppt born on 19/03/98 should be kept
-participantToDelete2 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 23 & MAGMOT_post$TIME_start == "2019-05-22-11-51")]) # ppt born on 17/12/91 should be deleted
-participantToDelete3 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 32 & MAGMOT_post$TIME_start == "2019-06-03-15-42")]) # ppt born on 10/03/97 should be deleted
-participantToDelete4 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 46 & MAGMOT_post$TIME_start == "2019-06-26-19-36")]) # ppt born on 15/04/96 should be deleted
-participantToDelete5 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 48 & MAGMOT_post$TIME_start == "2019-07-03-12-48")]) # ppt born on 15/11/99 should be deleted
+participantToDelete1 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == "09" & MAGMOT_post$TIME_start == "2019-05-13-19-20")]) # ppt assessed on 13/05/19 should be removed 
+participantToDelete2 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 23 & MAGMOT_post$TIME_start == "2019-05-22-11-51")]) # ppt assessed on 13/05/22 should be removed
+participantToDelete3 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 32 & MAGMOT_post$TIME_start == "2019-06-03-15-42")]) # ppt assessed on 13/06/03 should be removed
+participantToDelete4 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 46 & MAGMOT_post$TIME_start == "2019-06-26-19-36")]) # ppt assessed on 13/06/26 should be removed
+participantToDelete5 <- as.character(MAGMOT_post$participant[(MAGMOT_post$id.1 == 48 & MAGMOT_post$TIME_start == "2019-07-03-12-48")]) # ppt assessed on 13/07/03 should be removed
 
 MAGMOT_post <- subset(MAGMOT_post, MAGMOT_post$participant != participantToDelete1 & MAGMOT_post$participant != participantToDelete2 & MAGMOT_post$participant != participantToDelete3 & MAGMOT_post$participant != participantToDelete4 & MAGMOT_post$participant != participantToDelete5)
 rm(list=ls(pattern = "participantToDelete"))
