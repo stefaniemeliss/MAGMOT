@@ -1453,21 +1453,9 @@ for (s in seq_along(subjects)){
     project <- osfr::osf_retrieve_node("fhqb7")
     target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
     sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
-    # check whether file already exists
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural") # check whether file already exists
-    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
-      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-      file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
-    }
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version)) # check whether file already exists
-    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
-      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-      file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version))
-    }
     # upload all files in this directory
     osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
-    # note:  if this line produces error, that can be ignored as this is due to the fact that it has not changed compared to the previous file version
-    
+
     ### write information about scan durations
     names(scaninfoAll) <- c("ID", "scan", "duration_run_seconds", "duration_scan_seconds")
     scaninfoAll$duration_run_seconds <- round(scaninfoAll$duration_run_seconds, digits = 0)
@@ -1478,15 +1466,8 @@ for (s in seq_along(subjects)){
     write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
     # upload file to OSF
-    # check whether file already exists
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MAGMOT_informationAboutScanDuration.tsv")
-    if (dim(file_exists)[1] > 0){ # delete file if it exists
-      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-    }
-    # upload file
     osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite") 
-    # note:  if this line produces error, that can be ignored as this is due to the fact that it has not changed compared to the previous file version
-    
+
     #################### as a last step, create the files we need for concatenation ####################
     
     if (doISCprep == 1){
