@@ -90,9 +90,7 @@ dfMeans <- dfMeans[,c("stimID", "meanCuriosity_MAGMOT", "meanCuriosityStandardis
 
 #################################################### read in MAGMOT_pre ####################################################
 setwd(preDir)
-#MAGMOT_pre <- read.table("data.csv", sep = ",", na.strings = "", fill = T, row.names = NULL)
-#names(MAGMOT_pre) <- names(MAGMOT_pre)[-1]
-#MAGMOT_pre[dim(MAGMOT_pre)[2]] <- NULL
+
 data_pilot <- xlsx::read.xlsx("data_pilot.xlsx", sheetName="data") # data of participant 1 to 6 
 data_rest <- xlsx::read.xlsx("data.xlsx", sheetName="data") # data of participant 7 onwards
 MAGMOT_pre <- rbind.all.columns(data_pilot, data_rest)
@@ -123,6 +121,9 @@ rm(list=ls(pattern = "participantToDelete"))
 sort(MAGMOT_pre$id.1)
 
 ### recode demographic information and then delete the old variable
+MAGMOT_pre$sex <- ifelse(MAGMOT_pre$sex.1 == 1, "male", 
+                         ifelse(MAGMOT_pre$sex.1 == 2, "female", NA))
+MAGMOT_pre$sex.1 <- NULL
 MAGMOT_pre$gender <- ifelse(MAGMOT_pre$gender.1 == 1, "male", # gender
                             ifelse(MAGMOT_pre$gender.1 == 2, "female",
                                    ifelse(MAGMOT_pre$gender.1 == 3, "different", NA)))
@@ -183,7 +184,7 @@ names(MAGMOT_pre)[names(MAGMOT_pre)=="id.1"] <- "ID"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="age.1"] <- "age"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="education_years.1"] <- "yearsOfEducation"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="student_subject.1"] <- "studySubject"
-names(MAGMOT_pre)[names(MAGMOT_pre)=="english_age.1"] <- "AgeEnglishAcquisition"
+names(MAGMOT_pre)[names(MAGMOT_pre)=="english_age.1"] <- "ageEnglishAcquisition"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="health.1"] <- "health"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="neurodisorders.1"] <- "neurodisorders"
 names(MAGMOT_pre)[names(MAGMOT_pre)=="participant"] <- "preFile"
@@ -194,16 +195,49 @@ MAGMOT_pre$startPre <- as.POSIXct(MAGMOT_pre$TIME_start, format = "%Y-%m-%d-%H-%
 MAGMOT_pre$endPre <- as.POSIXct(MAGMOT_pre$TIME_end, format = "%Y-%m-%d-%H-%M") # convert date-time format
 MAGMOT_pre$durPre <- difftime(MAGMOT_pre$endPre, MAGMOT_pre$startPre, units='mins')
 
-#### MRI screening: any yes?
+### inclusion check
+items <- c("inclusioncheck.1", "inclusioncheck.2", "inclusioncheck.3", "inclusioncheck.4", "inclusioncheck.5", "inclusioncheck.6", "inclusioncheck.7")
+
+for (item in seq_along(items)){
+  # recode
+  MAGMOT_pre[[paste0(items[item])]] <- ifelse(MAGMOT_pre[[paste0(items[item])]] == 0, "no",
+                                              ifelse(MAGMOT_pre[[paste0(items[item])]] == 1, "yes",
+                                                     NA))
+}
+rm(item, items)
+
+### MRI screening: any yes?
 items <- c("screening_MRI.1", "screening_MRI.2", "screening_MRI.3", "screening_MRI.4", "screening_MRI.5", "screening_MRI.6", "screening_MRI.7", "screening_MRI.8", "screening_MRI.9", "screening_MRI.10",
            "screening_MRI.11", "screening_MRI.12", "screening_MRI.13", "screening_MRI.14", "screening_MRI.15", "screening_MRI.16", "screening_MRI.17", "screening_MRI.18", "screening_MRI.19")
+
 # compute summary score for MRI screening answers
 for (item in seq_along(items)){
-  if (item == 1){
-    MAGMOT_pre$screening_MRI <- MAGMOT_pre[[paste0(items[item])]]
-  } else {
-    MAGMOT_pre$screening_MRI <- MAGMOT_pre$screening_MRI + MAGMOT_pre[[paste0(items[item])]]
-  }
+  # if (item == 1){
+  #   MAGMOT_pre$screening_MRI <- MAGMOT_pre[[paste0(items[item])]]
+  # } else {
+  #   MAGMOT_pre$screening_MRI <- MAGMOT_pre$screening_MRI + MAGMOT_pre[[paste0(items[item])]]
+  # }
+  # recode answers
+  MAGMOT_pre[[paste0(items[item])]] <- ifelse(MAGMOT_pre[[paste0(items[item])]] == 0, "no",
+                                              ifelse(MAGMOT_pre[[paste0(items[item])]] == 1, "yes",
+                                                     NA))
+}
+rm(item, items)
+
+#### health screening
+items <- c("health_current.1", "health_current.2", "health_current.3", "health_current.4", 
+           "health_ever.1", "health_ever.2", "health_ever.3", "health_ever.4", "health_ever.5", "health_ever.6",
+           "health_ever.7", "health_ever.8", "health_ever.9", "health_ever.10", "health_ever.11", "health_ever.12",
+           "health_ever.13", "health_ever.14", "health_ever.15", "health_ever.16", "health_ever.17", "health_ever.18",
+           "health_ever.19", "health_ever.20", "health_ever.21", "health_ever.22", "health_ever.23", "health_ever.24")
+# compute summary score for health screening answers
+for (item in seq_along(items)){
+  # if (item == 1){
+  #   MAGMOT_pre$health_check <- MAGMOT_pre[[paste0(items[item])]]
+  # } else {
+  #   MAGMOT_pre$health_check <- MAGMOT_pre$screening_MRI + MAGMOT_pre[[paste0(items[item])]]
+  # }
+  # recode answers
   MAGMOT_pre[[paste0(items[item])]] <- ifelse(MAGMOT_pre[[paste0(items[item])]] == 0, "no",
                                               ifelse(MAGMOT_pre[[paste0(items[item])]] == 1, "yes",
                                                      NA))
@@ -225,10 +259,10 @@ for (item in items){ # recode items
 rm(item, items)
 
 # compute scales
-MAGMOT_pre$BIS <- MAGMOT_pre$BISBAS.15 +  MAGMOT_pre$BISBAS.1 +  MAGMOT_pre$BISBAS.12 +  MAGMOT_pre$BISBAS.2R + MAGMOT_pre$BISBAS.17 + MAGMOT_pre$BISBAS.20R #BIS items: 15, 1, 8, 12, 2 (R), 17, 20 (R)
-MAGMOT_pre$BAS_rewardresponsiveness <-  MAGMOT_pre$BISBAS.7 +  MAGMOT_pre$BISBAS.4 +  MAGMOT_pre$BISBAS.16 +  MAGMOT_pre$BISBAS.6 + MAGMOT_pre$BISBAS.13 #BAS reward responsiveness: 7, 4, 16, 6, 13
-MAGMOT_pre$BAS_drive <- MAGMOT_pre$BISBAS.9 +  MAGMOT_pre$BISBAS.3 +  MAGMOT_pre$BISBAS.11 +  MAGMOT_pre$BISBAS.19 #BAS drive: 9, 3, 11, 19
-MAGMOT_pre$BAS_funseeking <- MAGMOT_pre$BISBAS.10 +  MAGMOT_pre$BISBAS.18 +  MAGMOT_pre$BISBAS.5 +  MAGMOT_pre$BISBAS.14 #BAS fun seeking: 10, 18, 5, 14
+MAGMOT_pre$BISBAS_inhibition <- MAGMOT_pre$BISBAS.15 +  MAGMOT_pre$BISBAS.1 +  MAGMOT_pre$BISBAS.12 +  MAGMOT_pre$BISBAS.2R + MAGMOT_pre$BISBAS.17 + MAGMOT_pre$BISBAS.20R #BIS items: 15, 1, 8, 12, 2 (R), 17, 20 (R)
+MAGMOT_pre$BISBAS_rewardresponsiveness <-  MAGMOT_pre$BISBAS.7 +  MAGMOT_pre$BISBAS.4 +  MAGMOT_pre$BISBAS.16 +  MAGMOT_pre$BISBAS.6 + MAGMOT_pre$BISBAS.13 #BAS reward responsiveness: 7, 4, 16, 6, 13
+MAGMOT_pre$BISBAS_drive <- MAGMOT_pre$BISBAS.9 +  MAGMOT_pre$BISBAS.3 +  MAGMOT_pre$BISBAS.11 +  MAGMOT_pre$BISBAS.19 #BAS drive: 9, 3, 11, 19
+MAGMOT_pre$BISBAS_funseeking <- MAGMOT_pre$BISBAS.10 +  MAGMOT_pre$BISBAS.18 +  MAGMOT_pre$BISBAS.5 +  MAGMOT_pre$BISBAS.14 #BAS fun seeking: 10, 18, 5, 14
 
 ### Need for Cognition
 # +4 = very strong agreement; +3 = strong agreement; +2 = moderate agreement; +1 = slight agreement; 0 = neither agreement nor disagreement;
@@ -271,10 +305,17 @@ MAGMOT_pre$TraitCuriosity <- MAGMOT_pre$TraitCuriosity.1 + MAGMOT_pre$TraitCurio
   MAGMOT_pre$TraitCuriosity.8 + MAGMOT_pre$TraitCuriosity.9 + MAGMOT_pre$TraitCuriosity.10 + MAGMOT_pre$TraitCuriosity.11 + MAGMOT_pre$TraitCuriosity.12 + MAGMOT_pre$TraitCuriosity.13 + MAGMOT_pre$TraitCuriosity.14 +
   MAGMOT_pre$TraitCuriosity.15 + MAGMOT_pre$TraitCuriosity.16 + MAGMOT_pre$TraitCuriosity.17 + MAGMOT_pre$TraitCuriosity.18 + MAGMOT_pre$TraitCuriosity.19 + MAGMOT_pre$TraitCuriosity.20
 
+### create data frame with all the raw questionnaire data
+cols <- grepl("ID",names(MAGMOT_pre)) | grepl("inclusioncheck.",names(MAGMOT_pre)) | grepl("screening_MRI.",names(MAGMOT_pre)) | grepl("BISBAS.",names(MAGMOT_pre)) |  grepl("NeedForCognition.",names(MAGMOT_pre)) |  
+  grepl("FearOfFailure.",names(MAGMOT_pre))  |  grepl("ApproachAndAvoidanceTemperament.",names(MAGMOT_pre)) |  grepl("health_",names(MAGMOT_pre))  |  grepl("TraitCuriosity.",names(MAGMOT_pre))
+questionnaire_raw <- MAGMOT_pre[,  cols ]
+rm(cols)
+
+
 ### reduce MAGMOT_pre to relevant variables
-MAGMOT_pre <- MAGMOT_pre[, c("ID", "preFile", "startPre", "endPre", "durPre", "corsi.1", "X2nback.1", "age", "DOB",  "gender", "ethnicity", "education", "yearsOfEducation", 
-                             "employment", "studySubject", "english", "AgeEnglishAcquisition", "handedness", "vision", "health", "neurodisorders", "screening_MRI",
-                             "BIS", "BAS_rewardresponsiveness", "BAS_drive", "BAS_funseeking", "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity")]
+MAGMOT_pre <- MAGMOT_pre[, c("ID", "preFile", "startPre", "endPre", "durPre", "corsi.1", "X2nback.1", "age", "DOB", "sex",  "gender", "ethnicity", "education", "yearsOfEducation", 
+                             "employment", "studySubject", "english", "ageEnglishAcquisition", "handedness", "vision", "health", "neurodisorders",
+                             "BISBAS_inhibition", "BISBAS_rewardresponsiveness", "BISBAS_drive", "BISBAS_funseeking", "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity")]
 
 
 #################################################### get CORSI data ####################################################
@@ -335,6 +376,7 @@ for (i in seq_along(nback_filelist)){
     print(paste("There is a nback file missing for ID", MAGMOT_pre$ID[i] ))
   } else {
     nback <- read.table(paste(nback_filelist[i]))
+    nback <- read.table("~/Dropbox/Reading/PhD/Magictricks/fmri_study/Data/MAGMOT_pre/MAGMOT_2back.2019-03-12-1105.data.906df52b-ebfd-4f80-8131-d1bce23ee9ff.txt")
     # V1: name of block,V2: correct (1=correct, 2=wrong, 3=too slow), V3: which key was pressed, V4: RT in ms
     # V5: random number used for conditions (1=same as 2-back, 2-5 other letter), V6: trial number (per block), V7: current letter, V8: letter in previous trial
     nback <- subset(nback, nback$V1 != "training") # subset nback to only include data from task block
@@ -344,12 +386,12 @@ for (i in seq_along(nback_filelist)){
     nbackData[i, "nonNBacks"] <- sum(nback$V5 != 1)
     
     # subset data set so that it only contains the data of each of signal detection theory (SDT) cells
-    nbackData[i, "nback_hits"] <-  nrow(subset(nback, nback$V2 == 1 & nback$V5 == 1))
-    nbackData[i, "nback_misses_inclTooSlow"] <-  nrow( subset(nback, nback$V2 != 1 & nback$V5 == 1))
-    nbackData[i, "nback_misses_exclTooSlow"] <-  nrow(subset(nback, nback$V2 == 2 & nback$V5 == 1))
-    nbackData[i, "nback_correctrejections"] <-  nrow(subset(nback, nback$V2 == 1 & nback$V5 > 1))
-    nbackData[i, "nback_falsealarms_inclTooSlow"] <-  nrow(subset(nback, nback$V2 != 1 & nback$V5 > 1)) # wrong/too slow response when letter is not the same as 2-back
-    nbackData[i, "nback_falsealarms_exclTooSlow"] <-  nrow(subset(nback, nback$V2 == 2 & nback$V5 > 1)) # wrong response when letter is not the same as 2-back
+    nbackData[i, "nback_hits"] <-  nrow(subset(nback, nback$V2 == 1 & nback$V5 == 1)) # letter equal to what was presented two trials ago and ppt indicated this correctly
+    nbackData[i, "nback_misses_inclTooSlow"] <-  nrow( subset(nback, nback$V2 != 1 & nback$V5 == 1)) # letter equal to what was presented two trials ago and ppt did not indicated this OR reacted too slow
+    nbackData[i, "nback_misses_exclTooSlow"] <-  nrow(subset(nback, nback$V2 == 2 & nback$V5 == 1)) # letter equal to what was presented two trials ago and ppt did not indicated this
+    nbackData[i, "nback_correctrejections"] <-  nrow(subset(nback, nback$V2 == 1 & nback$V5 > 1)) # letter not equal to what was presented two trials ago and ppt indicated this correctly
+    nbackData[i, "nback_falsealarms_inclTooSlow"] <-  nrow(subset(nback, nback$V2 != 1 & nback$V5 > 1)) # letter not equal to what was presented two trials ago and ppt indicated did not this correctly OR reacted too slow
+    nbackData[i, "nback_falsealarms_exclTooSlow"] <-  nrow(subset(nback, nback$V2 == 2 & nback$V5 > 1)) # letter not equal to what was presented two trials ago and ppt indicated did not this correctly
     
     # compute some SDT measures
     nbackData[i, "nback_hitrate"] <-  nbackData[i, "nback_hits"] / nbackData[i, "NBacks"]  # percentage hits in actual nBack trials
@@ -442,6 +484,13 @@ MAGMOT_post$StateCuriosity <- MAGMOT_post$StateCuriosity.1 + MAGMOT_post$StateCu
   MAGMOT_post$StateCuriosity.8 + MAGMOT_post$StateCuriosity.9 + MAGMOT_post$StateCuriosity.10 + MAGMOT_post$StateCuriosity.11 + MAGMOT_post$StateCuriosity.12 + MAGMOT_post$StateCuriosity.13 + MAGMOT_post$StateCuriosity.14 +
   MAGMOT_post$StateCuriosity.15 + MAGMOT_post$StateCuriosity.16 + MAGMOT_post$StateCuriosity.17 + MAGMOT_post$StateCuriosity.18 + MAGMOT_post$StateCuriosity.19 + MAGMOT_post$StateCuriosity.20
 
+### create data frame with all the raw questionnaire data
+cols <- grepl("ID",names(MAGMOT_post)) | grepl("StateCuriosity.",names(MAGMOT_post))
+questionnaire_raw_2 <- MAGMOT_post[,  cols ]
+
+questionnaire_raw <- merge(questionnaire_raw, questionnaire_raw_2, by = "ID")
+rm(cols, questionnaire_raw_2)
+
 # select relevant rows from MAGMOT_post
 MAGMOT_post <- MAGMOT_post[,c("ID", "postFile", "startPost", "endPost", "durPost",
                               "group", "groupEffectCoded", "StateCuriosity", 
@@ -521,8 +570,12 @@ for (s in seq_along(subjects)){
                                                                                                                                                                                 ifelse(quest$question == "I was able to see the magic tricks properly.", "post24",
                                                                                                                                                                                        NA))))))))))))))))))))))))
   
+  # create item name that overlaps with the naming convention from the other questionnaires
+  quest$item <- gsub("post", "PostExpAssessment.", quest$IMI)
+  
   # recode items questionnaire
   items <- c("post2", "post14", "post17", "post18", "post20") #items to recode
+  quest$score_raw <- quest$endValue
   quest$score <- quest$endValue
   for (item in items){
     quest$score[quest$IMI == item] <- ifelse(quest$endValue[quest$IMI == item] == 7, 1,
@@ -542,35 +595,44 @@ for (s in seq_along(subjects)){
   write.table(quest, file = filenameQuest, sep = "\t", row.names = F, quote = F)
   
   # reduce questionnaire data set and convert data in wide format
-  questLong <- quest[,c("ID", "fMRI", "group", "motivation", "IMI", "score")]
+  questLong <- quest[,c("ID", "fMRI", "group", "motivation", "IMI", "score", "item", "score_raw")]
   questWide <- reshape2::dcast(questLong, ID + fMRI + group + motivation ~ IMI, value.var="score")
+  questWide_raw <- reshape2::dcast(questLong, ID + fMRI + group + motivation ~ item, value.var="score_raw")
   
   # rbind the questWide files of each subject to a data frame
   if(s == 1){
     questDataWide <- questWide
+    questDataWide_raw <- questWide_raw
   } else {
     temp_questDataWide <-  questWide
+    temp_questDataWide_raw <-  questWide_raw
     questDataWide <- rbind.all.columns(questDataWide, temp_questDataWide) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
-    rm(temp_questDataWide)
+    questDataWide_raw <- rbind.all.columns(questDataWide_raw, temp_questDataWide_raw) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
+    rm(temp_questDataWide, temp_questDataWide_raw)
   }
+  
   if (s == length(subjects)){
     # compute IMI scores
     questDataWide[,grep("post", colnames(questDataWide))] <- as.numeric(unlist(questDataWide[,grep("post", colnames(questDataWide))])) # make sure the scores are numeric
-    questDataWide$intrinsicMotivation <- (questDataWide$post1 + questDataWide$post2 + questDataWide$post3)/3 ###intrinsic motivation items
-    questDataWide$taskEngagement <- (questDataWide$post4 + questDataWide$post5 + questDataWide$post6)/3 ###task engagement items
-    questDataWide$interest <- (questDataWide$post7 + questDataWide$post8 + questDataWide$post9)/3 ###interest items
-    questDataWide$boredom <- (questDataWide$post10 + questDataWide$post11 + questDataWide$post12)/3 ###boredom items
-    questDataWide$effort <- (questDataWide$post13 + questDataWide$post14 + questDataWide$post15 + questDataWide$post16 + questDataWide$post17)/5 ####effort/importance
-    questDataWide$pressure <- (questDataWide$post18 + questDataWide$post19 + questDataWide$post20 + questDataWide$post21 + questDataWide$post22)/5 ###pressure/tension
+    questDataWide$IMI_intrinsicMotivation <- (questDataWide$post1 + questDataWide$post2 + questDataWide$post3)/3 ###intrinsic motivation items
+    questDataWide$IMI_taskEngagement <- (questDataWide$post4 + questDataWide$post5 + questDataWide$post6)/3 ###task engagement items
+    questDataWide$IMI_interest <- (questDataWide$post7 + questDataWide$post8 + questDataWide$post9)/3 ###interest items
+    questDataWide$IMI_boredom <- (questDataWide$post10 + questDataWide$post11 + questDataWide$post12)/3 ###boredom items
+    questDataWide$IMI_effort <- (questDataWide$post13 + questDataWide$post14 + questDataWide$post15 + questDataWide$post16 + questDataWide$post17)/5 ####effort/importance
+    questDataWide$IMI_pressure <- (questDataWide$post18 + questDataWide$post19 + questDataWide$post20 + questDataWide$post21 + questDataWide$post22)/5 ###pressure/tension
     
     # rename two variables
     names(questDataWide) [names(questDataWide) == "post23"] <- "compliance"
     names(questDataWide) [names(questDataWide) == "post24"] <- "ableToSee"
+    
+    # combine IMI values with questionnaire_raw
+    questionnaire_raw <- merge(questionnaire_raw, questDataWide_raw, by = "ID")
   }
   
   # remove unneccsary values and data
   if (debug == 0){
-    rm(quest, questLong, questWide, respMatQuest)
+    rm(quest, questLong, questWide, questWide_raw, respMatQuest)
+    
   }
   
   #################################################### read in task data  ####################################################
@@ -610,9 +672,10 @@ for (s in seq_along(subjects)){
   ptbdata <- merge(ptbdata, dfMeans, by = "stimID")
   
   # recode curiosity: replace all curiosity ratings that have exceeded the timeout 
-  # NOTE::: this means we should CHANGE/REPLACE responseCuriosity with  curiosity in the following, NOT DONE YET
+  # NOTE::: this means we should CHANGE/REPLACE responseCuriosity with  curiosity in the following
   ptbdata$curiosity <- ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, NA, ptbdata$responseCuriosity)
   ptbdata$curiosity_RT <- ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, NA, ptbdata$rtCuriosity)
+  ptbdata$curiosity_tooSlow <- ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, 1, 0)
   curiosityNAs <- sum(is.na(ptbdata$curiosity))
   if (feedback == "yes"){
     print(paste("number of NAs in curiosity", curiosityNAs))
@@ -637,11 +700,15 @@ for (s in seq_along(subjects)){
   ptbdata$rewardByCuriosity_updated <- ptbdata$curiosityGroupMeanCentered_updated * ptbdata$groupEffectCoded
   
   # process answer to the question how many people will be able to find a solution to the magic trick --> variable "estimate"
+  ptbdata$answer_tooSlow <- ifelse(ptbdata$timestampAnswer > ptbdata$displayAnswerOnset + ptbdata$timeoutAnswer - 3*ptbdata$timingCorrection, 1, 0)
   ptbdata$responseEstimate <- ifelse(ptbdata$responseAnswer == "0 to 10", 0,
                                      ifelse(ptbdata$responseAnswer == "11 to 20", 1,
                                             ifelse(ptbdata$responseAnswer == "21 to 30", 2,
                                                    ifelse(ptbdata$responseAnswer == "31 or more", 3, NaN))))
   ptbdata$rtEstimate <- ptbdata$rtAnswer
+  
+  # calculate how long a blank screen was displayed for between the end of the magic trick video and the start of the fixation
+  ptbdata$displayBlankDuration <- ptbdata$fixationPostVidOnset - ptbdata$displayVidOffset
   
   # define number of blocks
   numBlocks <- max(ptbdata$block)
@@ -713,8 +780,6 @@ for (s in seq_along(subjects)){
     } else { # if file does not exist, print into console and use filler file to create NAs
       print(paste0("magicmemory_", version_official, "_", subjectsAlt, ".csv does not exist either"))
       rm(subjectsAlt)
-      
-      # CREATE MEMORY FILLER!! actually, that might not even be necessary
     }
   }
   
@@ -748,27 +813,27 @@ for (s in seq_along(subjects)){
   cuedRecall$itemRecall <- cuedRecall$item-1
   cuedRecall$trialRecall <- c(1:dim(cuedRecall)[1])
   cuedRecall <- cuedRecall[,c("username", "trialRecall", "itemRecall", "stimid", "trickAnswer")]
-  names(cuedRecall) <- c("ID", "trialRecall", "itemRecall", "stimID", "description")
+  names(cuedRecall) <- c("ID", "trialRecall", "itemRecall", "stimID", "responseRecall")
   
   # pre code answers for recall task: in the experiment, participants are asked to insert "no recall" in the field if they cannot recall the magic trick
   # if that has occured, recall performance on that magic trick is coded with 0
   for (j in 1:nrow(cuedRecall)){
-    if (is.na(cuedRecall$description[j]) == T) {
+    if (is.na(cuedRecall$responseRecall[j]) == T) {
       cuedRecall$cuedRecallStrict[j] = NaN
       cuedRecall$cuedRecallLenient[j] = NaN
-    } else if (cuedRecall$description[j] == "no recall") { # check different spellings of NO RECALL
+    } else if (cuedRecall$responseRecall[j] == "no recall") { # check different spellings of NO RECALL
       cuedRecall$cuedRecallStrict[j] = 0
       cuedRecall$cuedRecallLenient[j] = 0
-    } else if (cuedRecall$description[j] == "No recall") {
+    } else if (cuedRecall$responseRecall[j] == "No recall") {
       cuedRecall$cuedRecallStrict[j] = 0
       cuedRecall$cuedRecallLenient[j] = 0
-    } else if (cuedRecall$description[j] == "No Recall") {
+    } else if (cuedRecall$responseRecall[j] == "No Recall") {
       cuedRecall$cuedRecallStrict[j] = 0
       cuedRecall$cuedRecallLenient[j] = 0
-    } else if (cuedRecall$description[j] == " No recall") {
+    } else if (cuedRecall$responseRecall[j] == " No recall") {
       cuedRecall$cuedRecallStrict[j] = 0
       cuedRecall$cuedRecallLenient[j] = 0
-    } else if (cuedRecall$description[j] == "NO recall") {
+    } else if (cuedRecall$responseRecall[j] == "NO recall") {
       cuedRecall$cuedRecallStrict[j] = 0
       cuedRecall$cuedRecallLenient[j] = 0
     } else { # if none of the spelling matches, insert NA --> manual coding necessary
@@ -783,6 +848,7 @@ for (s in seq_along(subjects)){
     setwd(preprocessedMemoryDir)
     filenameRecall <- paste0(BIDSstring,"_cuedRecall.csv")
     write.table(cuedRecall, file = filenameRecall, sep = ",", row.names = F)
+    write.csv(cuedRecall, file = filenameRecall, row.names = F)
     
     # check whether a coded recall file exists; NOTE: THE STRING MIGHT CHANGE!
     setwd(codedDir)
@@ -804,6 +870,7 @@ for (s in seq_along(subjects)){
         }
       }
       names(cuedRecall_coded)[names(cuedRecall_coded)=="Username"] <- "ID" # change Username to ID
+      names(cuedRecall_coded)[names(cuedRecall_coded)=="description"] <- "responseRecall" # change description to responseRecall
       cuedRecall_coded$ID <- subjects[s]
       cuedRecall <- cuedRecall_coded # overwrite cuedRecall
     }
@@ -827,24 +894,24 @@ for (s in seq_along(subjects)){
   
   # reduce and rename data set
   recognition <- recognition[,c("username", "trialRecognition", "itemRecognition", "stimid", "Recognition_chosen", "recognition_RT", "recognition" , "Confidence", "confidenceGroupMeanCentered", "confidence_RT")]
-  names(recognition) <- c("ID", "trialRecognition", "itemRecognition", "stimID", "answer", "answerRT", "recognition", "confidence", "confidenceGroupMeanCentered", "confidenceRT")
+  names(recognition) <- c("ID", "trialRecognition", "itemRecognition", "stimID", "responseRecognition", "rtRecognition", "recognition", "responseConfidence", "confidenceGroupMeanCentered", "rtConfidence")
   
   # compute scores of recognition performance
-  recognition$confidenceCorrectTrials <- ifelse(recognition$recognition == 1, recognition$confidence, NA)
+  recognition$responseConfidenceCorrectTrials <- ifelse(recognition$recognition == 1, recognition$responseConfidence, NA)
   recognition$confidenceGroupMeanCenteredCorrectTrials <- ifelse(recognition$recognition == 1, recognition$confidenceGroupMeanCentered, NA)
   recognition$recognitionAboveMeanConf <- ifelse(recognition$recognition == 1 & recognition$confidenceGroupMeanCentered > 0, 1, 0)
   
   for (k in 1:6) { #confidence ranges from 1 to 6, potentially code can be made more flexible by using min(data$confidence) and max(data$confidence)
-    recognition[[paste0("recognitionConfLevel_", k)]] <- ifelse(recognition$confidence == k & recognition$recognition == 1, 1, 0)
+    recognition[[paste0("recognitionConfLevel_", k)]] <- ifelse(recognition$responseConfidence == k & recognition$recognition == 1, 1, 0)
     if (k < 6) {
-      recognition[[paste0("recognitionConfLevel_above_", k)]] <- ifelse(recognition$confidence > k & recognition$recognition == 1, 1, 0)
+      recognition[[paste0("recognitionConfLevel_above_", k)]] <- ifelse(recognition$responseConfidence > k & recognition$recognition == 1, 1, 0)
     }
     
     if (k == 1 || k == 3 || k == 5) {
-      recognition[[paste0("recognitionConfLevel_", k, "_", k+1)]] <- ifelse(recognition$confidence == k  & recognition$recognition == 1 | recognition$confidence == k+1  & recognition$recognition == 1, 1, 0)
+      recognition[[paste0("recognitionConfLevel_", k, "_", k+1)]] <- ifelse(recognition$responseConfidence == k  & recognition$recognition == 1 | recognition$responseConfidence == k+1  & recognition$recognition == 1, 1, 0)
     }
     if (k == 1 || k == 4) {
-      recognition[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2)]] <- ifelse(recognition$confidence == k  & recognition$recognition == 1 | recognition$confidence == k+1  & recognition$recognition == 1 | recognition$confidence == k+2  & recognition$recognition == 1, 1, 0)
+      recognition[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2)]] <- ifelse(recognition$responseConfidence == k  & recognition$recognition == 1 | recognition$responseConfidence == k+1  & recognition$recognition == 1 | recognition$responseConfidence == k+2  & recognition$recognition == 1, 1, 0)
     }
   }
   
@@ -854,13 +921,14 @@ for (s in seq_along(subjects)){
     setwd(preprocessedMemoryDir)
     filenameRecog <- paste0(BIDSstring,"_recognition.csv")
     write.table(recognition, file = filenameRecog, sep = ",", row.names = F)
+    write.csv(recognition, file = filenameRecog, row.names = F)
   }
   
   # MERGE DATA FROM TASK AND MEMORY TEST
   MEMO <- merge(task, cuedRecall, by = c("ID", "stimID"))
   MEMO <- merge(MEMO, recognition, by = c("ID", "stimID"))
   if (debug == 0){
-    rm(cuedRecall, recognition, task)
+    rm(cuedRecall, cuedRecall_coded, recognition, task)
   }
   
   # compute whether a trick has been remembered based on Hasson et al. (2008).  
@@ -877,10 +945,13 @@ for (s in seq_along(subjects)){
     MEMO[[paste0("curBen_dich_", memoryLabels[mem])]] <- MEMO$curiosity_dich * MEMO[[paste0(memoryLevels[mem])]]
   }
   
+  # sort MEMO in order of trials of main experiment
+  MEMO <- MEMO[order(MEMO$trial),]
+  
   # save data in long format
   setwd(preprocessedLongDir)
   filenameLong <- paste0(BIDSstring,"_long.csv")
-  write.table(MEMO, file = filenameLong, sep = ",", row.names = F)
+  write.csv(MEMO, file = filenameLong, row.names = F)
   
   
   ########### CREATE EVENTS.TSV FILES   ########### 
@@ -905,8 +976,8 @@ for (s in seq_along(subjects)){
       onset <- run_acq[,c("trial","vidFileName", "displayVidOnset", "mockOffset", "displayVidOffset", "fixationPostVidOnset",
                           "displayAnswerOnset", "responseAnswer", "timestampAnswer", "fixationPostAnswerOnset",
                           "displayCuriosityOnset", "responseCuriosity", "timestampCuriosity", "fixationPostCuriosityOnset", 
-                          "description", "cuedRecallStrict", "cuedRecallLenient", 
-                          "answer", "confidence",
+                          "responseRecall", "cuedRecallStrict", "cuedRecallLenient",
+                          "responseRecognition", "responseConfidence",
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
                           "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")]
       
@@ -916,8 +987,8 @@ for (s in seq_along(subjects)){
       # onset <- reshape2::melt(onset, id.vars=c("vidFileName", "trial", "mockOffset", "displayVidOffset", "timestampPostVidFixation", "vidDurCalc", "cuedRecallStrict", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
       #                                          "responseAnswer", "timestampAnswer", "responseCuriosity", "timestampCuriosity"), value.name = "onset")
       onset <- reshape2::melt(onset, id.vars=c("vidFileName", "trial", "timestampVidOnset", "timestampMockOffset", "displayVidOffset", "timestampPostVidFixation",
-                                               "description", "cuedRecallStrict", "cuedRecallLenient", 
-                                               "answer", "confidence",
+                                               "responseRecall", "cuedRecallStrict", "cuedRecallLenient", 
+                                               "responseRecognition", "responseConfidence",
                                                "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
                                                "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
                                                "responseAnswer", "timestampAnswer", "responseCuriosity", "timestampCuriosity"), value.name = "onset")
@@ -976,9 +1047,9 @@ for (s in seq_along(subjects)){
       run_BIDS$responseCuriosity <- ifelse(run_BIDS$variable == "displayCuriosity", run_BIDS$responseCuriosity, "not applicable")
       run_BIDS$timestampCuriosity <- ifelse(run_BIDS$variable == "displayCuriosity", run_BIDS$timestampCuriosity, "not applicable")
       
-      run_BIDS$description <-  ifelse(run_BIDS$variable == "displayVid", as.character(run_BIDS$description), "not applicable")
-      run_BIDS$answer <-  ifelse(run_BIDS$variable == "displayVid", run_BIDS$answer, "not applicable")
-      run_BIDS$confidence <-  ifelse(run_BIDS$variable == "displayVid", run_BIDS$confidence, "not applicable")
+      run_BIDS$response_recall <-  ifelse(run_BIDS$variable == "displayVid", as.character(run_BIDS$responseRecall), "not applicable")
+      run_BIDS$response_recognition <-  ifelse(run_BIDS$variable == "displayVid", run_BIDS$responseRecognition, "not applicable")
+      run_BIDS$response_confidence <-  ifelse(run_BIDS$variable == "displayVid", run_BIDS$responseConfidence, "not applicable")
       
       # change col names of data frame according to BIDS specification
       names(run_BIDS)[names(run_BIDS)=="vidFileName"] <- "stim_file"
@@ -988,8 +1059,8 @@ for (s in seq_along(subjects)){
       run_BIDS$duration <- round(run_BIDS$duration, digits = 3)
       
       events_BIDS <- run_BIDS[, c("onset", "duration", "trial", "stim_file", "event", "response", "response_timestamp", 
-                                  "description","trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
-                                  "answer", "confidence",
+                                  "response_recall","trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
+                                  "response_recognition", "response_confidence",
                                   "trial_type_allConf", "trial_type_highConf", "trial_type_aboveAvgConf",
                                   "trial_type_rememberedStrictAboveAvg", "trial_type_rememberedLenientAboveAvg", "trial_type_rememberedStrictHigh", "trial_type_rememberedLenientHigh")]
       
@@ -1068,7 +1139,7 @@ for (s in seq_along(subjects)){
                                   "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
                                   "trial_type_allConf", "trial_type_highConf", "trial_type_aboveAvgConf",
                                   "trial_type_rememberedStrictAboveAvg", "trial_type_rememberedLenientAboveAvg", "trial_type_rememberedStrictHigh", "trial_type_rememberedLenientHigh", 
-                                  "confidence", "run", "acq")]
+                                  "responseConfidence", "run", "acq")]
     
     if (feedback == "yes"){
       print(paste("total Duration is", sum(BIDS_concat$duration)))
@@ -1171,16 +1242,16 @@ for (s in seq_along(subjects)){
       }
       
       # average mean confidence
-      postMemory[[paste0("meanConfidence", blockstring[BLOCK])]]  <- mean(data_subset$confidence, na.rm = T)
+      postMemory[[paste0("meanConfidence", blockstring[BLOCK])]]  <- mean(data_subset$responseConfidence, na.rm = T)
       temp_data <- subset(data_subset, data_subset$recognition == 1)
-      postMemory[[paste0("meanConfidenceCorrectTrials", blockstring[BLOCK])]]   <- mean(temp_data$confidence, na.rm = T)
+      postMemory[[paste0("meanConfidenceCorrectTrials", blockstring[BLOCK])]]   <- mean(temp_data$responseConfidence, na.rm = T)
       
       for (k in 1:6) { #confidence ranges from 1 to 6, potentially code can be made more flexible by using min(data$confidence) and max(data$confidence)
-        temp_data <- subset(data_subset, data_subset$confidence == k)
+        temp_data <- subset(data_subset, data_subset$responseConfidence == k)
         postMemory[[paste0("recognitionConfLevel_", k, blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T)
         postMemory[[paste0("recognitionConfLevel_", k, "_perc", blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T) / dim(data_subset)[1]
         if (k < 6) {
-          temp_data_above <- subset(data_subset, data_subset$confidence > k)
+          temp_data_above <- subset(data_subset, data_subset$responseConfidence > k)
           postMemory[[paste0("recognitionConfLevel_above_", k, blockstring[BLOCK])]] <-sum(temp_data_above$recognition, na.rm = T)
           postMemory[[paste0("recognitionConfLevel_above_", k, "_perc", blockstring[BLOCK])]] <-sum(temp_data_above$recognition, na.rm = T) / dim(data_subset)[1]
           rm(temp_data_above)
@@ -1188,14 +1259,14 @@ for (s in seq_along(subjects)){
         
         # sum up the scores for the recognition task pooled
         if (k == 1 || k == 3 || k == 5) {
-          temp_data_plus1 <- subset(data_subset, data_subset$confidence == (k+1))
+          temp_data_plus1 <- subset(data_subset, data_subset$responseConfidence == (k+1))
           postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T)
           postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, "_perc", blockstring[BLOCK])]] <- (sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T))  / dim(data_subset)[1]
           rm(temp_data_plus1)
         }
         if (k == 1 || k == 4) {
-          temp_data_plus1 <- subset(data_subset, data_subset$confidence == (k+1))
-          temp_data_plus2 <- subset(data_subset, data_subset$confidence == (k+2))
+          temp_data_plus1 <- subset(data_subset, data_subset$responseConfidence == (k+1))
+          temp_data_plus2 <- subset(data_subset, data_subset$responseConfidence == (k+2))
           postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2, blockstring[BLOCK])]] <- sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T) + sum(temp_data_plus2$recognition, na.rm = T)
           postMemory[[paste0("recognitionConfLevel_", k, "_", k+1, "_", k+2, "_perc", blockstring[BLOCK])]] <- (sum(temp_data$recognition, na.rm = T) + sum(temp_data_plus1$recognition, na.rm = T) + sum(temp_data_plus2$recognition, na.rm = T))  / dim(data_subset)[1]
           rm(temp_data_plus1)
@@ -1225,40 +1296,12 @@ for (s in seq_along(subjects)){
   
   #################################################### at the end of the loop, merge data sets ####################################################
   if (s == length(subjects)){
-    MAGMOT <- merge(MAGMOT, questDataWide, by = c("ID", "group"), all = T)
-    MAGMOT <- merge(MAGMOT, postMemoryWide, by = c("ID"), all = T)
-    if (debug == 0){
-      rm(postMemoryWide, questDataWide)
-    }
     
-    # write information about scan durations
-    names(scaninfoAll) <- c("ID", "scan", "duration_run_seconds", "duration_scan_seconds")
-    scaninfoAll$duration_run_seconds <- round(scaninfoAll$duration_run_seconds, digits = 0)
-    scaninfoAll$duration_scan_seconds <- round(scaninfoAll$duration_scan_seconds, digits = 0)
-    scaninfoAll$duration_run_TR <- scaninfoAll$duration_run_seconds/TR
-    scaninfoAll$duration_scan_TR <- scaninfoAll$duration_scan_seconds/TR
-    setwd(preprocessedEventsRootDir)
-    write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    ### long format data ###
     
-    # upload file to OSF
-    osfr::osf_auth() # log into OSF
-    project <- osfr::osf_retrieve_node("fhqb7")
-    target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
-    sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
-    # check whether file already exists
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MAGMOT_informationAboutScanDuration.tsv")
-    if (dim(file_exists)[1] > 0){ # delete file if it exists
-      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-    }
-    # upload file
-    osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite")
-    
-    
-    
-    #### combine single _long.csv files to one file ####
     setwd(file.path(preprocessedDir, "long"))
     file_list <- list.files(pattern = "long.csv")
-    
+    # combine single _long.csv files to one file
     for (n in seq_along(file_list)){
       if(n == 1){
         dataLong <- read.csv(file_list[n], header=T)
@@ -1269,9 +1312,19 @@ for (s in seq_along(subjects)){
         rm(temp_datalang)
       }
     }
+    # save the final file
     setwd(preprocessedShareDir)
     xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
-    write.table(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")    
+    write.csv(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), row.names = FALSE, na = "NA")   
+    
+    ### wide format data ###
+    
+    # merge data in wide format
+    MAGMOT <- merge(MAGMOT, questDataWide, by = c("ID", "group"), all = T)
+    MAGMOT <- merge(MAGMOT, postMemoryWide, by = c("ID"), all = T)
+    if (debug == 0){
+      rm(postMemoryWide, questDataWide)
+    }
     
     # compute the glmer models to extract the slopes
     for (mem in 1:length(memoryLevels)) {
@@ -1279,13 +1332,13 @@ for (s in seq_along(subjects)){
       LMEmodel <- glmer(dataLong[, memoryLevels[mem]] ~ groupEffectCoded*curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
       MAGMOT[[paste0("curBeta_", memoryLabels[mem])]] <-  coef(LMEmodel)$ID$curiosityGroupMeanCentered
       MAGMOT[[paste0("curBeta_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBeta_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBeta_", memoryLabels[mem])]])
-
+      
       # model with curiosity only
       LMEmodel2 <- glmer(dataLong[, memoryLevels[mem]] ~ curiosityGroupMeanCentered + (1+curiosityGroupMeanCentered|ID) + (1|stimID), family = "binomial"(link = 'logit'), data = dataLong)
       MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] <-  coef(LMEmodel2)$ID$curiosityGroupMeanCentered
       MAGMOT[[paste0("curBetaOnly_c_", memoryLabels[mem])]] <-  MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]] - mean(MAGMOT[[paste0("curBetaOnly_", memoryLabels[mem])]])
     }
-
+    
     # add RSFC estimates between HPC & VTA (Pearson)
     setwd(brainDir)
     RSFC <- read.delim2("RSFC_VTA-HPC_pearson.txt") # read in data
@@ -1293,40 +1346,146 @@ for (s in seq_along(subjects)){
     names(RSFC)[names(RSFC)=="RSFC_run.2"] <- "RSFC_VTAHPC_run2" # change col name
     RSFC$RSFC_VTAHPC_run1 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1)) # change from factor to numeric
     RSFC$RSFC_VTAHPC_run2 <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run2)) # change from factor to numeric
-
+    
     # fisher z transform correlations and compute RSFC change
     RSFC$RSFC_VTAHPC_run1_z <- atanh(RSFC$RSFC_VTAHPC_run1) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_run2_z <- atanh(RSFC$RSFC_VTAHPC_run2) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_diff <- RSFC$RSFC_VTAHPC_run2_z - RSFC$RSFC_VTAHPC_run1_z
-
+    
+    # merge wide format data
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
-
+    
     # add RSFC estimates between HPC & VTA (Spearman)
     RSFC <- read.delim2("RSFC_VTA-HPC_spearman.txt") # read in data
     names(RSFC)[names(RSFC)=="RSFC_run.1_spearman"] <- "RSFC_VTAHPC_run1_spearman" # change col name
     names(RSFC)[names(RSFC)=="RSFC_run.2_spearman"] <- "RSFC_VTAHPC_run2_spearman" # change col name
     RSFC$RSFC_VTAHPC_run1_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run1_spearman)) # change from factor to numeric
     RSFC$RSFC_VTAHPC_run2_spearman <- as.numeric(as.character(RSFC$RSFC_VTAHPC_run2_spearman)) # change from factor to numeric
-
+    
     # fisher z transform correlations and compute RSFC change
     RSFC$RSFC_VTAHPC_run1_z_spearman <- atanh(RSFC$RSFC_VTAHPC_run1_spearman) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_run2_z_spearman <- atanh(RSFC$RSFC_VTAHPC_run2_spearman) # fisher z transform correlations
     RSFC$RSFC_VTAHPC_diff_spearman <- RSFC$RSFC_VTAHPC_run2_z_spearman - RSFC$RSFC_VTAHPC_run1_z_spearman
-
+    
+    # merge wide format data
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
     
+    # save data
     setwd(preprocessedShareDir)
     xlsx::write.xlsx(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
-    write.table(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), quote=FALSE, sep=",", row.names = FALSE, na = "NA")
+    write.csv(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), row.names = FALSE, na = "NA")
     
-    # upload the csv files to OSF
+    ### create files that for the dataset paper ###
+    # demographics
+    demographics <- MAGMOT[,c("ID", "BIDS", "age", "DOB", "sex", "gender", "ethnicity", "english", "ageEnglishAcquisition", 
+                              "education", "yearsOfEducation", "employment", "studySubject", "handedness", "vision", "health")]
+    write.csv(demographics, file=paste0( version, "_demographics", ".csv"), row.names = FALSE, na = "NA")
+    
+    # scores
+    scores <- MAGMOT[,c("ID", "BIDS", 
+                        # working memory
+                        "corsiSpan", "nback_hits", "nback_misses_inclTooSlow", "nback_misses_exclTooSlow", 
+                        "nback_correctrejections", "nback_falsealarms_inclTooSlow", "nback_falsealarms_exclTooSlow", 
+                        "nback_hitrate", "nback_falsealarmrate", "nback_accurary",
+                        # questionnaires
+                        "BISBAS_inhibition", "BISBAS_rewardresponsiveness", "BISBAS_drive", "BISBAS_funseeking",
+                        "NeedForCognition", "FearOfFailure", "ApproachTemperament", "AvoidanceTemperament", "TraitCuriosity", "StateCuriosity",
+                        "IMI_intrinsicMotivation", "IMI_interest", "IMI_taskEngagement", "IMI_boredom", "IMI_pressure", "IMI_effort",
+                        # memory performance
+                        "cuedRecallStrict_abs", "cuedRecallStrict_rel", "cuedRecallLenient_abs", "cuedRecallLenient_rel", 
+                        "allConf_abs", "allConf_rel",
+                        "highConf_abs", "highConf_rel", "aboveAvgConf_abs", "aboveAvgConf_rel",
+                        "rememberedStrictHigh_abs", "rememberedLenientHigh_rel", "rememberedLenientHigh_abs", "rememberedLenientHigh_rel",
+                        "rememberedStrictAboveAvg_abs", "rememberedStrictAboveAvg_rel", "rememberedLenientAboveAvg_abs", "rememberedLenientAboveAvg_rel")]
+    write.csv(scores, file=paste0( version, "_scores.csv"), row.names = FALSE, na = "NA")
+    
+    # raw_quest_data
+    questionnaires <- c("inclusioncheck", "health_current", "health_ever", "screening_MRI", 
+                        "BISBAS", "NeedForCognition", "FearOfFailure", "ApproachAndAvoidanceTemperament", "TraitCuriosity", 
+                        "StateCuriosity", "PostExpAssessment")
+    numItems <- c(7,4,24, 19, 20, 18, 9, 12, 18, 20, 24)
+   
+    for (q in seq_along(questionnaires)){ # determine item list
+      for (ii in 1:numItems[q]){
+        if (ii == 1){
+          itemList <- paste0(questionnaires[q], ".", ii)
+        } else {
+          itemList <-  c(itemList, paste0(questionnaires[q], ".", ii, collapse = ", "))
+        }
+      }
+      if (q == 1){
+        itemListALL <- itemList
+      } else {
+        itemListALL <-  c(itemListALL, itemList)
+      }
+      print(itemList)
+    }
+    raw_quest_data <- questionnaire_raw[, c("ID", itemListALL)]
+    write.csv(raw_quest_data, file=paste0( version, "_raw_quest_data.csv"), row.names = FALSE, na = "NA")
+    
+    # experimental_data
+    experimental_data <- dataLong[,c("ID", "BIDS", "group", "orderNumber", "block", "acq", "startBlock", "endBlock", 
+                                     
+                                     "timingCorrection", "jitterVideo_trial", "jitterRating_trial",
+                                     
+                                     "vidFileName", "trial", "tTrialStart", "tTrialEnd", "durationTrial", "fixationInitialDuration",
+                                     "displayVidOnset", "displayVidOffset", "displayAnswerDuration", "displayBlankDuration", "fixationPostVidOnset", "fixationPostVidDuration",
+                                     
+                                     "displayAnswerOnset", "displayAnswerDuration",	"timeoutAnswer", "responseAnswer", "timestampAnswer", "timestampAnswerWhite", "rtAnswer", 
+                                     "fixationPostAnswerOnset", "fixationPostAnswerDuration","betweenRatingFixation",
+                                     "displayCuriosityOnset", "displayCuriosityDuration", "timeoutCuriosity", "responseCuriosity", "timestampCuriosity", "timestampCuriosityWhite",
+                                     "rtCuriosity", "startValueCuriosity", "clicksCuriosity", "fixationPostCuriosityOnset", "fixationPostCuriosityDuration",
+                                     "curiosity_tooSlow", # ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, 1, 0)
+                                     "mockOffset", "cueImage", "momentOfSurprise_1", "momentOfSurprise_2", "momentOfSurprise_3", "momentOfSurprise_4", "momentOfSurprise_5", "momentOfSurprise_6", "momentOfSurprise_7",	
+                                     "additionalMarker_momentOfSurprise_1", "additionalMarker_momentOfSurprise_2",
+     
+                                     "trialRecall", "responseRecall", "cuedRecallStrict", "cuedRecallLenient", "Flagging", "Comments", 
+                                     "trialRecognition", "responseRecognition", "rtRecognition", 
+                                     "responseConfidence", "rtConfidence",
+                                     "recognition", "recognitionAboveMeanConf", "recognitionConfLevel_4_5_6", 
+                                     "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh"
+                                     )]
+    write.csv(experimental_data, file=paste0( version, "_experimental_data.csv"), row.names = FALSE, na = "NA")
+    
+    
+    ### upload file to OSF
+    osfr::osf_auth() # log into OSF
+    project <- osfr::osf_retrieve_node("fhqb7")
+    target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
+    sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+    # check whether file already exists
     file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural") # check whether file already exists
-    while (dim(file_exists)[1] > 0){ # delete files if they exists. use while loop because only the first row will be used
+    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
       osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
       file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
     }
-    # upload file
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version)) # check whether file already exists
+    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
+      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+      file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version))
+    }
+    # upload all files in this directory
     osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
+    # note:  if this line produces error, that can be ignored as this is due to the fact that it has not changed compared to the previous file version
+    
+    ### write information about scan durations
+    names(scaninfoAll) <- c("ID", "scan", "duration_run_seconds", "duration_scan_seconds")
+    scaninfoAll$duration_run_seconds <- round(scaninfoAll$duration_run_seconds, digits = 0)
+    scaninfoAll$duration_scan_seconds <- round(scaninfoAll$duration_scan_seconds, digits = 0)
+    scaninfoAll$duration_run_TR <- scaninfoAll$duration_run_seconds/TR
+    scaninfoAll$duration_scan_TR <- scaninfoAll$duration_scan_seconds/TR
+    setwd(preprocessedEventsRootDir)
+    write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    
+    # upload file to OSF
+    # check whether file already exists
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MAGMOT_informationAboutScanDuration.tsv")
+    if (dim(file_exists)[1] > 0){ # delete file if it exists
+      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+    }
+    # upload file
+    osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite") 
+    # note:  if this line produces error, that can be ignored as this is due to the fact that it has not changed compared to the previous file version
     
     #################### as a last step, create the files we need for concatenation ####################
     
@@ -1385,10 +1544,10 @@ for (s in seq_along(subjects)){
                                   "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
                                   "trial_type_allConf", "trial_type_highConf", "trial_type_aboveAvgConf", 
                                   "trial_type_rememberedStrictAboveAvg", "trial_type_rememberedLenientAboveAvg", "trial_type_rememberedStrictHigh", "trial_type_rememberedLenientHigh", 
-                                  "confidence")]
+                                  "responseConfidence")]
           # mean-center curiosity and confidence
           events_s$responseCuriosity <- events_s$responseCuriosity - mean(events_s$responseCuriosity, na.rm = T) #mean center curiosity
-          events_s$confidence <- events_s$confidence - mean(events_s$confidence, na.rm = T) #mean center confidence
+          events_s$responseConfidence <- events_s$responseConfidence - mean(events_s$responseConfidence, na.rm = T) #mean center confidence
           
           # change column names so that they include the subject ID
           names(events_s)[names(events_s)=="vid"] <- "onset"
@@ -1416,10 +1575,10 @@ for (s in seq_along(subjects)){
                                       "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
                                       "trial_type_allConf", "trial_type_highConf", "trial_type_aboveAvgConf", 
                                       "trial_type_rememberedStrictAboveAvg", "trial_type_rememberedLenientAboveAvg", "trial_type_rememberedStrictHigh", "trial_type_rememberedLenientHigh", 
-                                      "confidence")]
+                                      "responseConfidence")]
             # mean-center curiosity and confidence
             events_ss$responseCuriosity <- events_ss$responseCuriosity - mean(events_ss$responseCuriosity, na.rm = T) #mean center curiosity
-            events_ss$confidence <- events_ss$confidence - mean(events_ss$confidence, na.rm = T) #mean center confidence
+            events_ss$responseConfidence <- events_ss$responseConfidence - mean(events_ss$responseConfidence, na.rm = T) #mean center confidence
             
             # change column names so that they include the subject ID
             names(events_ss)[names(events_ss)=="vid"] <- "onset"
@@ -1476,7 +1635,7 @@ for (s in seq_along(subjects)){
             #curiosity and curiosity interaction
             dataTable_ISC_dummy[x,4] <- cor(events[, paste0("responseCuriosity_", subjectsCorr[s])], events[, paste0("responseCuriosity_", subjectsToCorrelate[ss])] )
             dataTable_ISC_dummy[x,5] <- dataTable_ISC_dummy[x,4] * dataTable_ISC_dummy[x,3] 
-            dataTable_ISC_dummy[x,6] <- cor(events[, paste0("confidence_", subjectsCorr[s])], events[, paste0("confidence_", subjectsToCorrelate[ss])] )
+            dataTable_ISC_dummy[x,6] <- cor(events[, paste0("responseConfidence_", subjectsCorr[s])], events[, paste0("responseConfidence_", subjectsToCorrelate[ss])] )
             dataTable_ISC_dummy[x,7] <- dataTable_ISC_dummy[x,6] * dataTable_ISC_dummy[x,3] 
             
             addCol <- 0
@@ -1753,3 +1912,4 @@ for (s in seq_along(subjects)){
     } # end doISCprep
   }
 }
+
