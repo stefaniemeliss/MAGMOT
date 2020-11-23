@@ -96,10 +96,10 @@ age <- psych::describeBy(dfWide[,"age"], group=dfWide$group)
 age <- as.data.frame(rbind(age$cont, age$exp))
 age$mot <- rep(c("cont","exp"), each = 1)
 
-# gender
-plyr::count(dfWide, vars =  "gender")
+# sex
+plyr::count(dfWide, vars =  "sex")
 N_per_group <- plyr::count(dfWide, vars = "group")
-sex <- plyr::count(dfWide, vars = c("gender","group"))
+sex <- plyr::count(dfWide, vars = c("sex","group"))
 
 # ethnicity
 ethnicity <- plyr::count(dfWide, vars = c("ethnicity","group"))
@@ -143,9 +143,9 @@ demogs[i,contCol] <- paste0(age$mean[1], " (", round(age$sd[1], 2), ")") # contr
 demogs[i,expCol] <- paste0(age$mean[2], " (", round(age$sd[2], 2), ")") # experimental group
 
 i = i+1
-demogs[i,varCol] <- "Sex (% female)"
-demogs[i,contCol] <- paste0(sex$freq[sex$gender == "female" & sex$group == "cont"]/N_per_group$freq[N_per_group$group == "cont"]*100) # control group
-demogs[i,expCol] <- paste0(sex$freq[sex$gender == "female" & sex$group == "exp"]/N_per_group$freq[N_per_group$group == "exp"]*100) # experimental group
+demogs[i,varCol] <- "Sex assigned at birth (% female)"
+demogs[i,contCol] <- paste0(sex$freq[sex$sex == "female" & sex$group == "cont"]/N_per_group$freq[N_per_group$group == "cont"]*100) # control group
+demogs[i,expCol] <- paste0(sex$freq[sex$sex == "female" & sex$group == "exp"]/N_per_group$freq[N_per_group$group == "exp"]*100) # experimental group
 
 i = i+1
 demogs[i,varCol] <- "Ethnicity (% BAME)"
@@ -192,8 +192,14 @@ psych::describe(dfWide$daysBetweenExpAndMemory)
 # look at magic trick length: displayVidDuration (this is the actual magic trick + 6 seconds mock video)
 psych::describe(dfLong$displayVidDuration)
 
+# look at magic trick length: displayVidDuration (this is the actual magic trick + 6 seconds mock video)
+
+
 # average trial length
 psych::describe(dfLong$durationTrial)
+
+# duration of memory assessment
+psych::describe(dfWide$durMemory)
 
 
 ########## 3. Descriptives of magic tricks ########## 
@@ -233,6 +239,10 @@ stim_all <- merge(stim_all, memory_test, by.x = c("stimID"), all.x = T)
 # look at average video length
 psych::describe(stim_all$vidFileDuration_withoutMock)
 psych::describe(stim_all$vidFileDuration)
+
+# look at average video length of tricks used in experiment only
+psych::describe(stim_all$vidFileDuration_withoutMock[stim_all$experiment == "experiment"])
+psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"])
 
 # CREATE STIMULI TABLE FOR PAPER (i.e. Online-only Table 1)
 
