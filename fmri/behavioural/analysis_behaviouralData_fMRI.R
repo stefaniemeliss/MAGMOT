@@ -84,13 +84,13 @@ if (exists("dfLong") == F) {
 if(dataCoded == 0) { # if data is not coded yet, only look at recognition performance
   dependentVariables <- c("responseCuriosity", "rtCuriosity", "responseEstimate", "rtEstimate",
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
-                          "confidence", "confidenceCorrectTrials")
+                          "responseConfidence", "responseConfidenceCorrectTrials")
 } else {
   dependentVariables <- c("responseCuriosity", "rtCuriosity", "responseEstimate", "rtEstimate",
                           "cuedRecallStrict", "cuedRecallLenient", 
                           "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
                           "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
-                          "confidence", "confidenceCorrectTrials")
+                          "responseConfidence", "responseConfidenceCorrectTrials")
 }
 
 # for each of the variables defined above, compute the descriptive statistics
@@ -131,7 +131,7 @@ rm(descriptives)
 # define variables for which the mean per trick should be calculated
 indicesPerTrick <- c( "responseEstimate", "rtEstimate", "responseCuriosity", "rtCuriosity",
                      memoryLevels,
-                     "confidence", "confidenceCorrectTrials")
+                     "responseConfidence", "responseConfidenceCorrectTrials")
 indicesPerTrickMean <- paste0("mean_", indicesPerTrick)
 
 # calculate mean values for each magic trick for each index
@@ -191,12 +191,12 @@ rm(dfMeans, meansPerTrick, indicesPerTrick, indicesPerTrickMean)
 # define dependent variables 
 if(dataCoded == 0) { # if data is not coded yet, only look at recognition performance
   DV_LME <- c("recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
-              "confidence", "confidenceCorrectTrials")
+              "responseConfidence", "responseConfidenceCorrectTrials")
 } else {
   DV_LME <- c("cuedRecallStrict", "cuedRecallLenient", 
               "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
               "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
-              "confidence", "confidenceCorrectTrials")
+              "responseConfidence", "responseConfidenceCorrectTrials")
 }
 
 ##### 3.1 basic LME predicting memory performance with mean-centered curiosity, effect-coded reward and their interaction #####
@@ -406,7 +406,7 @@ groupingVariables <- c("mediansplitCuriosityWithinSubject", "curiosity_dich")
 DV_barplot <- c("cuedRecallStrict", "cuedRecallLenient", 
                 "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
                 "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
-                "confidence", "confidenceCorrectTrials", 
+                "responseConfidence", "responseConfidenceCorrectTrials", 
                 "confidenceGroupMeanCentered", "confidenceGroupMeanCenteredCorrectTrials")
 
 # determine colours to be used in histogram
@@ -465,7 +465,7 @@ for (DV in DV_barplot){
   if (DV %in% c("recognition", "recognitionAboveMeanConf", "recognitionConfLevel_4_5_6")){
     graph <- graph + coord_cartesian(ylim = c(0, 1)) + geom_hline(yintercept = 0.25, linetype="dashed", color = "black")
   }
-  if (DV %in% c("confidence", "confidenceCorrectTrials")){
+  if (DV %in% c("responseConfidence", "responseConfidenceCorrectTrials")){
     graph <- graph + coord_cartesian(ylim = c(0, 6))
   }
   if (DV %in% c("confidenceGroupMeanCentered", "confidenceGroupMeanCenteredCorrectTrials")){
