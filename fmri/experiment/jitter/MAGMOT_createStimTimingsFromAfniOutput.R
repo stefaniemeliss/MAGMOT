@@ -101,6 +101,7 @@ videosJitter <- subset(allTimings, allTimings$stimType == "video") #extract timi
 videosJitter <- subset(videosJitter, is.na(videosJitter$run1_jitter)==F) # and only those referring to jitter rather than ISIs (= durVid or durRatings)
 videoJitter <- c(videosJitter$run1_jitter, videosJitter$run2_jitter,videosJitter$run3_jitter) # combine all three runs into one long vector
 videoJitter
+psych::describe(videoJitter)
 hist(videoJitter, ylim = c(0,36), xlim = c(0, 12))
 write(videoJitter, file = "videoJitter.tsv", ncolumns = 1, sep = "\t")
 
@@ -109,6 +110,7 @@ ratingsJitter <- subset(allTimings, allTimings$stimType == "rating")
 ratingsJitter <- subset(ratingsJitter, is.na(ratingsJitter$run1_jitter)==F)
 ratingJitter <- c(ratingsJitter$run1_jitter, ratingsJitter$run2_jitter,ratingsJitter$run3_jitter)
 ratingJitter
+psych::describe(ratingJitter)
 hist(ratingJitter, ylim = c(0,36), xlim = c(0, 12))
 write(ratingJitter, file = "ratingJitter.tsv", ncolumns = 1, sep = "\t")
 
