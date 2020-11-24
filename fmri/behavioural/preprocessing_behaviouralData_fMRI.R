@@ -1418,7 +1418,6 @@ for (s in seq_along(subjects)){
       } else {
         itemListALL <-  c(itemListALL, itemList)
       }
-      print(itemList)
     }
     raw_quest_data <- questionnaire_raw[, c("ID", itemListALL)]
     write.csv(raw_quest_data, file=paste0( version, "_raw_quest_data.csv"), row.names = FALSE, na = "NA")
