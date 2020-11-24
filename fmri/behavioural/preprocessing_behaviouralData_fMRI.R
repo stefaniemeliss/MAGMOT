@@ -1436,7 +1436,7 @@ for (s in seq_along(subjects)){
                                      "timingCorrection", "jitterVideo_trial", "jitterRating_trial",
                                      
                                      "vidFileName", "trial", "tTrialStart", "tTrialEnd", "durationTrial", "fixationInitialDuration",
-                                     "displayVidOnset", "displayVidOffset", "displayAnswerDuration", "displayBlankDuration", "fixationPostVidOnset", "fixationPostVidDuration",
+                                     "displayVidOnset", "displayVidOffset", "displayVidDuration", "displayBlankDuration", "fixationPostVidOnset", "fixationPostVidDuration",
                                      
                                      "displayAnswerOnset", "displayAnswerDuration",	"timeoutAnswer", "responseAnswer", "timestampAnswer", "timestampAnswerWhite", "rtAnswer", 
                                      "fixationPostAnswerOnset", "fixationPostAnswerDuration","betweenRatingFixation",
