@@ -376,7 +376,6 @@ for (i in seq_along(nback_filelist)){
     print(paste("There is a nback file missing for ID", MAGMOT_pre$ID[i] ))
   } else {
     nback <- read.table(paste(nback_filelist[i]))
-    nback <- read.table("~/Dropbox/Reading/PhD/Magictricks/fmri_study/Data/MAGMOT_pre/MAGMOT_2back.2019-03-12-1105.data.906df52b-ebfd-4f80-8131-d1bce23ee9ff.txt")
     # V1: name of block,V2: correct (1=correct, 2=wrong, 3=too slow), V3: which key was pressed, V4: RT in ms
     # V5: random number used for conditions (1=same as 2-back, 2-5 other letter), V6: trial number (per block), V7: current letter, V8: letter in previous trial
     nback <- subset(nback, nback$V1 != "training") # subset nback to only include data from task block
@@ -469,9 +468,9 @@ names(MAGMOT_post)[names(MAGMOT_post)=="alcohol_amount.1"] <- "alcoholAmount"
 names(MAGMOT_post)[names(MAGMOT_post)=="rewardEffort.1"] <- "rewardEffort"
 names(MAGMOT_post)[names(MAGMOT_post)=="rewardExpectations.1"] <- "rewardExpectations"
 names(MAGMOT_post)[names(MAGMOT_post)=="participant"] <- "postFile"
-names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.1"] <- "comment_ppt1"
-names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.2"] <- "comment_ppt2"
-names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.3"] <- "comment_ppt3"
+names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.1"] <- "comment_task1"
+names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.2"] <- "comment_task2"
+names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.3"] <- "comment_task3"
 names(MAGMOT_post)[names(MAGMOT_post)=="comments_experimenter.1"] <- "comment_exp"
 
 ### compute duration of post assessment
@@ -496,7 +495,7 @@ MAGMOT_post <- MAGMOT_post[,c("ID", "postFile", "startPost", "endPost", "durPost
                               "group", "groupEffectCoded", "StateCuriosity", 
                               "sleepLastNight", "sleepAverage", 
                               "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations", 
-                              "comment_ppt1", "comment_ppt2", "comment_ppt3", "comment_exp",
+                              "comment_task1", "comment_task2", "comment_task3", "comment_exp",
                               "eyetracking", "fieldmap", "preLearningRest", "taskBlock1", "taskBlock2", "taskBlock3", "postLearningRest", "T1w",
                               "eyetrackingData", "taskData", "questionnaireData" 
 )]
@@ -1163,7 +1162,7 @@ for (s in seq_along(subjects)){
                               "survey_test_known_response", "survey_memory_intention_response", "survey_reward_belief_response",
                               "survey_magictrick_experience_response", "survey_connection_response", "survey_comment_response")]
   names(postMemory) <- c("ID", "startMemory", "startMemory_UTC", "endMemory", "endMemory_UTC", "durMemory", "memoryFile",
-                         "sleepBeforeMemoryTest","sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment")
+                         "sleepBeforeMemoryTest","sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment_memory")
   
   # recode rewardBelief
   postMemory$rewardBelief_score <- ifelse(postMemory$rewardBelief == "Not applicable", NA,
@@ -1187,6 +1186,7 @@ for (s in seq_along(subjects)){
   
   # calculate time span between experiment and memory test
   postMemory$durScanningSession <- difftime(postMemory$endExperiment_UTC, postMemory$endPractice_UTC, units = "mins")
+  postMemory$durScanningSession <- ifelse( postMemory$durScanningSession > 180, NA,  postMemory$durScanningSession) # replace any values bigger than 3 hours with NA
   postMemory$daysBetweenExpAndMemory <- difftime(postMemory$startMemory_UTC, postMemory$endExperiment_UTC)
   
   ########### add columns to postMemory data
@@ -1377,7 +1377,7 @@ for (s in seq_along(subjects)){
     
     ### create files that for the dataset paper ###
     # demographics
-    demographics <- MAGMOT[,c("ID", "BIDS", "age", "DOB", "sex", "gender", "ethnicity", "english", "ageEnglishAcquisition", 
+    demographics <- MAGMOT[,c("ID", "BIDS", "group", "age", "DOB", "sex", "gender", "ethnicity", "english", "ageEnglishAcquisition", 
                               "education", "yearsOfEducation", "employment", "studySubject", "handedness", "vision", "health")]
     write.csv(demographics, file=paste0( version, "_demographics", ".csv"), row.names = FALSE, na = "NA")
     
@@ -1423,6 +1423,14 @@ for (s in seq_along(subjects)){
     raw_quest_data <- questionnaire_raw[, c("ID", itemListALL)]
     write.csv(raw_quest_data, file=paste0( version, "_raw_quest_data.csv"), row.names = FALSE, na = "NA")
     
+    # other information
+    duration_info <- MAGMOT[,c(grepl("ID",names(MAGMOT)) | grepl("dur",names(MAGMOT)))]
+    other_information <- MAGMOT[,c("ID", "BIDS", "ableToSee", "compliance", "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations",
+                                   "comment_task1", "comment_task2", "comment_task3", 
+                                   "sleepBeforeMemoryTest", "sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment_memory", "daysBetweenExpAndMemory")]
+    other_information <- merge(other_information, duration_info, by = c("ID", "BIDS"))
+    write.csv(other_information, file=paste0( version, "_other_information.csv"), row.names = FALSE, na = "NA")
+    
     # experimental_data
     experimental_data <- dataLong[,c("ID", "BIDS", "group", "orderNumber", "block", "acq", "startBlock", "endBlock", 
                                      
@@ -1453,6 +1461,17 @@ for (s in seq_along(subjects)){
     project <- osfr::osf_retrieve_node("fhqb7")
     target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
     sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+    # check whether file already exists - this is necessary due to a bug in the package
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural") # check whether file already exists
+    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
+      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+      file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
+    }
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version)) # check whether file already exists
+    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
+      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+      file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version))
+    }
     # upload all files in this directory
     osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
 
@@ -1466,6 +1485,11 @@ for (s in seq_along(subjects)){
     write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
     # upload file to OSF
+    # check whether file already exists - this is necessary due to a bug in the package
+    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MAGMOT_informationAboutScanDuration.tsv")
+    if (dim(file_exists)[1] > 0){ # delete file if it exists
+      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+    }
     osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite") 
 
     #################### as a last step, create the files we need for concatenation ####################
