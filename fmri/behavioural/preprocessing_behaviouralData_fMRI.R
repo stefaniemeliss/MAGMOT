@@ -675,9 +675,9 @@ for (s in seq_along(subjects)){
   ptbdata$curiosity <- ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, NA, ptbdata$responseCuriosity)
   ptbdata$curiosity_RT <- ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, NA, ptbdata$rtCuriosity)
   ptbdata$curiosity_tooSlow <- ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, 1, 0)
-  curiosityNAs <- sum(is.na(ptbdata$curiosity))
+  curiosity_tooSlow <- sum(ptbdata$curiosity_tooSlow)
   if (feedback == "yes"){
-    print(paste("number of NAs in curiosity", curiosityNAs))
+    print(paste("number of too slow in curiosity", curiosity_tooSlow))
   }
   
   # compute median split (WITHIN SUBJECT) for curiousity rating
@@ -699,7 +699,14 @@ for (s in seq_along(subjects)){
   ptbdata$rewardByCuriosity_updated <- ptbdata$curiosityGroupMeanCentered_updated * ptbdata$groupEffectCoded
   
   # process answer to the question how many people will be able to find a solution to the magic trick --> variable "estimate"
+  ptbdata$answer <- ifelse(ptbdata$timestampAnswer > ptbdata$displayAnswerOnset + ptbdata$timeoutAnswer - 3*ptbdata$timingCorrection, NA, ptbdata$responseAnswer)
+  ptbdata$answer_RT <- ifelse(ptbdata$timestampAnswer > ptbdata$displayAnswerOnset + ptbdata$timeoutAnswer - 3*ptbdata$timingCorrection, NA, ptbdata$rtCuriosity)
   ptbdata$answer_tooSlow <- ifelse(ptbdata$timestampAnswer > ptbdata$displayAnswerOnset + ptbdata$timeoutAnswer - 3*ptbdata$timingCorrection, 1, 0)
+  answer_tooSlow <- sum(ptbdata$answer_tooSlow)
+  if (feedback == "yes"){
+    print(paste("number of too slow in answer", answer_tooSlow))
+  }
+
   ptbdata$responseEstimate <- ifelse(ptbdata$responseAnswer == "0 to 10", 0,
                                      ifelse(ptbdata$responseAnswer == "11 to 20", 1,
                                             ifelse(ptbdata$responseAnswer == "21 to 30", 2,
@@ -1173,8 +1180,9 @@ for (s in seq_along(subjects)){
                                                                       ifelse(postMemory$rewardBelief == "Somehow disagree", 2,
                                                                              ifelse(postMemory$rewardBelief == "Definitely disagree", 1, 0)))))))
   
-  # add curiosity NAs to the data set in wide format
-  postMemory$curiosityNAs <- curiosityNAs
+  # add sum of responses that were fiven too slowly to the data set in wide format
+  postMemory$answer_tooSlow <- answer_tooSlow
+  postMemory$curiosity_tooSlow <- curiosity_tooSlow
   
   # add endExperiment and endPractice
   postMemory$endExperiment_raw <- ptbdata$endExperiment_raw[1]
@@ -1424,7 +1432,7 @@ for (s in seq_along(subjects)){
     
     # other information
     duration_info <- MAGMOT[,c(grepl("ID",names(MAGMOT)) | grepl("dur",names(MAGMOT)))]
-    other_information <- MAGMOT[,c("ID", "BIDS", "ableToSee", "compliance", "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations",
+    other_information <- MAGMOT[,c("ID", "BIDS", "ableToSee", "compliance", "answer_tooSlow", "curiosity_tooSlow", "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations",
                                    "comment_task1", "comment_task2", "comment_task3", 
                                    "sleepBeforeMemoryTest", "sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment_memory", "daysBetweenExpAndMemory")]
     other_information <- merge(other_information, duration_info, by = c("ID", "BIDS"))
@@ -1435,10 +1443,11 @@ for (s in seq_along(subjects)){
                                      
                                      "timingCorrection", "jitterVideo_trial", "jitterRating_trial",
                                      
-                                     "vidFileName", "trial", "tTrialStart", "tTrialEnd", "durationTrial", "fixationInitialDuration",
+                                     "stimID","vidFileName", "trial", "tTrialStart", "tTrialEnd", "durationTrial", "fixationInitialDuration",
                                      "displayVidOnset", "displayVidOffset", "displayVidDuration", "displayBlankDuration", "fixationPostVidOnset", "fixationPostVidDuration",
                                      
                                      "displayAnswerOnset", "displayAnswerDuration",	"timeoutAnswer", "responseAnswer", "timestampAnswer", "timestampAnswerWhite", "rtAnswer", 
+                                     "answer_tooSlow", # ifelse(ptbdata$timestampAnswer > ptbdata$displayAnswerOnset + ptbdata$timeoutAnswer - 3*ptbdata$timingCorrection, 1, 0)
                                      "fixationPostAnswerOnset", "fixationPostAnswerDuration","betweenRatingFixation",
                                      "displayCuriosityOnset", "displayCuriosityDuration", "timeoutCuriosity", "responseCuriosity", "timestampCuriosity", "timestampCuriosityWhite",
                                      "rtCuriosity", "startValueCuriosity", "clicksCuriosity", "fixationPostCuriosityOnset", "fixationPostCuriosityDuration",
