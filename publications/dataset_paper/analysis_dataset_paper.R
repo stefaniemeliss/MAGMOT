@@ -7,6 +7,11 @@ rm(list=ls())
 # define necessary directories
 analysisDir <- getwd()
 
+filename_tables <- "tables_dataset_paper.xlsx"
+
+# delete output files
+ifelse(file.exists(filename_tables), file.remove(filename_tables), FALSE)
+
 # helper functions and packages 
 devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/errorbars.R?raw=TRUE")
 devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/rbindcolumns.R?raw=TRUE")
@@ -45,9 +50,13 @@ osfr::osf_ls_files(target_dir, pattern = ".csv") %>%
 ### read in data sets ###
 
 # data in wide format
-dfWide <- xlsx::read.xlsx(paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
+scores <- read.csv(paste0(version, "_scores.csv"), stringsAsFactors = F)
+other_information <- read.csv(paste0(version, "_other_information.csv"), stringsAsFactors = F)
+demographics <- read.csv(paste0(version, "_demographics", ".csv"))
+dfWide <- merge(demographics, scores, by = c("ID", "BIDS"))
+dfWide <- merge(dfWide, other_information, by = c("ID", "BIDS"))
 # data in long format
-dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
+dfLong <- read.csv(paste0(version, "_experimental_data.csv"))
 
 # stimuli related files
 ozono <- read.csv("~/Dropbox/Reading/PhD/Magictricks/stimuli/Ozono_et_al_2020_Detailed_information_about_MagicCATs.csv", stringsAsFactors = F)
@@ -143,6 +152,7 @@ demogs[i,varCol] <- "Age"
 demogs[i,contCol] <- paste0(age$mean[1], " (", round(age$sd[1], 2), ")") # control group
 demogs[i,expCol] <- paste0(age$mean[2], " (", round(age$sd[2], 2), ")") # experimental group
 
+# this currently produces error, but this is due to missing data in sex
 i = i+1
 demogs[i,varCol] <- "Sex assigned at birth (% female)"
 demogs[i,contCol] <- paste0(sex$freq[sex$sex == "female" & sex$group == "cont"]/N_per_group$freq[N_per_group$group == "cont"]*100) # control group
@@ -172,7 +182,7 @@ demogs[i,expCol] <- paste0(round(nback$mean[2],2), " (", round(nback$sd[2], 2), 
 names(demogs) <- c("", "Control Group", "Experimental Group")
 
 # save demogs
-xlsx::write.xlsx(demogs, file="tables_dataset_paper.xlsx", sheetName = "Table_1", append = T, row.names = F) # note: row.names contain variables
+xlsx::write.xlsx(demogs, file=filename_tables, sheetName = "Table_1", append = T, row.names = F) # note: row.names contain variables
 
 ########## 2. Determine average testing lengths etc. ########## 
 
@@ -190,18 +200,19 @@ psych::describe(block_durations)
 # time between experiment and memory tests
 psych::describe(dfWide$daysBetweenExpAndMemory)
 
-# look at magic trick length: displayVidDuration (this is the actual magic trick + 6 seconds mock video)
-psych::describe(dfLong$displayVidDuration)
-
-# look at magic trick length: displayVidDuration (this is the actual magic trick + 6 seconds mock video)
-
-
 # average trial length
 psych::describe(dfLong$durationTrial)
 
 # duration of memory assessment
 psych::describe(dfWide$durMemory)
 
+### information used in trial structure figure - actual presentation times
+psych::describe(dfLong$displayVidDuration) # stimulus presentation (this is the actual magic trick + 6 seconds mock video)
+psych::describe(dfLong$displayBlankDuration) # blank between end of magic trick video and start of fixation
+psych::describe(dfLong$fixationPostVidDuration) # fixation between magic trick and estimate rating
+psych::describe(dfLong$rtAnswer) # reaction time estimate rating
+psych::describe(dfLong$rtCuriosity) # reaction time estimate rating
+psych::describe(dfLong$fixationPostCuriosityDuration) # fixation between curiosity rating and next magic trick
 
 ########## 3. Descriptives of magic tricks ########## 
 
@@ -245,6 +256,14 @@ psych::describe(stim_all$vidFileDuration)
 psych::describe(stim_all$vidFileDuration_withoutMock[stim_all$experiment == "experiment"])
 psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"])
 
+### information used in trial structure figure - intended presentation times
+psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"]) # stimulus presentation (this is the actual magic trick + 6 seconds mock video)
+psych::describe(dfLong$displayBlankDuration) # blank between end of magic trick video and start of fixation
+psych::describe(dfLong$jitterVideo_trial[dfLong$ID == 1]) # jitter between magic trick and estimate rating (constant across subjects)
+psych::describe(dfLong$rtAnswer) # reaction time estimate rating
+psych::describe(dfLong$rtCuriosity) # reaction time estimate rating
+psych::describe(dfLong$jitterRating_trial[dfLong$ID == 1]) # jitter between curiosity rating and next magic trick (constant across subjects)
+
 # CREATE STIMULI TABLE FOR PAPER (i.e. Online-only Table 1)
 
 # add cue image
@@ -267,7 +286,7 @@ names(stim_info) <- c("Occurance", "Stimulus ID", "Name", "Credit", #"Video file
                      "Recognition option 1", "Recognition option 2", "Recognition option 3", "Recognition option 4", "Different wording in pilot study")
 
 # write file
-xlsx::write.xlsx(stim_info, file="tables_dataset_paper.xlsx", sheetName = "Online-only Table_1", append = T, row.names = F, showNA = F) # note: row.names contain variables
+xlsx::write.xlsx(stim_info, file=filename_tables, sheetName = "Online-only Table_1", append = T, row.names = F, showNA = F) # note: row.names contain variables
 
 
 
@@ -357,7 +376,8 @@ names(marker_long) <- c("Stimulus ID", "Video file name", "Video duration (witho
                         "Marker", "Variable name in dataset", "Timing", "Description", "Notes")
 
 # write file
-xlsx::write.xlsx(marker_long, file="tables_dataset_paper.xlsx", sheetName = "Online-only Table_2", append = T, row.names = F, showNA = F) # note: row.names contain variables
+xlsx::write.xlsx(marker_long, file=filename_tables, sheetName = "Online-only Table_2", append = T, row.names = F, showNA = F) # note: row.names contain variables
+
 
 
 
