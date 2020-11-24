@@ -32,7 +32,8 @@ project <- osfr::osf_retrieve_node("fhqb7")
 target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
 sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
 
-osfr::osf_ls_files(sub_dir, pattern = ".xlsx") %>%
+# download all files
+osfr::osf_ls_files(sub_dir, pattern = "MAGMOT") %>%
   osfr::osf_download(conflicts = "overwrite")
 
 target_dir <- osfr::osf_ls_files(project, pattern = "stim") # looks at all files and directories in the project and defines the match with "data"
