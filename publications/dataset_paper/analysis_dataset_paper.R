@@ -256,6 +256,9 @@ psych::describe(stim_all$vidFileDuration)
 psych::describe(stim_all$vidFileDuration_withoutMock[stim_all$experiment == "experiment"])
 psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"])
 
+vidFileDuration <- stim_all$vidFileDuration[stim_all$experiment == "experiment"]
+
+
 ### information used in trial structure figure - intended presentation times
 psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"]) # stimulus presentation (this is the actual magic trick + 6 seconds mock video)
 psych::describe(dfLong$displayBlankDuration) # blank between end of magic trick video and start of fixation
@@ -379,8 +382,42 @@ names(marker_long) <- c("Stimulus ID", "Video file name", "Video duration (witho
 xlsx::write.xlsx(marker_long, file=filename_tables, sheetName = "Online-only Table_2", append = T, row.names = F, showNA = F) # note: row.names contain variables
 
 
+### DURATION OF MAGIC TRICKs
+# transform long data into wide data
+displayVidDuration <- reshape::cast(dfLong, ID~stimID,value="displayVidDuration")
+vidFileDuration  <- reshape::cast(stim_all, ~stimID,value="vidFileDuration")
+rownames(vidFileDuration) <- "vidFileDuration"
 
+# compute mean, sd, min, max and range for the display duration of each magic trick
+mean_displayVidDuration <- mapply(mean, displayVidDuration[-1])
+sd_displayVidDuration <- mapply(sd, displayVidDuration[-1])
+min_displayVidDuration <- mapply(min, displayVidDuration[-1])
+max_displayVidDuration <- mapply(max, displayVidDuration[-1])
+range_displayVidDuration <- max_displayVidDuration - min_displayVidDuration
 
+# put all information into one data frame
+descript_displayVidDuration <- rbind(mean_displayVidDuration, sd_displayVidDuration)
+descript_displayVidDuration <- rbind(descript_displayVidDuration, min_displayVidDuration)
+descript_displayVidDuration <- rbind(descript_displayVidDuration, max_displayVidDuration)
+descript_displayVidDuration <- rbind(descript_displayVidDuration, range_displayVidDuration)
+
+# merge this with actual file length
+descript_displayVidDuration <- as.data.frame(descript_displayVidDuration)
+descript_displayVidDuration <- rbind.match.columns(descript_displayVidDuration, vidFileDuration)
+descript_displayVidDuration <- as.data.frame(t(descript_displayVidDuration))
+
+# compute difference between vidFileDurattion and displayVidDuration
+descript_displayVidDuration$diff_file_mean <- descript_displayVidDuration$mean_displayVidDuration - descript_displayVidDuration$vidFileDuration
+descript_displayVidDuration$diff_file_min <- descript_displayVidDuration$min_displayVidDuration - descript_displayVidDuration$vidFileDuration
+descript_displayVidDuration$diff_file_max <- descript_displayVidDuration$max_displayVidDuration - descript_displayVidDuration$vidFileDuration
+
+psych::describe(descript_displayVidDuration$diff_file_mean)
+psych::describe(descript_displayVidDuration$diff_file_min)
+psych::describe(descript_displayVidDuration$diff_file_max)
+
+# latencies
+psych::describe(dfLong$fixationPostVidDuration - dfLong$jitterVideo_trial) # fixation after video
+psych::describe(dfLong$fixationPostCuriosityDuration - dfLong$jitterRating_trial) # fixation after curiosity rating
 
 
 
