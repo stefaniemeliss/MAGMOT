@@ -5,7 +5,7 @@ library(dplyr)
 
 version_official <- "fmri"
 git_dir <- "~/Dropbox/Reading/PhD/Magictricks/git" # this needs to be changed to reflect the directory where the git repository has been downloaded to
-setwd(file.path(git_dir, "fmri", "bold", "concat")) # please use the same directory here where the jupyter notebook is saved in!!
+setwd(file.path(git_dir, "fmri", "bold", "cut")) # please use the same directory here where the jupyter notebook is saved in!!
 
 osfr::osf_auth() # log into OSF using PAT
 project <- osfr::osf_retrieve_node("fhqb7")
