@@ -1,5 +1,10 @@
 #!/bin/bash
 
+################################################################################
+# converting FreeSurfer to AFNI to create masks for pre-processing
+################################################################################
+
+
 # please note that this script needs to be run locally as the virtual machines cause issues
 # this script has to be run after the FS recon-all command
 
