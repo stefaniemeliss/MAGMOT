@@ -1,7 +1,11 @@
 #!/bin/tcsh
 source ~/.cshrc
 
-module load afni19.2.07
+################################################################################
+# pre-processing for functional data using anfi_proc.py 
+################################################################################
+
+module load afni19.3.03
 
 # --------------------------------------------------------------------
 # Script: s.2016_ChenEtal_02_ap.tcsh
@@ -15,6 +19,7 @@ module load afni19.2.07
 # Originally run using: AFNI_16.1.16
 # --------------------------------------------------------------------
 
+# further modified based on Example 11. (see afni_proc.py -help)
 
 # FMRI processing script, ISC movie data.
 # Assumes previously run FS and SUMA commands, respectively: 
@@ -26,7 +31,8 @@ set topdir = /storage/shared/research/cinn/2018/MAGMOT #study folder
 echo $topdir
 set task = magictrickwatching
 set fsroot = $topdir/derivatives/FreeSurfer
-set outroot = $topdir/derivatives/$task/afniproc
+set outroot = $topdir/derivatives/afniproc
+mkdir $outroot
 
 # define subject listecho $
 set BIDSdir = $topdir/MAGMOT_BIDS
@@ -36,61 +42,79 @@ set subjects	=(`ls -d sub*`) # this creates an array containing all subjects in 
 echo $subjects
 echo $#subjects
 
-echo $#subjects
+set subjects	= sub-control003
+
 
 
 # for each subject in the subjects array
-#for subj in "${subjects[@]}"; do
 foreach subj ($subjects)
-
 
 	#set subj	= "sub-experimental005"
 	echo $subj
 
-
-	# define PWD in which the script should get saved
-	cd $topdir/derivatives/$task/afniproc
-
-	# Input directory: unprocessed FMRI data
-	set indir   = $topdir/derivatives/$task/concat/$subj
-	#indir=$topdir/derivatives/magictrickwatching/concat/$subj
-	# Input directory: FreeSurfer + @SUMA_MakeSpec_FS results
-	set fsindir = $fsroot/$subj/SUMA
-	#fsindir=$fsroot/$subj/SUMA
-
 	# Output directory: name for output
 	set outdir  = $outroot/$subj
-	#outdir=$outroot/$subj
+	cd $outdir # define PWD in which the script and results should get saved
 
-	# Input data: list of partitioned EPIs (movie clips)
-	set epi_dpattern = $indir"/"${subj}"_task-magictrickwatching*run-*_bold_concat.nii.gz"
-	echo $epi_dpattern
+	# Input directory: unprocessed FMRI data
+	set indir   = $topdir/derivatives/$subj/func/cut
+
+	# Input directory: FreeSurfer + @SUMA_MakeSpec_FS results
+	set fsindir = $fsroot/$subj/SUMA
+
+	# Input directory: SSWarper output (anatomical non-linear aligned to MNI)
+	set sswindir = $outdir/SSWarper
 
 	# Input data: FreeSurfer results (anatomy, ventricle and WM maps)
 	# all these files are in the ../derivatives/FreeSurfer/$SUBJ_ID/SUMA directory
-	set fsanat = ${subj}"_SurfVol.nii"
+	set sswanat = anatSS.${subj}.nii
 	set fsvent = FSmask_vent.nii
 	set fswm   = FSmask_WM.nii
+	set fsgm   = FSmask_GM.nii
+
+	# Input data: list of partitioned EPIs (movie clips)
+	set epi_dpattern = $indir"/"${subj}"_task-magictrickwatching_run-*_space-orig_desc-cut_bold.nii.gz"
+	echo $epi_dpattern
+
+	if ($subj == sub-experimental016) then
+		set epi_dpattern = (sub-experimental016_task-magictrickwatching_run-1_bold_concat.nii.gz 		\
+							sub-experimental016_task-magictrickwatching_acq-1_run-2_bold_concat.nii.gz 	\
+							sub-experimental016_task-magictrickwatching_acq-2_run-2_bold_concat.nii.gz	\
+							sub-experimental016_task-magictrickwatching_run-3_bold_concat.nii.gz)
+	endif
 
 echo 0000
 
 	# specify actual afni_proc.py
-	afni_proc.py -subj_id $subj.magictrickwatching_perRun					\
+	afni_proc.py -subj_id "${subj}"_task-"${task}"					\
 	    -blocks despike tshift align tlrc volreg blur mask regress          \
-	    -copy_anat $fsindir/$fsanat                                         \
-	    -anat_follower_ROI aaseg  anat $fsindir/aparc.a2009s+aseg_rank.nii  \
-	    -anat_follower_ROI aeseg  epi  $fsindir/aparc.a2009s+aseg_rank.nii  \
+		-radial_correlate_blocks tcat volreg								\
+	    -copy_anat $sswindir/$sswanat                                       \
+		-anat_has_skull no													\
+		-anat_follower anat_w_skull anat $sswindir/anatU.$subj.nii      	\
+	    -anat_follower_ROI aaseg  anat $fsindir/aparc+aseg.nii				\
+	    -anat_follower_ROI aeseg  epi  $fsindir/aparc+aseg.nii				\
 	    -anat_follower_ROI FSvent epi  $fsindir/$fsvent                     \
 	    -anat_follower_ROI FSWMe  epi  $fsindir/$fswm                       \
-	    -anat_follower_erode FSvent FSWMe                                   \
+	    -anat_follower_ROI FSGMe  epi  $fsindir/$fsgm                       \
+	    -anat_follower_erode FSvent FSWMe FSGMe                             \
 	    -dsets $epi_dpattern                                                \
 	    -tcat_remove_first_trs 0                                            \
-	    -tlrc_base /usr/share/afni/atlases/MNI152_T1_2009c+tlrc             \
+		-tshift_opts_ts -tpattern altplus									\
+        -align_opts_aea -cost lpc+ZZ -giant_move -check_flip				\
+	    -tlrc_base MNI152_2009_template_SSW.nii.gz		             		\
 	    -tlrc_NL_warp                                                       \
+		-tlrc_NL_warped_dsets $sswindir/anatQQ.$subj.nii 					\
+			$sswindir/anatQQ.$subj.aff12.1D									\
+			$sswindir/anatQQ."$subj"_WARP.nii								\
 	    -volreg_align_to MIN_OUTLIER                                        \
 	    -volreg_align_e2a                                                   \
 	    -volreg_tlrc_warp                                                   \
+		-blur_to_fwhm -blur_size 8 -blur_in_automask
+		-mask_epi_anat yes													\
+		-regress_motion_per_run												\
 	    -regress_ROI_PC FSvent 3                                            \
+		-regress_ROI_PC_per_run FSvent										\
 	    -regress_make_corr_vols aeseg FSvent                                \
 	    -regress_anaticor_fast                                              \
 	    -regress_anaticor_label FSWMe                                       \
@@ -100,11 +124,17 @@ echo 0000
 	    -regress_est_blur_epits                                             \
 	    -regress_est_blur_errts                                             \
 	    -regress_run_clustsim no											\
-		-regress_polort 6 # was 3 previously, WRONG!						
+		-regress_polort 6													\
+		-html_review_style pythonic
 
+	# note: regress_polort 5 due to: 1140 volumns in total * 2 (TR = 2) = 2280 seconds
+	# 2280s / 3 (number of runs) = 760s (run_length) per run [this matches with average block_durInSecs]
+	# DEGREE: 1 + floor(run_length / 150.0)	= 1 + floor(5.066) = 6
+
+	# trpattern = altplus due to slice_code = 3 (i.e. interleaved ascending) and slice_start = 0 in DICOM header
 
 	# execute script
-	tcsh -xef proc.$subj.magictrickwatching_perRun |& tee output.proc.$subj.magictrickwatching_perRun
+	tcsh -xef proc."${subj}"_task-"${task}" |& tee output.proc."${subj}"_task-"${task}"
 
 							
 end
