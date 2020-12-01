@@ -666,7 +666,7 @@ for (s in seq_along(subjects)){
     ptbdata$endPractice_LDN <- as.POSIXct(ptbdata$endPractice, format = "%d-%m-%Y_%H:%M", tz = "Europe/London")
     ptbdata$endPractice_UTC <- format(ptbdata$endPractice_LDN, tz="GMT", usetz=TRUE)
   }
-
+  
   # add curiosity median split for MAGMOT sample (computed at beginning of script based on old MAGMOT_long.xlsx data set)
   ptbdata <- merge(ptbdata, dfMeans, by = "stimID")
   
@@ -706,7 +706,7 @@ for (s in seq_along(subjects)){
   if (feedback == "yes"){
     print(paste("number of too slow in answer", answer_tooSlow))
   }
-
+  
   ptbdata$responseEstimate <- ifelse(ptbdata$responseAnswer == "0 to 10", 0,
                                      ifelse(ptbdata$responseAnswer == "11 to 20", 1,
                                             ifelse(ptbdata$responseAnswer == "21 to 30", 2,
@@ -1130,34 +1130,49 @@ for (s in seq_along(subjects)){
       }
     }
     
-    # save a file containg onsets, durations, stimID, and events with stimID and events as numbers to use it for the concat script in Matlab
-    # save a file only containing onsets and durations of the actual video
-    BIDS[(BIDS$event == "displayVid"), "responseCuriosity"] <- BIDS[(BIDS$event == "displayCuriosity"), "responseCuriosity"] # overwrite the "not applicable" with the actual curiosity rating
-    BIDS_concat <- subset(BIDS, BIDS$event == "displayVid") # BIDS contains all onsets and durations for all 36 trials as well as the memory performance associated with all of them
-    BIDS_concat$duration_mock <- BIDS_concat$mock-BIDS_concat$vid
-    BIDS_concat$duration_vid <- as.numeric(BIDS_concat$displayVidOffset)-as.numeric(BIDS_concat$vid_per_run)
-    BIDS_concat$duration_vid_withoutMock <-as.numeric(BIDS_concat$displayVidOffset)-as.numeric(BIDS_concat$mock_per_run)
-    BIDS_concat$duration_vid_postFixation <-as.numeric(BIDS_concat$timestampPostVidFixation)-as.numeric(BIDS_concat$vid_per_run)
-    BIDS_concat$duration_vid_withoutMock_postFixation <-as.numeric(BIDS_concat$timestampPostVidFixation)-as.numeric(BIDS_concat$mock_per_run)
-    
-    #names(BIDS_concat)
-    BIDS_concat <- BIDS_concat[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "duration_vid_withoutMock_postFixation", "avgVidDur_MAGMOT", "trial", "stim_file", "responseCuriosity", 
-                                  "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
-                                  "trial_type_allConf", "trial_type_highConf", "trial_type_aboveAvgConf",
-                                  "trial_type_rememberedStrictAboveAvg", "trial_type_rememberedLenientAboveAvg", "trial_type_rememberedStrictHigh", "trial_type_rememberedLenientHigh", 
-                                  "responseConfidence", "run", "acq")]
-    
-    if (feedback == "yes"){
-      print(paste("total Duration is", sum(BIDS_concat$duration)))
-    }
-    #write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-    write.table(BIDS_concat, file=file.path(concatRootDir, paste0(BIDSstring, "_task-magictrickwatching_concat.tsv")), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-    
   }
+  
+  # save a file containg onsets, durations, stimID, and events with stimID and events as numbers to use it for the concat script in Matlab
+  # save a file only containing onsets and durations of the actual video
+  BIDS[(BIDS$event == "displayVid"), "responseCuriosity"] <- BIDS[(BIDS$event == "displayCuriosity"), "responseCuriosity"] # overwrite the "not applicable" with the actual curiosity rating
+  BIDS$ID <- BIDSstring
+  BIDS_concat <- subset(BIDS, BIDS$event == "displayVid") # BIDS contains all onsets and durations for all 36 trials as well as the memory performance associated with all of them
+  BIDS_concat$duration_mock <- BIDS_concat$mock-BIDS_concat$vid
+  BIDS_concat$duration_vid <- as.numeric(BIDS_concat$displayVidOffset)-as.numeric(BIDS_concat$vid_per_run)
+  BIDS_concat$duration_vid_withoutMock <-as.numeric(BIDS_concat$displayVidOffset)-as.numeric(BIDS_concat$mock_per_run)
+  BIDS_concat$duration_vid_postFixation <-as.numeric(BIDS_concat$timestampPostVidFixation)-as.numeric(BIDS_concat$vid_per_run)
+  BIDS_concat$duration_vid_withoutMock_postFixation <-as.numeric(BIDS_concat$timestampPostVidFixation)-as.numeric(BIDS_concat$mock_per_run)
+  
+  input_3dTcat <- BIDS_concat[,c("ID", "stim_file", "mock")]
+  
+  if (s == 1){ # for the first run of the first subject
+    input_3dTcat_all <-  input_3dTcat
+  } else {
+    temp_input_3dTcat <-  input_3dTcat
+    input_3dTcat_all <- rbind.all.columns(input_3dTcat_all, temp_input_3dTcat) #rbind all columns will induce NA if there was initially no data saved in the loop per participant
+    rm(temp_input_3dTcat_all)
+  }
+  
+  #names(BIDS_concat)
+  BIDS_concat <- BIDS_concat[,c("vid", "mock", "duration_vid", "duration_vid_withoutMock", "duration_vid_withoutMock_postFixation", "avgVidDur_MAGMOT", "trial", "stim_file", "responseCuriosity", 
+                                "trial_type_cuedRecallStrict", "trial_type_cuedRecallLenient",
+                                "trial_type_allConf", "trial_type_highConf", "trial_type_aboveAvgConf",
+                                "trial_type_rememberedStrictAboveAvg", "trial_type_rememberedLenientAboveAvg", "trial_type_rememberedStrictHigh", "trial_type_rememberedLenientHigh", 
+                                "responseConfidence", "run", "acq")]
+  
+  
+  
+  if (feedback == "yes"){
+    print(paste("total Duration is", sum(BIDS_concat$duration)))
+  }
+  #write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+  write.table(BIDS_concat, file=file.path(concatRootDir, paste0(BIDSstring, "_task-magictrickwatching_concat.tsv")), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+  
+  
   
   # delete no longer needed variables
   if (debug == 0){
-    rm(duration, onset, run, run_BIDS, BIDS, events_BIDS)
+    rm(duration, onset, run, run_BIDS, BIDS, events_BIDS, input_3dTcat)
   }
   
   
@@ -1320,10 +1335,44 @@ for (s in seq_along(subjects)){
         rm(temp_datalang)
       }
     }
+    
     # save the final file
     setwd(preprocessedShareDir)
     xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
     write.csv(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), row.names = FALSE, na = "NA")   
+    
+    ### calculate average vid duration and process input for 3dTcat ###
+    
+    # transform long data into wide data
+    displayVidDuration <- reshape::cast(dataLong, ID~vidFileName,value="displayVidDuration")
+    
+    # compute mean for the display duration of each magic trick
+    mean_displayVidDuration <- as.data.frame(mapply(mean, displayVidDuration[-1]))
+    names(mean_displayVidDuration) <- "mean_displayVidDuration"
+    mean_displayVidDuration$stim_file <- row.names(mean_displayVidDuration)
+    
+    # calculate mean_displayVidDuration without mock
+    mean_displayVidDuration$mean_displayVidDuration <- mean_displayVidDuration$mean_displayVidDuration - 6 # subtract mock
+    mean_displayVidDuration$mean_displayVidDuration_TR <- ceiling(round(mean_displayVidDuration$mean_displayVidDuration, digits = 1)/TR)
+    
+    # add those mean durations to the onset information
+    input_3dTcat_all <- merge(input_3dTcat_all, mean_displayVidDuration, by.x = "stim_file", all.x = T)
+    input_3dTcat_all$mock_TR <- round(input_3dTcat_all$mock)/TR # round onsets and convert seconds into volumes
+    
+    # determine start and end volumes (--> this is used as input for 3dTcat)
+    input_3dTcat_all$start_vol <- input_3dTcat_all$mock_TR - 1 # because afni starts at 0
+    input_3dTcat_all$end_vol <- input_3dTcat_all$start_vol + input_3dTcat_all$mean_displayVidDuration_TR - 1 # because otherwise we would add a TR more at the end
+    
+    # order file
+    input_3dTcat_all <- input_3dTcat_all[order(input_3dTcat_all$ID, input_3dTcat_all$stim_file),]
+    
+    # select relevant columns
+    input_3dTcat_fin <- input_3dTcat_all[,c("ID", "stim_file", "start_vol", "end_vol")]
+    #input_3dTcat_all <- input_3dTcat_all[order(input_3dTcat_all$ID, input_3dTcat_all$start_vol),]
+    
+    # save file
+    write.table(input_3dTcat_fin, file="MAGMOT_inputForConcatenation.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    
     
     ### wide format data ###
     
@@ -1412,7 +1461,7 @@ for (s in seq_along(subjects)){
                         "BISBAS", "NeedForCognition", "FearOfFailure", "ApproachAndAvoidanceTemperament", "TraitCuriosity", 
                         "StateCuriosity", "PostExpAssessment")
     numItems <- c(7,4,24, 19, 20, 18, 9, 12, 18, 20, 24)
-   
+    
     for (q in seq_along(questionnaires)){ # determine item list
       for (ii in 1:numItems[q]){
         if (ii == 1){
@@ -1454,13 +1503,13 @@ for (s in seq_along(subjects)){
                                      "curiosity_tooSlow", # ifelse(ptbdata$timestampCuriosity > ptbdata$displayCuriosityOnset + ptbdata$timeoutCuriosity - 3*ptbdata$timingCorrection, 1, 0)
                                      "mockOffset", "cueImage", "momentOfSurprise_1", "momentOfSurprise_2", "momentOfSurprise_3", "momentOfSurprise_4", "momentOfSurprise_5", "momentOfSurprise_6", "momentOfSurprise_7",	
                                      "additionalMarker_momentOfSurprise_1", "additionalMarker_momentOfSurprise_2",
-     
+                                     
                                      "trialRecall", "responseRecall", "cuedRecallStrict", "cuedRecallLenient", "Flagging", "Comments", 
                                      "trialRecognition", "responseRecognition", "rtRecognition", 
                                      "responseConfidence", "rtConfidence",
                                      "recognition", "recognitionAboveMeanConf", "recognitionConfLevel_4_5_6", 
                                      "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh"
-                                     )]
+    )]
     write.csv(experimental_data, file=paste0( version, "_experimental_data.csv"), row.names = FALSE, na = "NA")
     
     
@@ -1481,8 +1530,8 @@ for (s in seq_along(subjects)){
       file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version))
     }
     # upload all files in this directory
-    osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
-
+    #osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
+    
     ### write information about scan durations
     names(scaninfoAll) <- c("ID", "scan", "duration_run_seconds", "duration_scan_seconds")
     scaninfoAll$duration_run_seconds <- round(scaninfoAll$duration_run_seconds, digits = 0)
@@ -1498,8 +1547,8 @@ for (s in seq_along(subjects)){
     if (dim(file_exists)[1] > 0){ # delete file if it exists
       osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
     }
-    osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite") 
-
+    #osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite") 
+    
     #################### as a last step, create the files we need for concatenation ####################
     
     if (doISCprep == 1){
