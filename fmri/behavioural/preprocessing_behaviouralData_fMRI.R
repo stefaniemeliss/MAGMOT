@@ -1373,6 +1373,13 @@ for (s in seq_along(subjects)){
     # save file
     write.table(input_3dTcat_fin, file="MAGMOT_inputForConcatenation.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
+    ### write information about scan durations for cutting task data ###
+    names(scaninfoAll) <- c("ID", "scan", "duration_run_seconds", "duration_scan_seconds")
+    scaninfoAll$duration_run_seconds <- round(scaninfoAll$duration_run_seconds, digits = 0)
+    scaninfoAll$duration_scan_seconds <- round(scaninfoAll$duration_scan_seconds, digits = 0)
+    scaninfoAll$duration_run_TR <- scaninfoAll$duration_run_seconds/TR
+    scaninfoAll$duration_scan_TR <- scaninfoAll$duration_scan_seconds/TR
+    write.table(scaninfoAll, file="MAGMOT_inputForCutting.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
     ### wide format data ###
     
@@ -1531,23 +1538,7 @@ for (s in seq_along(subjects)){
     }
     # upload all files in this directory
     #osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
-    
-    ### write information about scan durations
-    names(scaninfoAll) <- c("ID", "scan", "duration_run_seconds", "duration_scan_seconds")
-    scaninfoAll$duration_run_seconds <- round(scaninfoAll$duration_run_seconds, digits = 0)
-    scaninfoAll$duration_scan_seconds <- round(scaninfoAll$duration_scan_seconds, digits = 0)
-    scaninfoAll$duration_run_TR <- scaninfoAll$duration_run_seconds/TR
-    scaninfoAll$duration_scan_TR <- scaninfoAll$duration_scan_seconds/TR
-    setwd(preprocessedEventsRootDir)
-    write.table(scaninfoAll, file="MAGMOT_informationAboutScanDuration.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
-    
-    # upload file to OSF
-    # check whether file already exists - this is necessary due to a bug in the package
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MAGMOT_informationAboutScanDuration.tsv")
-    if (dim(file_exists)[1] > 0){ # delete file if it exists
-      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-    }
-    #osfr::osf_upload(sub_dir, path = "MAGMOT_informationAboutScanDuration.tsv", conflicts = "overwrite") 
+
     
     #################### as a last step, create the files we need for concatenation ####################
     
