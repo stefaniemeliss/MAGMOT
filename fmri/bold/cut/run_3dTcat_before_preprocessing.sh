@@ -37,7 +37,7 @@ for subject in "${subjects[@]}"; do
 	echo $subject
 
 	# create output_dir
-	out_dir=$deriv_dir/$subject/func/cut
+	out_dir=$deriv_dir/$subject/func/
 	mkdir $deriv_dir
 
 	# list task files
