@@ -38,6 +38,9 @@ overwrite = "no"
 # define whether you want feedback printed to the console
 feedback = "no"
 
+# define whether to upload data to OSF
+upload = "yes"
+
 
 # define necessary directories
 mainDir <- "~/Dropbox/Reading/PhD/Magictricks/fmri_study"
@@ -1520,24 +1523,29 @@ for (s in seq_along(subjects)){
     
     
     ### upload file to OSF
-    osfr::osf_auth() # log into OSF
-    project <- osfr::osf_retrieve_node("fhqb7")
-    target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
-    sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
-    # check whether file already exists - this is necessary due to a bug in the package
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural") # check whether file already exists
-    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
-      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-      file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
+    if (upload == "yes"){
+      
+      # log into OSF
+      osfr::osf_auth() 
+      project <- osfr::osf_retrieve_node("fhqb7")
+      target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
+      sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
+      
+      # check whether file already exists and delete if so - this is necessary due to a bug in the package
+      file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural") # check whether file already exists
+      while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
+        osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+        file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
+      }
+      file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version)) # check whether file already exists
+      while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
+        osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
+        file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version))
+      }
+      
+      # upload all files in the share directory
+      osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
     }
-    file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version)) # check whether file already exists
-    while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
-      osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-      file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version))
-    }
-    # upload all files in this directory
-    #osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
-
     
     #################### as a last step, create the files we need for concatenation ####################
     
