@@ -27,7 +27,7 @@ subjects=($(ls -d sub*))
 #subjects=(sub-experimental016)
 
 # define TSV file to read in
-input=$DIR/"scripts/fmri/bold/cut/MAGMOT_informationAboutScanDuration.tsv"
+input=$DIR/"scripts/fmri/bold/cut/MAGMOT_inputForCutting.tsv"
 
 # define search and replace string for file prefix
 searchstring="_bold.nii.gz"
