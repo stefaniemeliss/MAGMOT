@@ -1,10 +1,8 @@
 #!/bin/bash
 
-
-#while IFS= read -r line
-#do
-#	echo "$line"
-#done < "$input"
+################################################################################
+# cutting task BOLD series before pre-processing
+################################################################################
 
 # load in AFNI module
 module load afni19.3.03
