@@ -57,7 +57,7 @@ foreach subj ($subjects)
 	cd $outdir # define PWD in which the script and results should get saved
 
 	# Input directory: unprocessed FMRI data
-	set indir   = $topdir/derivatives/$subj/func/cut
+	set indir   = $topdir/derivatives/$subj/func/
 
 	# Input directory: FreeSurfer + @SUMA_MakeSpec_FS results
 	set fsindir = $fsroot/$subj/SUMA
@@ -73,14 +73,14 @@ foreach subj ($subjects)
 	set fsgm   = FSmask_GM.nii
 
 	# Input data: list of partitioned EPIs (movie clips)
-	set epi_dpattern = $indir"/"${subj}"_task-magictrickwatching_run-*_space-orig_desc-cut_bold.nii.gz"
+	set epi_dpattern = $indir"/"${subj}"_task-magictrickwatching_run-*_desc-cut_bold.nii.gz"
 	echo $epi_dpattern
 
 	if ($subj == sub-experimental016) then
-		set epi_dpattern = (sub-experimental016_task-magictrickwatching_run-1_bold_concat.nii.gz 		\
-							sub-experimental016_task-magictrickwatching_acq-1_run-2_bold_concat.nii.gz 	\
-							sub-experimental016_task-magictrickwatching_acq-2_run-2_bold_concat.nii.gz	\
-							sub-experimental016_task-magictrickwatching_run-3_bold_concat.nii.gz)
+		set epi_dpattern = (sub-experimental016_task-magictrickwatching_run-1_bold_cut.nii.gz 		\
+							sub-experimental016_task-magictrickwatching_acq-1_run-2_bold_cut.nii.gz 	\
+							sub-experimental016_task-magictrickwatching_acq-2_run-2_bold_cut.nii.gz	\
+							sub-experimental016_task-magictrickwatching_run-3_bold_cut.nii.gz)
 	endif
 
 echo 0000
