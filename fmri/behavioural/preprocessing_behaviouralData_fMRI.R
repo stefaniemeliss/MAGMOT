@@ -1079,7 +1079,6 @@ for (s in seq_along(subjects)){
       
       setwd(preprocessedEventsSubjDir)
       write.table(events_BIDS, file=BIDSfilename, quote = F, sep="\t", row.names = F, na = "n/a")
-      #write.table(events_BIDS, file=file.path(preprocessedEventsRootDir, BIDSfilename), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
       
       # crate file for concatenation of BOLD data: mockOffset and onsets have to be translated
       run_BIDS$run <- b
