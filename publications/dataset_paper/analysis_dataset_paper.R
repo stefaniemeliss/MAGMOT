@@ -194,8 +194,11 @@ psych::describe(dfWide$durInMins_thirdBlock)
 # duration of whole experiment
 psych::describe(dfWide$durInMins)
 
-block_durations <- c(dfWide$durInMins_firstBlock, dfWide$durInMins_secondBlock, dfWide$durInMins_thirdBlock)
-psych::describe(block_durations)
+block_durInMins <- c(dfWide$durInMins_firstBlock, dfWide$durInMins_secondBlock, dfWide$durInMins_thirdBlock)
+psych::describe(block_durInMins)
+
+block_durInSecs <- c(dfWide$durInSecs_firstBlock, dfWide$durInSecs_secondBlock, dfWide$durInSecs_thirdBlock)
+psych::describe(block_durInSecs)
 
 # time between experiment and memory tests
 psych::describe(dfWide$daysBetweenExpAndMemory)
@@ -411,9 +414,15 @@ descript_displayVidDuration$diff_file_mean <- descript_displayVidDuration$mean_d
 descript_displayVidDuration$diff_file_min <- descript_displayVidDuration$min_displayVidDuration - descript_displayVidDuration$vidFileDuration
 descript_displayVidDuration$diff_file_max <- descript_displayVidDuration$max_displayVidDuration - descript_displayVidDuration$vidFileDuration
 
+descript_displayVidDuration$diff_mean_min <- descript_displayVidDuration$mean_displayVidDuration - descript_displayVidDuration$min_displayVidDuration
+descript_displayVidDuration$diff_mean_max <- descript_displayVidDuration$max_displayVidDuration - descript_displayVidDuration$mean_displayVidDuration
+
 psych::describe(descript_displayVidDuration$diff_file_mean)
 psych::describe(descript_displayVidDuration$diff_file_min)
 psych::describe(descript_displayVidDuration$diff_file_max)
+
+psych::describe(descript_displayVidDuration$diff_mean_min)
+psych::describe(descript_displayVidDuration$diff_mean_max)
 
 # latencies
 psych::describe(dfLong$fixationPostVidDuration - dfLong$jitterVideo_trial) # fixation after video
