@@ -85,6 +85,12 @@ if (exists("dfMeans") == F) {
   dfMeans <- xlsx::read.xlsx("~/Dropbox/Reading/PhD/Magictricks/fmri_study/Analysis/Tricks/MAGMOT_recognitionAndCuriosity_perTrick.xlsx", sheetName = "Sheet1")#, showWarnings = FALSE)
 }
 dfMeans <- dfMeans[,c("stimID", "meanCuriosity_MAGMOT", "meanCuriosityStandardised_MAGMOT", "mediansplitCuriosity_MAGMOT", "avgVidDur_MAGMOT")]
+# note: avgVidDur_MAGMOT was used in the MATLAB concatenation script. it is not the same as "mean_displayVidDuration" because 
+# long_MAGMOT$vidDurCalc <- long_MAGMOT$displayVidOffset - long_MAGMOT$mockOffset
+# 
+# dur_MAGMOT <- reshape::cast(long_MAGMOT, ID~stimID,value="vidDurCalc")
+# avgDur_MAGMOT <- colMeans(dur_MAGMOT, na.rm = T) 
+
 
 ####################################################################################################################################
 ####################################################  PROCESS PSYTOOLKIT DATA   ####################################################
@@ -1355,7 +1361,7 @@ for (s in seq_along(subjects)){
     
     # calculate mean_displayVidDuration without mock
     mean_displayVidDuration$mean_displayVidDuration <- mean_displayVidDuration$mean_displayVidDuration - 6 # subtract mock
-    mean_displayVidDuration$mean_displayVidDuration_TR <- ceiling(round(mean_displayVidDuration$mean_displayVidDuration, digits = 1)/TR)
+    mean_displayVidDuration$mean_displayVidDuration_TR <- ceiling(round(mean_displayVidDuration$mean_displayVidDuration, digits = 0)/TR)
     
     # add those mean durations to the onset information
     input_3dTcat_all <- merge(input_3dTcat_all, mean_displayVidDuration, by.x = "stim_file", all.x = T)
