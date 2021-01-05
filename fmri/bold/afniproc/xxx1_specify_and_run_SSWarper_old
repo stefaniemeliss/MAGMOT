@@ -1,0 +1,202 @@
+#!/bin/bash
+
+################################################################################
+# non-linear registration to MNI template (non-linear 2009c)
+################################################################################
+
+# from https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/programs/@SSwarper_sphx.html
+# This script has dual purposes for processing a given subject's anatomical volume:
+#    + to skull-strip the brain, and
+#    + to calculate the warp to a reference template/standard space.
+# Automatic snapshots of the registration are created, as well, to help the QC process.
+# This program cordially ties in directly with afni_proc.py, so you can run it beforehand, 
+# check the results, and then provide both the skull-stripped volume and the warps to the processing program.
+
+
+# define path
+DIR="/storage/shared/research/cinn/2018/MAGMOT"
+
+# change directory to BIDS folder
+BIDS_dir="$DIR"/MAGMOT_BIDS
+# change directory to the raw NIFI files
+cd $BIDS_dir
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+#subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006)
+#subjects=(sub-control001 sub-control002 sub-control003)
+#subjects=(sub-experimental005)
+
+subjects_overclipped=(sub-control003 sub-control013 sub-control033 sub-control037 sub-experimental014 sub-experimental018 sub-experimental026 ) # SSwarper version 1.52
+
+subjects_stillskulled=(sub-experimental034) # SSwarper version 1.52
+
+
+subjects_redo="sub-control003 sub-control013 sub-control033 sub-control037 sub-experimental014 sub-experimental018 sub-experimental026 sub-experimental034" # SSwarper version 1.52
+
+
+# these are the subjects that show problematic results after running the code with SSwarper version 2.31
+# subjects=(sub-control003 sub-experimental004 sub-control019 sub-experimental018 sub-control021 sub-experimental026 sub-control027 sub-control031 sub-control035 sub-control037 sub-control043)
+# sub-control035 still has skull 
+# rest (sub-control003 sub-experimental004 sub-control019 sub-experimental018 sub-control021 sub-experimental026 sub-control027 sub-control031 sub-control037 sub-control043)
+
+subjects_overclipped=(sub-control003 sub-experimental004 sub-control019 sub-control021 sub-control027 sub-control013 sub-control033 sub-control037 sub-control031 sub-experimental014 sub-experimental018 sub-experimental026 sub-control043) # SSwarper version 1.52 + SSwarper version 2.31
+
+subjects_stillskulled=(sub-control035) # SSwarper version 2.31
+
+# run again
+# subjects for which changing the settings has not worked sufficiently: sub-control003, sub-experimental018 sub-experimental026 sub-control037
+
+subjects=(sub-control003 sub-experimental004 sub-control019 sub-control021 sub-control027 sub-control031 sub-control043 sub-control045) # rerun these subjects using -push-to-edge --> out.SSwarper2
+subjects=(sub-experimental012 sub-experimental028 sub-control033 sub-control041 sub-control045) # rerun these subjects using -push-to-edge --> out.SSwarper2
+subjects=(sub-experimental034 sub-control035) # re-run these subjects --> out.SSwarper3
+
+subjects_redo="sub-control003 sub-control013 sub-control033 sub-control037 sub-experimental014 sub-experimental018 sub-experimental026 sub-experimental034" # SSwarper version 1.52
+subjects_redo="sub-control003 sub-experimental004 sub-experimental012 sub-control013 sub-experimental014 sub-experimental018 sub-control019 sub-control021 sub-experimental026 sub-control027 sub-experimental028 sub-control031 sub-control033 sub-experimental034 sub-control035 sub-control037 sub-control041 sub-control043 sub-control045" # SSwarper version 2.31
+
+
+
+# define derivatives directory
+deriv_dir="$DIR"/derivatives
+
+# define which template to use and where to find them
+template=MNI152_2009_template_SSW.nii.gz
+template_path=`@FindAfniDsetPath $template`
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+
+    echo "###################################################################################"	
+    echo "@SSwarper for subject $subject"
+    echo "###################################################################################"	
+
+	# create output folder
+	out_root=$deriv_dir/afniproc
+	out_dir=$out_root/$subject/SSwarper
+	mkdir $out_dir
+
+	# go to FreeSurfer folder with the anamotical scan
+    #FS_dir=$deriv_dir/FreeSurfer
+    # SUMA_dir=$FS_dir/$subject/SUMA
+    # cd $SUMA_dir
+
+	# define BIDS anat folder
+	anat_dir=$DIR/MAGMOT_BIDS/"${subject}"/anat
+    anat="$subject"_rec-NORM_T1w.nii.gz
+    prefix="$subject"_shft.nii.gz
+    cd $anat_dir
+
+    # copy original anatomical scan
+    3dcopy $anat $out_dir/$anat
+
+    cd $out_dir
+
+    # align centers
+    @Align_Centers  \
+        -cm \
+        -prefix $prefix     \
+        -dset $anat \
+        -base $template_path/$template
+
+		
+	# check whether subject needs re-doing
+	if echo $subjects_redo | grep -w $subject > /dev/null; then
+
+
+		# if subject still has skull after using defaults in SSwarper version 1.52
+        # -use_skull: Use outer skull to limit expansion of surface into the skull due to very strong shading artifacts. This option is buggy at the moment, use it only if you have leakage into skull.
+		if [[ "$subject" == "$subjects_stillskulled" ]]; then
+
+			echo "using setting to improve skull stripping"
+
+			# specify SSwarper
+			@SSwarper -input $prefix                             \
+						-subid $subject							\
+						-odir $out_dir							\
+						-base $template_path/$template	\
+						-giant_move -SSopt '-use_skull'
+
+		# if subject has clippings
+        # -push_to_edge: Perform aggressive push to edge at the end. This option might cause leakage.
+		else
+
+			echo "using special settings to prevent clipping"
+
+			# specify SSwarper
+			@SSwarper -input $prefix                             \
+						-subid $subject							\
+						-odir $out_dir							\
+						-base $template_path/$template	\
+						-giant_move -SSopt '-push_to_edge'
+			fi
+
+
+	# if subject is not part of the redo from SSwarper version 1.52, use default SSwarper
+	else 
+
+		echo "using defaults"
+
+		# specify SSwarper
+		@SSwarper -input $prefix                            \
+					-subid $subject							\
+					-odir $out_dir							\
+					-base $template_path/$template
+
+
+
+	fi
+
+    echo ""
+    echo ""
+    echo ""
+
+    # as a last step, move anat_with_skull (anatUAC) anat anat_without_skull (anatSS) into derivatives folder
+
+    # deine derivative dir
+    anat_deriv=$DIR/derivatives/"${subject}"/anat
+    #3dcopy anatUAC.$subject.nii $anat_deriv/"${subject}"_space-orig_res-anat_label-skulled_T1w.nii.gz
+    3dcopy anatUAC.$subject.nii $anat_deriv/"${subject}"_label-withskull_T1w.nii.gz
+    3dcopy anatSS.$subject.nii $anat_deriv/"${subject}"_label-skullstripped_T1w.nii.gz    
+
+
+
+done
+
+# this will go through the following steps (from @SSWarper -help)
+
+  #1: Uniform-ize the input dataset's intensity via 3dUnifize.
+  #     ==> anatU.sub007.nii
+  # anatU.sub007.nii        = intensity uniform-ized original dataset (or, if '-unifize_off' used, a copy of orig dset);
+  # anatUA.sub007.nii       = anisotropically smoothed version of the above (or, if '-aniso_off' used, a copy of anatU.*.nii)
+  # anatUAC.sub007.nii      = ceiling-capped ver of the above (at 98%ile of non-zero values)
+  #2: Strip the skull with 3dSkullStrip, with mildly agressive settings.
+  #     ==> anatS.sub007.nii
+  #3: Nonlinearly warp (3dQwarp) the result from #1 to the skull-on template, driving the warping to a medium level of refinement.
+  #4: Use a slightly dilated brain mask from the template to crop off the non-brain tissue resulting from #3 (3dcalc).
+  #5: Warp the output of #4 back to original anatomical space, along with the template brain mask, 
+  #   and combine those with the output of #2 to get a better skull-stripped result in original space (3dNwarpApply and 3dcalc).
+  #     ==> anatSS.sub007.nii
+  #6  Restart the nonlinear warping, registering the output of #5 to the skull-off template brain volume (3dQwarp).
+  #     ==> anatQQ.sub007.nii (et cetera)
+  # anatQQ.sub007.nii       = skull-stripped dataset nonlinearly warped to the base template space;
+  # anatQQ.sub007.aff12.1D  = affine matrix to transform original dataset to base template space;
+  # anatQQ.sub007_WARP.nii  = incremental warp from affine transformation to nonlinearly aligned dataset;
+  #7  Use @snapshot_volreg3 to make the pretty pictures.
+  #     ==> AMsub007.jpg and MAsub007.jpg
+  # AMsub007.jpg          = 3x3 snapshot image of the anatQQ.sub007.nii dataset with the edges from the base template overlaid -- to check the alignment;
+  # MAsub007.jpg          = similar to the above, with the roles of the template and the anatomical datasets reversed.
+  # QC_anatQQ.sub007.jp   = like AM*.jpg, but 3 rows of 8 slices
+  # QC_anatSS.sub007.jpg  = check skullstripping in orig space: ulay is input dset, and olay is mask of skullstripped output (anatSS* dset)
+  # init_qc_00_overlap_uinp_obase.jpg
+  #  o [ulay] original source dset and [olay] original base dset
+  #  o single image montage to check initial overlap of source and base, ignoring any obliquity that might be present (i.e., the way AFNIGUI does by default, and also how alignment starts)
+  #  o if initial overlap is not strong, alignment can fail or produce weirdness
+  #  o *if* either dset has obliquity, then an image of both after deobliquing with 3dWarp is created (*DEOB.jpg), and a text file about obliquity is also created (*DEOB.txt).
+
+
+
+
+
+
+
+

@@ -1,0 +1,98 @@
+#!/bin/bash
+
+################################################################################
+# non-linear registration to MNI template (non-linear 2009c)
+################################################################################
+
+
+# define path
+DIR="/storage/shared/research/cinn/2018/MAGMOT"
+
+# change directory to BIDS folder
+BIDS_dir="$DIR"/MAGMOT_BIDS
+# change directory to the raw NIFI files
+cd $BIDS_dir
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+#subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006)
+#subjects=(sub-control001 sub-control002 sub-control003)
+#subjects=(sub-experimental005)
+subjects=(sub-control003)
+
+# define derivatives directory
+deriv_dir="$DIR"/derivatives
+
+# define which template to use and where to find them
+template=MNI152_2009_template_SSW.nii.gz
+template_path=`@FindAfniDsetPath $template`
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+
+    echo "###################################################################################"	
+    echo "@SSwarper for subject $subject"
+    echo "###################################################################################"	
+
+	# create output folder
+	out_root=$deriv_dir/afniproc
+	out_dir=$out_root/$subject/align_centers
+	mkdir $out_dir
+
+	# define BIDS anat folder
+	anat_dir=$DIR/MAGMOT_BIDS/"${subject}"/anat
+    anat="$subject"_rec-NORM_T1w.nii.gz
+    anat_rf="$subject"_refit.nii.gz
+	cd $anat_dir
+
+	# define prefix
+    prefix_shft="$subject"_shft.nii.gz
+    prefix_shft_rf="$subject"_shft_refit.nii.gz	
+
+	prefix_3dCM="$subject"_3dCM.nii.gz
+	prefix_3dCM_rf="$subject"_3dCM_refit.nii.gz
+	prefix_3dCM_shft="$subject"_3dCM_shft.nii.gz
+	prefix_3dCM_shft_rf="$subject"_3dCM_shft_refit.nii.gz
+
+    # copy original anatomical scan
+    3dcopy $anat $out_dir/$anat
+
+	# go to output directory
+    cd $out_dir
+
+	# change center of mass
+	3dcopy $anat $prefix_3dCM
+	3dCM -automask -set 0 0 0 $prefix_3dCM
+
+    # align centers between anatomical and template
+    @Align_Centers \
+        -cm \
+        -prefix $prefix_shft \
+        -dset $anat \
+        -base $template_path/$template
+
+    # align centers between anatomical and template after changing center of mask of anatomical
+    @Align_Centers \
+        -cm \
+        -prefix $prefix_3dCM_shft \
+        -dset $prefix_3dCM \
+        -base $template_path/$template
+	
+
+	# refit to MNI for visualisation purposes: first copy files, then refit
+	3dcopy $anat $anat_rf	
+	3dcopy $prefix_shft $prefix_shft_rf
+	3dcopy $prefix_3dCM $prefix_3dCM_rf
+	3dcopy $prefix_3dCM_shft $prefix_3dCM_shft_rf
+
+	3drefit -space MNI $anat_rf
+	3drefit -space MNI $prefix_shft_rf
+	3drefit -space MNI $prefix_3dCM_rf
+	3drefit -space MNI $prefix_3dCM_shft_rf
+
+	# copy template into directory for visualisation purposes
+	3dcopy $template_path/$template $template
+		
+done
+
+

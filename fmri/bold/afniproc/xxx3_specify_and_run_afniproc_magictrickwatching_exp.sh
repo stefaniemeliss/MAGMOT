@@ -30,19 +30,22 @@ module load afni19.3.03
 set topdir = /storage/shared/research/cinn/2018/MAGMOT #study folder
 echo $topdir
 set task = magictrickwatching
-set fsroot = $topdir/derivatives/FreeSurfer
-set outroot = $topdir/derivatives/afniproc
-mkdir $outroot
+set derivroot = $topdir/derivatives
+set fsroot = $derivroot/FreeSurfers
+set outroot = $derivroot/afniproc
 
 # define subject listecho $
 set BIDSdir = $topdir/MAGMOT_BIDS
 
 cd $BIDSdir
 set subjects	=(`ls -d sub*`) # this creates an array containing all subjects in the BIDS directory
+#set subjects	=(`ls -d sub-control*`) # this creates an array containing all subjects in the BIDS directory
+set subjects	=(`ls -d sub-experimental*`) # this creates an array containing all subjects in the BIDS directory
 echo $subjects
 echo $#subjects
 
-set subjects	= sub-control003
+set subjects	= sub-experimental016
+#set subjects	= sub-control001
 
 
 
@@ -57,30 +60,33 @@ foreach subj ($subjects)
 	cd $outdir # define PWD in which the script and results should get saved
 
 	# Input directory: unprocessed FMRI data
-	set indir   = $topdir/derivatives/$subj/func/
+	set indir   = $derivroot/$subj/func
 
-	# Input directory: FreeSurfer + @SUMA_MakeSpec_FS results
-	set fsindir = $fsroot/$subj/SUMA
+	# Input directory: anatomical derivatives
+	set derivindir = $derivroot/$subj/anat
 
 	# Input directory: SSWarper output (anatomical non-linear aligned to MNI)
-	set sswindir = $outdir/SSWarper
+	set sswindir = $outdir/SSwarper
 
 	# Input data: FreeSurfer results (anatomy, ventricle and WM maps)
 	# all these files are in the ../derivatives/FreeSurfer/$SUBJ_ID/SUMA directory
-	set sswanat = anatSS.${subj}.nii
-	set fsvent = FSmask_vent.nii
-	set fswm   = FSmask_WM.nii
-	set fsgm   = FSmask_GM.nii
+	set anatSS = anatSS.${subj}.nii	
+    set anatUAC = anatUAC.${subj}.nii
+
+	set fsvent = ${subj}_space-orig_res-anat_label-vent_mask.nii.gz
+	set fswm   = ${subj}_space-orig_res-anat_label-WM_mask.nii.gz
+	set fsgm   = ${subj}_space-orig_res-anat_label-GM_mask.nii.gz
+    set fsparc = ${subj}_space-orig_desc-Destrieux_dseg.nii.gz
 
 	# Input data: list of partitioned EPIs (movie clips)
 	set epi_dpattern = $indir"/"${subj}"_task-magictrickwatching_run-*_desc-cut_bold.nii.gz"
 	echo $epi_dpattern
 
 	if ($subj == sub-experimental016) then
-		set epi_dpattern = (sub-experimental016_task-magictrickwatching_run-1_bold_cut.nii.gz 		\
-							sub-experimental016_task-magictrickwatching_acq-1_run-2_bold_cut.nii.gz 	\
-							sub-experimental016_task-magictrickwatching_acq-2_run-2_bold_cut.nii.gz	\
-							sub-experimental016_task-magictrickwatching_run-3_bold_cut.nii.gz)
+		set epi_dpattern = ($indir"/sub-experimental016_task-magictrickwatching_run-1_desc-cut_bold.nii.gz" 		\
+							$indir"/sub-experimental016_task-magictrickwatching_acq-1_run-2_desc-cut_bold.nii.gz" 	\
+							$indir"/sub-experimental016_task-magictrickwatching_acq-2_run-2_desc-cut_bold.nii.gz"	\
+							$indir"/sub-experimental016_task-magictrickwatching_run-3_desc-cut_bold.nii.gz")
 	endif
 
 echo 0000
@@ -89,14 +95,14 @@ echo 0000
 	afni_proc.py -subj_id "${subj}"_task-"${task}"					\
 	    -blocks despike tshift align tlrc volreg blur mask regress          \
 		-radial_correlate_blocks tcat volreg								\
-	    -copy_anat $sswindir/$sswanat                                       \
+	    -copy_anat $sswindir/$anatSS                                       \
 		-anat_has_skull no													\
-		-anat_follower anat_w_skull anat $sswindir/anatU.$subj.nii      	\
-	    -anat_follower_ROI aaseg  anat $fsindir/aparc+aseg.nii				\
-	    -anat_follower_ROI aeseg  epi  $fsindir/aparc+aseg.nii				\
-	    -anat_follower_ROI FSvent epi  $fsindir/$fsvent                     \
-	    -anat_follower_ROI FSWMe  epi  $fsindir/$fswm                       \
-	    -anat_follower_ROI FSGMe  epi  $fsindir/$fsgm                       \
+		-anat_follower anat_w_skull anat $sswindir/$anatUAC                 \
+	    -anat_follower_ROI aaseg  anat $derivindir/$fsparc				\
+	    -anat_follower_ROI aeseg  epi  $derivindir/$fsparc				\
+	    -anat_follower_ROI FSvent epi  $derivindir/$fsvent                     \
+	    -anat_follower_ROI FSWMe  epi  $derivindir/$fswm                       \
+	    -anat_follower_ROI FSGMe  epi  $derivindir/$fsgm                       \
 	    -anat_follower_erode FSvent FSWMe FSGMe                             \
 	    -dsets $epi_dpattern                                                \
 	    -tcat_remove_first_trs 0                                            \
@@ -108,9 +114,11 @@ echo 0000
 			$sswindir/anatQQ.$subj.aff12.1D									\
 			$sswindir/anatQQ."$subj"_WARP.nii								\
 	    -volreg_align_to MIN_OUTLIER                                        \
+        -volreg_post_vr_allin yes                                           \
+        -volreg_pvra_base_index MIN_OUTLIER                                 \
 	    -volreg_align_e2a                                                   \
 	    -volreg_tlrc_warp                                                   \
-		-blur_to_fwhm -blur_size 8 -blur_in_automask
+		-blur_to_fwhm -blur_size 8 -blur_in_automask						\
 		-mask_epi_anat yes													\
 		-regress_motion_per_run												\
 	    -regress_ROI_PC FSvent 3                                            \
@@ -127,7 +135,7 @@ echo 0000
 		-regress_polort 6													\
 		-html_review_style pythonic
 
-	# note: regress_polort 5 due to: 1140 volumns in total * 2 (TR = 2) = 2280 seconds
+	# note: regress_polort 6 due to: 1140 volumns in total * 2 (TR = 2) = 2280 seconds
 	# 2280s / 3 (number of runs) = 760s (run_length) per run [this matches with average block_durInSecs]
 	# DEGREE: 1 + floor(run_length / 150.0)	= 1 + floor(5.066) = 6
 
