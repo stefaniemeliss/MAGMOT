@@ -9,31 +9,20 @@ module load anaconda3
 #define path
 path="/storage/shared/research/cinn/2018/MAGMOT"
 
+# define directories
+BIDS_dir="$path"/MAGMOT_BIDS
+deriv_dir="$path"/derivatives
+software_dir="$path"/software/pyfMRIqc-master
+
 # change directory to BIDS folder
-cd "$path"/MAGMOT_BIDS/
+cd $BIDS_dir
 
 # define subjects based on folder names in the BIDS directory
 subjects=($(ls -d sub*))
 
-# define which subjects should be excluded
-subjects_excl=(sub-experimental000)
-
-# exclude subjects: compare the elements of subjects_excl and subjects
-# if they match, delete (i.e. unset) the element in subject 
-for e in ${!subjects_excl[@]}; do 
-	excl=${subjects_excl[$e]}
-	for i in ${!subjects[@]}; do
-	subj=${subjects[$i]}
-		if [[ "$excl" == "$subj" ]]; then
-			unset subjects[i]
-			subjects=( "${subjects[@]}" )
-		fi
-	done
-done
-
 #subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006) # script development
 #subjects=(sub-control037) # script development
-
+#subjects=(sub-control001)
 
 # create file to save censor values
 #printf "subject\tscan\tvolumes\tthreshold_02mm\tfraction_02mm\tthreshold_03mm\tfraction_03mm\tthreshold_05mm\tfraction_05mm\tthreshold_1mm\tfraction_1mm" > "$path"/derivatives/pyfMRIqc/afni_volreg_quick_censor_count.tsv #file header
@@ -45,17 +34,17 @@ for subject in "${subjects[@]}"; do
 	echo $subject
 
 	# define all necessary directories
-	fildirTASK=$path/derivatives/magictrickwatching/concat/$subject	
-	fildirREST=$path/MAGMOT_BIDS/$subject/func
-	fildirQC=$path/derivatives/pyfMRIqc/$subject	
+	fildirTASK=$deriv_dir/$subject/func	
+	fildirREST=$BIDS_dir/$subject/func
+	fildirQC=$deriv_dir/pyfMRIqc/$subject	
 	mkdir $fildirQC
 
 	# copy task files
 	cd $fildirTASK
-	filesTASK=($(ls -d *magictrickwatching*concat.nii.gz))
+	filesTASK=($(ls -d *magictrickwatching*cut_bold.nii.gz))
 	for fileTASK in "${filesTASK[@]}"; do
 		searchstring="nii.gz"
-		replacestring="nii"	
+		replacestring="nii.gz"	
 		fileTASK_new="${fileTASK/$searchstring/$replacestring}"	
 		3dcopy $fildirTASK/$fileTASK $fildirQC/$fileTASK_new
 	done	
@@ -65,7 +54,7 @@ for subject in "${subjects[@]}"; do
 	filesREST=($(ls -d *rest*.nii.gz))
 	for fileREST in "${filesREST[@]}"; do
 		searchstring="nii.gz"
-		replacestring="nii"	
+		replacestring="nii.gz"	
 		fileREST_new="${fileREST/$searchstring/$replacestring}"	
 		3dcopy $fildirREST/$fileREST $fildirQC/$fileREST_new
 	done
@@ -88,7 +77,7 @@ for subject in "${subjects[@]}"; do
 		replacestring_3d="volreg_sub"	
 		replacestring_1d="motion_sub"
 		replacestring_plot="plot_sub"
-		searchending=".nii"
+		searchending=".nii.gz"
 		replaceending=""
 		volreg_prefix="${file/$searchstring/$replacestring_3d}"	
 		file_suffix="${file/$searchending/$replaceending}" 
@@ -145,7 +134,8 @@ for subject in "${subjects[@]}"; do
 		##########################
 
 		# change directory to pyfMRIqc-master
-		cd /storage/shared/research/cinn/2018/MAGMOT/software/pyfMRIqc-fix-rm
+		#cd /storage/shared/research/cinn/2018/MAGMOT/software/pyfMRIqc-fix-rm
+		#cd /storage/shared/research/cinn/2018/MAGMOT/software/pyfMRIqc-master
 
 		# define input parameters
 		func_nift_file=$fildirQC/"${file}"
@@ -155,10 +145,13 @@ for subject in "${subjects[@]}"; do
 		mask_nift_file=$fildirQC/"${mask_prefix}"
 
 		#python pyfMRIqc.py -n $func_nift_file -s $SNR_voxel_perc -m $motion_file -k $mask_nift_file
-		python pyfMRIqc.py -n $func_nift_file -s $SNR_voxel_perc -m $motion_file -k $mask_nift_file
+		python $software_dir/pyfMRIqc.py -n $func_nift_file -s $SNR_voxel_perc -m $motion_file -k $mask_nift_file
 
 	done 
 
+	# remove nifti files
+	rm *.nii.gz
+	
 done
 
 

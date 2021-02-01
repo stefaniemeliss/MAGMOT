@@ -11,6 +11,7 @@ qc_dir=file.path(path, "derivatives", "pyfMRIqc")
 setwd(qc_dir)
 subjects <- list.dirs(recursive = F)
 subjects <- gsub('./', '', subjects)
+subjects <- subjects[grepl("sub", subjects)]
 
 # loop over subjects
 for (s in seq_along(subjects)){
