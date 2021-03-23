@@ -1,0 +1,93 @@
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++
+***** Summary information of data structure *****
+49 subjects in set1 : sub-control001 sub-control002 sub-control003 sub-control007 sub-control009 sub-control011 sub-control013 sub-control015 sub-control017 sub-control019 sub-control021 sub-control023 sub-control025 sub-control027 sub-control029 sub-control031 sub-control033 sub-control035 sub-control037 sub-control039 sub-control041 sub-control043 sub-control045 sub-control047 sub-control049 sub-experimental004 sub-experimental005 sub-experimental006 sub-experimental008 sub-experimental010 sub-experimental012 sub-experimental014 sub-experimental016 sub-experimental018 sub-experimental020 sub-experimental022 sub-experimental024 sub-experimental026 sub-experimental028 sub-experimental030 sub-experimental032 sub-experimental034 sub-experimental036 sub-experimental038 sub-experimental040 sub-experimental042 sub-experimental044 sub-experimental046 sub-experimental048 
+49 subjects in set2 : sub-control002 sub-control003 sub-control007 sub-control009 sub-control011 sub-control013 sub-control015 sub-control017 sub-control019 sub-control021 sub-control023 sub-control025 sub-control027 sub-control029 sub-control031 sub-control033 sub-control035 sub-control037 sub-control039 sub-control041 sub-control043 sub-control045 sub-control047 sub-control049 sub-experimental004 sub-experimental005 sub-experimental006 sub-experimental008 sub-experimental010 sub-experimental012 sub-experimental014 sub-experimental016 sub-experimental018 sub-experimental020 sub-experimental022 sub-experimental024 sub-experimental026 sub-experimental028 sub-experimental030 sub-experimental032 sub-experimental034 sub-experimental036 sub-experimental038 sub-experimental040 sub-experimental042 sub-experimental044 sub-experimental046 sub-experimental048 sub-experimental050 
+50 subjects in total: sub-control001 sub-control002 sub-control003 sub-control007 sub-control009 sub-control011 sub-control013 sub-control015 sub-control017 sub-control019 sub-control021 sub-control023 sub-control025 sub-control027 sub-control029 sub-control031 sub-control033 sub-control035 sub-control037 sub-control039 sub-control041 sub-control043 sub-control045 sub-control047 sub-control049 sub-experimental004 sub-experimental005 sub-experimental006 sub-experimental008 sub-experimental010 sub-experimental012 sub-experimental014 sub-experimental016 sub-experimental018 sub-experimental020 sub-experimental022 sub-experimental024 sub-experimental026 sub-experimental028 sub-experimental030 sub-experimental032 sub-experimental034 sub-experimental036 sub-experimental038 sub-experimental040 sub-experimental042 sub-experimental044 sub-experimental046 sub-experimental048 sub-experimental050 
+1225 response values
+1225 centered values for numeric variable grp : 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 
+
+Contingency tables of subject distributions among the categorical variables:
+
+***** End of data structure information *****
+++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Reading input files now...
+
+Reading input files for effect estimates: Done!
+
+If the program hangs here for more than, for example, half an hour,
+kill the process because the model specification or something else
+is likely inappropriate.
+
+[1] "Great, test run passed at voxel (21, 25, 21)!"
+[1] "Start to compute 64 slices along Z axis. You can monitor the progress"
+[1] "and estimate the total run time as shown below."
+[1] "01/11/21 21:05:02.985"
+Package snow loaded successfully!
+
+Z slice # 1 done:  01/11/21 21:05:11.397 
+Z slice # 2 done:  01/11/21 21:05:12.048 
+Z slice # 3 done:  01/11/21 21:05:14.623 
+Z slice # 4 done:  01/11/21 21:05:21.272 
+Z slice # 5 done:  01/11/21 21:05:35.318 
+Z slice # 6 done:  01/11/21 21:05:58.123 
+Z slice # 7 done:  01/11/21 21:06:29.212 
+Z slice # 8 done:  01/11/21 21:07:08.833 
+Z slice # 9 done:  01/11/21 21:08:03.261 
+Z slice # 10 done:  01/11/21 21:09:21.164 
+Z slice # 11 done:  01/11/21 21:10:49.843 
+Z slice # 12 done:  01/11/21 21:12:25.194 
+Z slice # 13 done:  01/11/21 21:14:14.973 
+Z slice # 14 done:  01/11/21 21:16:06.256 
+Z slice # 15 done:  01/11/21 21:18:17.804 
+Z slice # 16 done:  01/11/21 21:20:32.455 
+Z slice # 17 done:  01/11/21 21:22:59.658 
+Z slice # 18 done:  01/11/21 21:25:43.363 
+Z slice # 19 done:  01/11/21 21:28:34.923 
+Z slice # 20 done:  01/11/21 21:31:34.372 
+Z slice # 21 done:  01/11/21 21:34:31.216 
+Z slice # 22 done:  01/11/21 21:37:43.252 
+Z slice # 23 done:  01/11/21 21:40:54.549 
+Z slice # 24 done:  01/11/21 21:44:06.598 
+Z slice # 25 done:  01/11/21 21:46:41.378 
+Z slice # 26 done:  01/11/21 21:49:27.397 
+Z slice # 27 done:  01/11/21 21:52:13.678 
+Z slice # 28 done:  01/11/21 21:55:21.592 
+Z slice # 29 done:  01/11/21 21:58:27.753 
+Z slice # 30 done:  01/11/21 22:01:21.919 
+Z slice # 31 done:  01/11/21 22:04:14.017 
+Z slice # 32 done:  01/11/21 22:07:14.489 
+Z slice # 33 done:  01/11/21 22:10:12.619 
+Z slice # 34 done:  01/11/21 22:13:07.042 
+Z slice # 35 done:  01/11/21 22:16:12.876 
+Z slice # 36 done:  01/11/21 22:19:05.152 
+Z slice # 37 done:  01/11/21 22:22:01.372 
+Z slice # 38 done:  01/11/21 22:24:54.764 
+Z slice # 39 done:  01/11/21 22:27:45.403 
+Z slice # 40 done:  01/11/21 22:30:26.557 
+Z slice # 41 done:  01/11/21 22:33:10.201 
+Z slice # 42 done:  01/11/21 22:35:48.849 
+Z slice # 43 done:  01/11/21 22:38:30.440 
+Z slice # 44 done:  01/11/21 22:40:44.652 
+Z slice # 45 done:  01/11/21 22:42:55.656 
+Z slice # 46 done:  01/11/21 22:44:51.795 
+Z slice # 47 done:  01/11/21 22:46:37.123 
+Z slice # 48 done:  01/11/21 22:48:08.432 
+Z slice # 49 done:  01/11/21 22:49:37.302 
+Z slice # 50 done:  01/11/21 22:50:49.739 
+Z slice # 51 done:  01/11/21 22:51:46.655 
+Z slice # 52 done:  01/11/21 22:52:24.314 
+Z slice # 53 done:  01/11/21 22:53:00.383 
+Z slice # 54 done:  01/11/21 22:53:29.351 
+Z slice # 55 done:  01/11/21 22:53:46.152 
+Z slice # 56 done:  01/11/21 22:53:54.244 
+Z slice # 57 done:  01/11/21 22:53:55.723 
+Z slice # 58 done:  01/11/21 22:53:56.204 
+Z slice # 59 done:  01/11/21 22:53:56.584 
+Z slice # 60 done:  01/11/21 22:53:56.937 
+Z slice # 61 done:  01/11/21 22:53:57.502 
+Z slice # 62 done:  01/11/21 22:53:57.943 
+Z slice # 63 done:  01/11/21 22:53:58.551 
+Z slice # 64 done:  01/11/21 22:53:58.961 
+[1] "Congratulations! You've got an output ISC_magictrickwatching_GM+tlrc"

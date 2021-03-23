@@ -1,0 +1,86 @@
+#!/bin/bash
+source ~/.bashrc
+
+
+# Set directory
+topdir="/storage/shared/research/cinn/2018/MAGMOT/derivatives/magictrickwatching/analyses/"
+scriptdir=$topdir"scripts/ISC_RSA"
+mkdir $scriptdir
+cd $scriptdir
+
+# define list of covariates and the interaction term that will be inlcuded in IS-RSA analysis
+covariates=(corr_curiosity corr_confidence corr_cuedRecallStrict curBeta_cuedRecallStrict curBetaOnly_cuedRecallStrict curBen_cuedRecallStrict curCor_cuedRecallStrict		corr_cuedRecallLenient curBeta_cuedRecallLenient curBetaOnly_cuedRecallLenient curBen_cuedRecallLenient curCor_cuedRecallLenient corr_allConf curBeta_allConf curBetaOnly_allConf curBen_allConf curCor_allConf corr_highConf curBeta_highConf curBetaOnly_highConf curBen_highConf curCor_highConf corr_aboveAvgConf curBeta_aboveAvgConf curBetaOnly_aboveAvgConf curBen_aboveAvgConf curCor_aboveAvgConf corr_rememberedStrictAboveAvg curBeta_rememberedStrictAboveAvg curBetaOnly_rememberedStrictAboveAvg curBen_rememberedStrictAboveAvg curCor_rememberedStrictAboveAvg corr_rememberedLenientAboveAvg curBeta_rememberedLenientAboveAvg curBetaOnly_rememberedLenientAboveAvg curBen_rememberedLenientAboveAvg curCor_rememberedLenientAboveAvg corr_rememberedStrictHigh curBeta_rememberedStrictHigh curBetaOnly_rememberedStrictHigh curBen_rememberedStrictHigh curCor_rememberedStrictHigh corr_rememberedLenientHigh curBeta_rememberedLenientHigh curBetaOnly_rememberedLenientHigh curBen_rememberedLenientHigh curCor_rememberedLenientHigh)
+num_covariates=${#covariates[@]}
+echo $num_covariates
+
+interaction=(grCorr_curiosity grCorr_confidence grCorr_cuedRecallStrict grCurBeta_cuedRecallStrict grCurBetaOnly_cuedRecallStrict grCurBen_cuedRecallStrict grCurCor_cuedRecallStrict grCorr_cuedRecallLenient grCurBeta_cuedRecallLenient grCurBetaOnly_cuedRecallLenient grCurBen_cuedRecallLenient grCurCor_cuedRecallLenient grCorr_allConf grCurBeta_allConf grCurBetaOnly_allConf grCurBen_allConf grCurCor_allConf grCorr_highConf grCurBeta_highConf grCurBetaOnly_highConf grCurBen_highConf grCurCor_highConf grCorr_aboveAvgConf grCurBeta_aboveAvgConf grCurBetaOnly_aboveAvgConf grCurBen_aboveAvgConf grCurCor_aboveAvgConf grCorr_rememberedStrictAboveAvg grCurBeta_rememberedStrictAboveAvg grCurBetaOnly_rememberedStrictAboveAvg grCurBen_rememberedStrictAboveAvg grCurCor_rememberedStrictAboveAvg grCorr_rememberedLenientAboveAvg grCurBeta_rememberedLenientAboveAvg grCurBetaOnly_rememberedLenientAboveAvg grCurBen_rememberedLenientAboveAvg grCurCor_rememberedLenientAboveAvg grCorr_rememberedStrictHigh grCurBeta_rememberedStrictHigh grCurBetaOnly_rememberedStrictHigh grCurBen_rememberedStrictHigh grCurCor_rememberedStrictHigh grCorr_rememberedLenientHigh grCurBeta_rememberedLenientHigh grCurBetaOnly_rememberedLenientHigh grCurBen_rememberedLenientHigh grCurCor_rememberedLenientHigh)
+num_interaction=${#interaction[@]}
+echo $num_interaction
+
+# define ROI masks
+mask_dir="/storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/"
+masks=(pHPC aHPC HPC VTA Caudate NAcc GM)
+masks=(GM)
+
+mask_files=(HPC_posterior_resampled_EPI.nii.gz HPC_anterior_resampled_EPI.nii.gz HPC_resampled_EPI.nii.gz SNVTA_resampled_EPI.nii.gz Caudate_resampled_EPI.nii.gz NAcc_resampled_EPI.nii.gz wholeBrain_mask.nii.gz)
+mask_files=(wholeBrain_mask.nii.gz)
+
+num_masks=${#masks[@]}
+
+
+# loop over masks to create a 3dISC for each mask
+for (( m=0; m<${num_masks}; m++));
+    do
+
+	# loop over covariates to create a 3dISC for each of them
+	for (( v=0; v<${num_covariates}; v++));
+	
+		do
+        # define variables
+        cov=${covariates[$v]}
+		int=${interaction[$v]}
+		mask=${masks[$m]}
+		mask_f=${mask_files[$m]}
+
+		# specify 3dISC command including group
+		scriptdir=$topdir"scripts/ISC_RSA_inclGroup"
+		mkdir -p $scriptdir
+		cd $scriptdir
+
+		printf "3dISC -prefix ISC_magictrickwatching_"$cov"_"$mask" -jobs 4 \\" > ./3dISC_magictrickwatching_"$cov"_"$mask" #name and number of jobs
+		printf "\n\t -model 'grp+$cov+$int+(1|Subj1)+(1|Subj2)' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # model
+		printf "\n\t -qVars   'grp,$cov,$int' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # qVars
+		printf "\n\t -qVarCenters   '$cov,$int' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # qVarCenters
+		printf "\n\t -gltCode ave '1 0 0 0' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode G11vG22 '0 1 0 0' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode G11 '1 0.5 0 0' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode G22 '1 -0.5 0 0' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode $cov '0 0 1 0'  \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode "$cov"1v"$cov"2 '0 0 0 1'\\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode "$cov"1 '0 0 1 0.5'  \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode "$cov"2 '0 0 1 -0.5'  \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -mask $mask_dir$mask_f \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # mask
+		printf "\n\t -dataTable @dataTable_magictrickwatching_memo.txt \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # datatable
+
+		# specify 3dISC command excluding group
+		scriptdir=$topdir"scripts/ISC_RSA_exclGroup"
+		mkdir -p $scriptdir
+		cd $scriptdir
+
+		printf "3dISC -prefix ISC_magictrickwatching_"$cov"_"$mask" -jobs 4 \\" > ./3dISC_magictrickwatching_"$cov"_"$mask" #name and number of jobs
+		printf "\n\t -model '$cov+(1|Subj1)+(1|Subj2)' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # model
+		printf "\n\t -qVars   '$cov' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # qVars
+		printf "\n\t -qVarCenters   '$cov' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # qVarCenters
+		printf "\n\t -gltCode ave '1 0' \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -gltCode "$cov"exclGroup '0 1'  \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # contrasts
+		printf "\n\t -mask $mask_dir$mask_f \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # mask
+		printf "\n\t -dataTable @dataTable_magictrickwatching_memo.txt \\" >> ./3dISC_magictrickwatching_"$cov"_"$mask" # datatable 
+
+	done
+done
+
+
+
+
+
+

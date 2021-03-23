@@ -11,6 +11,7 @@ path="/storage/shared/research/cinn/2018/MAGMOT"
 
 # define directories
 BIDS_dir="$path"/MAGMOT_BIDS
+raw_dir="$path"/rawdata
 deriv_dir="$path"/derivatives
 software_dir="$path"/software/pyfMRIqc-master
 
@@ -22,7 +23,7 @@ subjects=($(ls -d sub*))
 
 #subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006) # script development
 #subjects=(sub-control037) # script development
-#subjects=(sub-control001)
+subjects=(sub-experimental030)
 
 # create file to save censor values
 #printf "subject\tscan\tvolumes\tthreshold_02mm\tfraction_02mm\tthreshold_03mm\tfraction_03mm\tthreshold_05mm\tfraction_05mm\tthreshold_1mm\tfraction_1mm" > "$path"/derivatives/pyfMRIqc/afni_volreg_quick_censor_count.tsv #file header
@@ -34,39 +35,42 @@ for subject in "${subjects[@]}"; do
 	echo $subject
 
 	# define all necessary directories
-	fildirTASK=$deriv_dir/$subject/func	
-	fildirREST=$BIDS_dir/$subject/func
-	fildirQC=$deriv_dir/pyfMRIqc/$subject	
-	mkdir $fildirQC
+	#fildirTASK=$deriv_dir/$subject/func	
+	#fildirREST=$BIDS_dir/$subject/func
+	filedir=$raw_dir/$subject/func
+	filedirQC=$deriv_dir/pyfMRIqc/$subject	
+	mkdir $filedirQC
 
 	# copy task files
-	cd $fildirTASK
-	filesTASK=($(ls -d *magictrickwatching*cut_bold.nii.gz))
-	for fileTASK in "${filesTASK[@]}"; do
-		searchstring="nii.gz"
-		replacestring="nii.gz"	
-		fileTASK_new="${fileTASK/$searchstring/$replacestring}"	
-		3dcopy $fildirTASK/$fileTASK $fildirQC/$fileTASK_new
-	done	
+	#cd $fildirTASK
+	#filesTASK=($(ls -d *magictrickwatching*cut_bold.nii.gz))
+	#for fileTASK in "${filesTASK[@]}"; do
+	#	searchstring="nii.gz"
+	#	replacestring="nii.gz"	
+	#	fileTASK_new="${fileTASK/$searchstring/$replacestring}"	
+	#	3dcopy $fildirTASK/$fileTASK $fildirQC/$fileTASK_new
+	#done	
 
 	# copy rest files
-	cd $fildirREST
-	filesREST=($(ls -d *rest*.nii.gz))
-	for fileREST in "${filesREST[@]}"; do
-		searchstring="nii.gz"
-		replacestring="nii.gz"	
-		fileREST_new="${fileREST/$searchstring/$replacestring}"	
-		3dcopy $fildirREST/$fileREST $fildirQC/$fileREST_new
-	done
+	#cd $fildirREST
+	#filesREST=($(ls -d *rest*.nii.gz))
+	#for fileREST in "${filesREST[@]}"; do
+	#	searchstring="nii.gz"
+	#	replacestring="nii.gz"	
+	#	fileREST_new="${fileREST/$searchstring/$replacestring}"	
+	#	3dcopy $fildirREST/$fileREST $fildirQC/$fileREST_new
+	#done
 
 	# create files array with nifti files
-	cd $fildirQC
+	cd $filedir
 	files=($(ls -d sub*.nii*))
+	cd $filedirQC
 
 	# loop through the files that have been copied over
 	for file in "${files[@]}"; do
 
-		cd $fildirQC
+		# copy file
+		3dcopy $filedir/$file $filedirQC/$file
 
 		#########################
 		### MOTION CORRECTION ###
@@ -115,7 +119,7 @@ for subject in "${subjects[@]}"; do
 
 		# print values to file
 		# printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05\t$thresh_1\t$frac_1" >> "$path"/derivatives/pyfMRIqc/afni_volreg_quick_censor_count.tsv
-		printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05\t$thresh_1\t$frac_1" >> "$path"/derivatives/pyfMRIqc/afni_volreg_censor_count.tsv
+		printf "\n$subject\t$file\t$num_vols\t$thresh_02\t$frac_02\t$thresh_03\t$frac_03\t$thresh_05\t$frac_05\t$thresh_1\t$frac_1" >> $deriv_dir/pyfMRIqc/afni_volreg_censor_count.tsv
 
 		##########################
 		###### CREATE MASK  ######
@@ -138,11 +142,11 @@ for subject in "${subjects[@]}"; do
 		#cd /storage/shared/research/cinn/2018/MAGMOT/software/pyfMRIqc-master
 
 		# define input parameters
-		func_nift_file=$fildirQC/"${file}"
+		func_nift_file=$filedirQC/"${file}"
 		SNR_voxel_perc=25
 		#mask_threshold=200
-		motion_file=$fildirQC/"${motionfile_prefix}"
-		mask_nift_file=$fildirQC/"${mask_prefix}"
+		motion_file=$filedirQC/"${motionfile_prefix}"
+		mask_nift_file=$filedirQC/"${mask_prefix}"
 
 		#python pyfMRIqc.py -n $func_nift_file -s $SNR_voxel_perc -m $motion_file -k $mask_nift_file
 		python $software_dir/pyfMRIqc.py -n $func_nift_file -s $SNR_voxel_perc -m $motion_file -k $mask_nift_file

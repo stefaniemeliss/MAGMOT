@@ -1,0 +1,17 @@
+#!/bin/bash
+
+module load afni19.3.03
+
+cd /storage/shared/research/cinn/2018/MAGMOT/derivatives/restingstate/ISC/
+
+# find all pre-learning ISC maps
+pre=(`find . -name "*run-2*"`)
+#find all post-learning ISC maps
+post=(`find . -name "*run-1*"`)
+
+# compute mean of pre- and post learning ISC
+3dMean -prefix avg_ISC_restingstate_run-1.nii.gz ${pre[@]}
+3dMean -prefix avg_ISC_restingstate_run-2.nii.gz ${post[@]}
+
+# compute difference
+3dcalc -a avg_ISC_restingstate_run-1.nii.gz -b avg_ISC_restingstate_run-2.nii.gz -expr 'b-a' -prefix avg_ISC_restingstate_change.nii.gz

@@ -26,7 +26,6 @@ for subject in "${subjects[@]}"; do
 	
 	# define anat scan
 	anat_scan=$anat_dir/anatUAC."${subject}".nii # this is the uniformized, intensity-corrected and ceiling-capped image.
-/storage/shared/research/cinn/2018/MAGMOT/derivatives/afniproc/sub-control001/SSwarper/anatUAC.sub-control001.nii
 	fs_anat=T1.nii
 
 	# create anat folder in derivatives

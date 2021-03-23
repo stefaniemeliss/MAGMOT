@@ -1,0 +1,14 @@
+3dISC -prefix ISC_magictrickwatching_uniqueBen_cuedRecallStrict_GM -jobs 4 \
+	 -model 'grp+uniqueBen_cuedRecallStrict+grUniqueBen_cuedRecallStrict+(1|Subj1)+(1|Subj2)' \
+	 -qVars   'grp,uniqueBen_cuedRecallStrict,grUniqueBen_cuedRecallStrict' \
+	 -qVarCenters   'uniqueBen_cuedRecallStrict,grUniqueBen_cuedRecallStrict' \
+	 -gltCode ave '1 0 0 0' \
+	 -gltCode G11vG22 '0 1 0 0' \
+	 -gltCode G11 '1 0.5 0 0' \
+	 -gltCode G22 '1 -0.5 0 0' \
+	 -gltCode uniqueBen_cuedRecallStrict '0 0 1 0'  \
+	 -gltCode uniqueBen_cuedRecallStrict1vuniqueBen_cuedRecallStrict2 '0 0 0 1'\
+	 -gltCode uniqueBen_cuedRecallStrict1 '0 0 1 0.5'  \
+	 -gltCode uniqueBen_cuedRecallStrict2 '0 0 1 -0.5'  \
+	 -mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-GM_mask.nii.gz \
+	 -dataTable @dataTable_magictrickwatching_unique.txt \

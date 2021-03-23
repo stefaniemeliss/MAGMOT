@@ -1,0 +1,14 @@
+3dISC -prefix ISC_magictrickwatching_uniqueBen_aboveAvgConf_GM -jobs 4 \
+	 -model 'grp+uniqueBen_aboveAvgConf+grUniqueBen_aboveAvgConf+(1|Subj1)+(1|Subj2)' \
+	 -qVars   'grp,uniqueBen_aboveAvgConf,grUniqueBen_aboveAvgConf' \
+	 -qVarCenters   'uniqueBen_aboveAvgConf,grUniqueBen_aboveAvgConf' \
+	 -gltCode ave '1 0 0 0' \
+	 -gltCode G11vG22 '0 1 0 0' \
+	 -gltCode G11 '1 0.5 0 0' \
+	 -gltCode G22 '1 -0.5 0 0' \
+	 -gltCode uniqueBen_aboveAvgConf '0 0 1 0'  \
+	 -gltCode uniqueBen_aboveAvgConf1vuniqueBen_aboveAvgConf2 '0 0 0 1'\
+	 -gltCode uniqueBen_aboveAvgConf1 '0 0 1 0.5'  \
+	 -gltCode uniqueBen_aboveAvgConf2 '0 0 1 -0.5'  \
+	 -mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-GM_mask.nii.gz \
+	 -dataTable @dataTable_magictrickwatching_unique.txt \

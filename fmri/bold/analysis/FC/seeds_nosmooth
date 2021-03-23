@@ -1,0 +1,2 @@
+RSFC_nosmooth_run-1_pearson_rewardHPC /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-HPC_desc-rewardsensitiv_mask.nii.gz
+RSFC_nosmooth_run-1_pearson_aHPC /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-aHPC_mask.nii.gz
