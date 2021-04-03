@@ -49,11 +49,11 @@ echo $#subjects
 #set subjects	= sub-control002
 
 # create header of TSNR output file
-echo "scan\tTSNR" > $outroot/TSNR.txt
+echo "scan\tTSNR" > $outroot/data_TSNR.txt
 
-echo "scan\tdL\tdP\tdS\tpitch\troll\tyaw" > $outroot/motion.txt
+echo "scan\tdL\tdP\tdS\tpitch\troll\tyaw" > $outroot/data_motion.txt
 
-echo "scan\txmin\txmax\tymin\tymax\tzmin\tzmax" > $outroot/extents.txt
+echo "scan\txmin\txmax\tymin\tymax\tzmin\tzmax" > $outroot/data_extents.txt
 
 
 # for each subject in the subjects array
@@ -140,7 +140,7 @@ foreach subj ($subjects)
 	# create files that have file name as first column and motion values as second column, once just for this run and once in the root directory for ALL scans
 	awk -F, 'BEGIN{print "scan", "\t", "dL", "\t", "dP", "\t", "dS", "\t", "pitch", "\t", "roll", "\t", "yaw"}{print FILENAME"\t"$0}' motion.$epi_id > absolute.motion.$epi_id.txt
 	awk -F, '{print FILENAME"\t"$0}' motion."$epi_id" >> $outdir/"$subj".motion.txt
-	awk -F, '{print FILENAME"\t"$0}' motion."$epi_id" >> $outroot/motion.txt
+	awk -F, '{print FILENAME"\t"$0}' motion."$epi_id" >> $outroot/data_motion.txt
 
 
 	############################################################################
@@ -171,8 +171,8 @@ foreach subj ($subjects)
 	sed 's/       /\t/g' extents_epi_"$epi_id" > epi_"$epi_id"
 
 	# summarise information in file
-	awk -F, '{print FILENAME"\t"$0}' brain_"$epi_id" >> $outroot/extents.txt
-	awk -F, '{print FILENAME"\t"$0}' epi_"$epi_id" >> $outroot/extents.txt
+	awk -F, '{print FILENAME"\t"$0}' brain_"$epi_id" >> $outroot/data_extents.txt
+	awk -F, '{print FILENAME"\t"$0}' epi_"$epi_id" >> $outroot/data_extents.txt
 
 	##########################################################################
 	# once the minimal pre-processing has finished, compute and extract tSNR #
@@ -196,7 +196,7 @@ foreach subj ($subjects)
 	# create files that have file name as first column and TSNR values as second column, once just for this run and once in the root directory for ALL scans
 	awk -F, 'BEGIN{print "scan", "\t", "TSNR"}{print FILENAME"\t"$0}' values.TSNR."$epi_id" > TSNR.$epi_id.txt
 	awk -F, '{print FILENAME"\t"$0}' values.TSNR."$epi_id" >> $outdir/"$subj".TSNR.txt
-	awk -F, '{print FILENAME"\t"$0}' values.TSNR."$epi_id" >> $outroot/TSNR.txt
+	awk -F, '{print FILENAME"\t"$0}' values.TSNR."$epi_id" >> $outroot/data_TSNR.txt
 
 
 	# go back to outdir

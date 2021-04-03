@@ -21,6 +21,7 @@ subjects=($(ls -d sub*))
 #subjects=($(ls -d sub-experimental*))
 #subjects=(sub-control001)
 #subjects=(sub-control003 sub-control017 sub-experimental008 sub-experimental010 sub-experimental018 sub-experimental030)
+subjects=(sub-experimental024)
 
 # define search and replace strings
 searchstring="_bold.nii.gz"
