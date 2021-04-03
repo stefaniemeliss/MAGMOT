@@ -34,4 +34,4 @@ params=$(grep -h ACF $deriv_dir/afniproc/sub*/sub*task-"$task".results/out.ss*.t
 echo $params
 
 # simulate cluster extent threshold
-3dClustSim -acf $params -both -prefix ClustSim_"$task" -nxyz 64 64 76 -dxyz 3 3 3
+3dClustSim -acf $params -both -prefix ClustSim_"$task" -nxyz 64 76 64 -dxyz 3 3 3
