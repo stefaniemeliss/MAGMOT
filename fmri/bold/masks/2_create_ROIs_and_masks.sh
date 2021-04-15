@@ -29,6 +29,40 @@ template_path=`@FindAfniDsetPath $template`
 # copy MNI template that has been used to normalise data to ROI_dir
 3dcopy $template_path/$template $ROI_dir/$template
 
+############### create average EPI and gray matters masks ###############
+
+#cd "$deriv_dir" # change directory to where pre-processed files are
+
+task=both
+
+# define prefix
+epi_ave=sample_task-"$task"_label-automask_average.nii.gz
+epi_mask=sample_label-dilatedGM_mask.nii.gz
+
+gm_ave=sample_task-"$task"_label-gm_average.nii.gz
+gm_mask=sample_label-gm_mask.nii.gz
+
+# define string for the masks that are created during pre-processing
+mask_ea=*_space-MNI152NLin2009cAsym_label-dilatedGM_mask.nii.gz
+
+# create average EPI masks restingstate: Combine individual EPI automasks into a group mask
+3dMean -datum float -prefix $ROI_dir/$epi_ave  $deriv_dir/sub*/func/$mask_ea
+3dcalc -datum float -prefix $ROI_dir/$epi_mask -a $ROI_dir/$epi_ave -expr 'ispositive(a-0.499)'
+
+# remove average
+rm $ROI_dir/$epi_ave
+
+# define string for GM mask in EPI resolution and MNI space (note: this mask is the same for task and rest)
+mask_gm=*_task-rest.results/follow_ROI_FSGMe+tlrc.BRIK.gz
+
+# create average EPI masks restingstate: Combine individual EPI automasks into a group mask
+3dMean -datum float -prefix $ROI_dir/$gm_ave  $deriv_dir/afniproc/sub-*/$mask_gm
+3dcalc -datum float -prefix $ROI_dir/$gm_mask -a $ROI_dir/$gm_ave -expr 'ispositive(a-0.09)'
+
+# remove average
+rm $ROI_dir/$gm_ave
+
+
 ###### create average EPI masks ######
 
 # define prefix
