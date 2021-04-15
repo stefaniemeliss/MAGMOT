@@ -76,13 +76,15 @@ rm AFNI*
 
 # 1. resample to AFNI template
 3dresample -prefix AFNI_FSL_MNI152_FreeSurferConformed_1mm.nii.gz -master $MMC_dir/$epi_mask -input FSL_MNI152_FreeSurferConformed_1mm.nii.gz
-3dresample -prefix AFNI_Yeo2011_7Networks_MNI152.nii.gz -master $MMC_dir/$epi_mask -input Yeo2011_7Networks_MNI152_FreeSurferConformed1mm.nii.gz
+#3dresample -prefix AFNI_Yeo2011_7Networks_MNI152.nii.gz -master $MMC_dir/$epi_mask -input Yeo2011_7Networks_MNI152_FreeSurferConformed1mm.nii.gz
 3dresample -prefix AFNI_Yeo2011_7Networks_MNI152_liberal.nii.gz -master $MMC_dir/$epi_mask -input Yeo2011_7Networks_MNI152_FreeSurferConformed1mm_LiberalMask.nii.gz
+3dresample -prefix AFNI_Yeo2011_17Networks_MNI152_liberal.nii.gz -master $MMC_dir/$epi_mask -input Yeo2011_17Networks_MNI152_FreeSurferConformed1mm_LiberalMask.nii.gz
 
 # 2. refit from orig to MNI space
 3drefit -space MNI AFNI_FSL_MNI152_FreeSurferConformed_1mm.nii.gz
-3drefit -space MNI AFNI_Yeo2011_7Networks_MNI152.nii.gz
+#3drefit -space MNI AFNI_Yeo2011_7Networks_MNI152.nii.gz
 3drefit -space MNI AFNI_Yeo2011_7Networks_MNI152_liberal.nii.gz
+3drefit -space MNI AFNI_Yeo2011_17Networks_MNI152_liberal.nii.gz
 
 # 3. create all 7 networks liberal
 3dcalc -a AFNI_Yeo2011_7Networks_MNI152_liberal.nii.gz -expr 'amongst(a,1)' -short -prefix AFNI_Yeo2011_network1_visual_liberal.nii.gz
@@ -111,6 +113,7 @@ rm $FC_dir/AFNI*
 #3dcopy AFNI_Yeo2011_network1_visual.nii.gz $FC_dir/AFNI_Yeo2011_network1_visual.nii.gz
 #3dcopy AFNI_Yeo2011_network2_somatomotor.nii.gz $FC_dir/AFNI_Yeo2011_network2_somatomotor.nii.gz
 #3dcopy AFNI_Yeo2011_network7_default.nii.gz $FC_dir/AFNI_Yeo2011_network7_default.nii.gz 
+
 
 ############### set up the file used to compute correlations (pearson) ###############
 
