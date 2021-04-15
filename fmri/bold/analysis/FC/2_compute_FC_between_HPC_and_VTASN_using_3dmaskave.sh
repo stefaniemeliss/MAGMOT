@@ -23,20 +23,22 @@ cd $BIDS_dir
 
 # define subjects based on folder names in the BIDS directory
 subjects=($(ls -d sub*))
-#subjects=(sub-control001)
+#subjects=(sub-control001 sub-control002)
+subjects=(sub-control001)
 # sort array
 subjects=($(echo ${subjects[*]}| tr " " "\n" | sort -n))
 
 preproc=(smoothed nosmooth)
 preproc=(preproc nosmooth)
+preproc=(s0 s4 s6 s8)
+preproc=(s4)
 
 for smooth in "${preproc[@]}"; do
 
-    # define ROI masks
-    VTA_fHPC=$FC_dir/VTA_RSFC_"$smooth"_run-1_pearson_rewardHPC.nii.gz
-    VTA_aHPC=$FC_dir/VTA_RSFC_"$smooth"_run-1_pearson_aHPC.nii.gz
 
-VTA_RSFC_nosmooth_run-1_pearson_aHPC.nii.gz
+    # define ROI masks
+    VTA_fHPC=$FC_dir/VTA_RSFC_paired_"$smooth"_rewardHPC.nii.gz
+    VTA_aHPC=$FC_dir/VTA_RSFC_paired_"$smooth"_aHPC.nii.gz
 
     fHPC=$ROI_dir/MNI_res-epi_label-HPC_desc-rewardsensitiv_mask.nii.gz
     aHPC=$ROI_dir/MNI_res-epi_label-aHPC_mask.nii.gz
@@ -46,8 +48,11 @@ VTA_RSFC_nosmooth_run-1_pearson_aHPC.nii.gz
     out_FC_aHPC=FC_"$smooth"_VTA-aHPC.txt
 
     # open file for correlation output
-    printf "BIDS\tRSFC_"$smooth"_fHPC_run-1\tRSFC_"$smooth"_fHPC_run-2\ttaskFC_"$smooth"_fHPC" > "$FC_dir"/$out_FC_fHPC #file header
-    printf "BIDS\tRSFC_"$smooth"_aHPC_run-1\tRSFC_"$smooth"_aHPC_run-2\ttaskFC_"$smooth"_aHPC" > "$FC_dir"/$out_FC_aHPC #file header
+    #printf "BIDS\tRSFC_"$smooth"_fHPC_run-1\tRSFC_"$smooth"_fHPC_run-2\ttaskFC_"$smooth"_fHPC" > "$FC_dir"/$out_FC_fHPC #file header
+    #printf "BIDS\tRSFC_"$smooth"_aHPC_run-1\tRSFC_"$smooth"_aHPC_run-2\ttaskFC_"$smooth"_aHPC" > "$FC_dir"/$out_FC_aHPC #file header
+
+    #printf "BIDS\tRSFC_"$smooth"_fHPC_run-1\tRSFC_"$smooth"_fHPC_run-2" > "$FC_dir"/$out_FC_fHPC #file header
+    #printf "BIDS\tRSFC_"$smooth"_aHPC_run-1\tRSFC_"$smooth"_aHPC_run-2" > "$FC_dir"/$out_FC_aHPC #file header
 
     # define strings for file prefix
     replacestring="maskave_"
@@ -62,11 +67,8 @@ VTA_RSFC_nosmooth_run-1_pearson_aHPC.nii.gz
 	    cd $concat_dir
 
 	    # PRE-PROCESSED AND CONCATENATED RESTING FILES
-        if [[ "$smooth" == *"nosmooth"* ]]; then
-            inputs=("$subject"_task-rest_run-1_desc-"$smooth"_bold.nii.gz "$subject"_task-rest_run-2_desc-"$smooth"_bold.nii.gz "$subject"_task-magictrickwatching_desc-"$smooth"concat_bold.nii.gz)
-        else
-            inputs=("$subject"_task-rest_run-1_desc-"$smooth"_bold.nii.gz "$subject"_task-rest_run-2_desc-"$smooth"_bold.nii.gz "$subject"_task-magictrickwatching_desc-concat_bold.nii.gz)
-        fi
+        inputs=("$subject"_task-rest_run-1_desc-"$smooth"preproc_bold.nii.gz "$subject"_task-rest_run-2_desc-"$smooth"preproc_bold.nii.gz "$subject"_task-magictrickwatching_desc-"$smooth"concat_bold.nii.gz)
+
 
 	    # loop over the preprocessed resting state files and extract average time course
 	    for (( f=0; f<${#inputs[@]}; f++)); do
@@ -78,13 +80,9 @@ VTA_RSFC_nosmooth_run-1_pearson_aHPC.nii.gz
 
             # define search string based on whether its rest or task data
             if [[ "$file" == *"rest"* ]]; then
-                searchstring="desc-"$smooth"_bold.nii.gz"
+                searchstring="desc-"$smooth"preproc_bold.nii.gz"
             else
-                if [[ "$smooth" == *"nosmooth"* ]]; then
-                    searchstring="desc-"$smooth"concat_bold.nii.gz"
-                else
-                    searchstring="desc-concat_bold.nii.gz"
-                fi
+				searchstring="desc-"$smooth"concat_bold.nii.gz"
             fi
 
             echo $searchstring
@@ -115,13 +113,13 @@ VTA_RSFC_nosmooth_run-1_pearson_aHPC.nii.gz
 		    pearson_a=$(awk 'NR==4 {print $3}' $FC_aHPC_prefix)
 
             # add correlation to table
-		    if [[ $f == 0 ]]; then
-			    printf "\n$subject\t$pearson_f" >> "$FC_dir"/$out_FC_fHPC # cor for run-1
-			    printf "\n$subject\t$pearson_a" >> "$FC_dir"/$out_FC_aHPC # cor for run-1
-		    else
-			    printf "\t$pearson_f" >> "$FC_dir"/$out_FC_fHPC # cor for run-2 + task
-			    printf "\t$pearson_a" >> "$FC_dir"/$out_FC_aHPC # cor for run-2 + task
-		    fi
+		    #if [[ $f == 0 ]]; then
+			    #printf "\n$subject\t$pearson_f" >> "$FC_dir"/$out_FC_fHPC # cor for run-1
+			    #printf "\n$subject\t$pearson_a" >> "$FC_dir"/$out_FC_aHPC # cor for run-1
+		    #else
+			    #printf "\t$pearson_f" >> "$FC_dir"/$out_FC_fHPC # cor for run-2 + task
+			    #printf "\t$pearson_a" >> "$FC_dir"/$out_FC_aHPC # cor for run-2 + task
+		    #fi
 
 	    done
 
