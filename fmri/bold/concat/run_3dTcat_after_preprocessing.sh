@@ -20,22 +20,16 @@ cd $BIDS_dir
 
 # define subjects based on folder names in the BIDS directory
 subjects=($(ls -d sub*))
-subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006)
-subjects=(sub-control003)
-#subjects=(sub-experimental016)
+#subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006)
+#subjects=(sub-control003)
+#subjects=(sub-experimental016 sub-control045)
+#subjects=(sub-experimental024)
 
 # define TSV file to read in
-input=$DIR/"scripts/fmri/bold/concat/MAGMOT_inputForConcatenation.tsv"
+input=$DIR/"scripts/fmri/bold/concat/MMC_inputForConcatenation.tsv"
 
-# define search and replace string for file prefix
-searchstring="_desc-preproc_bold.nii.gz"
-replacestring="_desc-concat_bold.nii.gz"
-
-
-#### FOR TESTING #####
-#searchstring="_afniproc.nii.gz"
-#replacestring="_concat.nii.gz"
-
+# define pre-proc
+preproc=(s0 s4 s6 s8)
 
 
 # for each subject in the subjects array
@@ -43,73 +37,134 @@ for subject in "${subjects[@]}"; do
 
 	echo $subject
 
-	# define output_dir
-	out_dir=$deriv_dir/$subject/func/
+	# define concat directory
+	outdir=$deriv_dir/$subject/func
 
 	# load in pre-processed task file
-	cd $out_dir
-	file="$subject"_task-magictrickwatching_desc-preproc_bold.nii.gz
+	cd $outdir
 
-	# set variable to track appearance of first magic trick
-	i=0
-	first=1
+	for smooth in "${preproc[@]}"; do
 
-	#### FOR TESTING #####
-	#in_dir=$deriv_dir/magictrickwatching/concat/$subject/
-	#cd $in_dir
-	#file="$subject"_task-magictrickwatching_afniproc.nii.gz
+		############### concatenate TASK files ###############
 
-	# read in file with information about scan duration
-	{
-	IGNORE_FL=T
-	while read ID stim_file start_vol end_vol
-		do
+		# define task
+		task=magictrickwatching
 
-		# if the line is header set IGNORE_FL to F and skip line
-		if [[ ${ID} = "ID" ]]; then
-			IGNORE_FL=F
+		# define searchstring and replace string
+		searchstring="desc-"$smooth"preproc_bold.nii.gz"
+		replacestring="desc-"$smooth"concat_bold.nii.gz"
+
+		# define niifile
+		taskfile="$subject"_task-"$task"_"$searchstring"
+
+		# set variable to track appearance of first magic trick
+		i=0
+		first=1
+
+		# read in file with information about scan duration
+		{
+		IGNORE_FL=T
+		while read ID stim_file start_vol end_vol
+			do
+
+			# if the line is header set IGNORE_FL to F and skip line
+			if [[ ${ID} = "ID" ]]; then
+				IGNORE_FL=F
+					continue
+			fi
+
+			# Ignore all lines until actual columns are found
+			if [[ ${IGNORE_FL} = T  ]]; then
 				continue
-		fi
+			fi
 
-		# Ignore all lines until actual columns are found
-		if [[ ${IGNORE_FL} = T  ]]; then
-			continue
-		fi
+			# when the right information are available for the subject
+			if [[ "$ID" == *"$subject"* ]]; then
 
-		# when the right information are available for the subject
-		if [[ "$ID" == *"$subject"* ]]; then
+				# update variable that tracks appearance of magictricks
+				((i=i+1))
 
-			# update variable that tracks appearance of magictricks
-			((i=i+1))
+				# when we're dealing with the first magic trick
+				if [[ $i -eq $first ]]; then
 
-			# when we're dealing with the first magic trick
-			if [[ $i -eq $first ]]; then
+					echo "processing concatenation"
+					# determine start and end vol for the first magic trick and save them in select
+					select=`echo $start_vol..$end_vol`
 
-				echo "processing concatenation"
+				else
 
-				# determine start and end vol for the first magic trick and save them in select
-				select=`echo $start_vol..$end_vol`
+					# determine start and end vol for the next magic trick and save them in select_temp
+					select_temp=`echo $start_vol..$end_vol`
+					#update select to include start and end of all magic tricks processed so far
+					select=`echo $select,$select_temp`
 
-			else
+				fi
 
-				# determine start and end vol for the next magic trick and save them in select_temp
-				select_temp=`echo $start_vol..$end_vol`
-				#update select to include start and end of all magic tricks processed so far
-				select=`echo $select,$select_temp`
 
 			fi
 
+			done < "$input"
+			}
+
+		
+
+		# define prefix
+		prefix="${taskfile/$searchstring/$replacestring}"
+
+		# create task concat
+		if [ ! -f "$prefix" ]; then
+
+			echo $prefix
+
+			# once input file is processed
+			echo "selected vols: $select"
+
+			# 3dTcat to concatenate data using selected volumes
+			3dTcat $taskfile[$select] -prefix $prefix -session $outdir
+
+			# extract final file length
+			3dinfo $prefix > info.txt
+			numvol=$(awk 'NR==18 {print $6}' info.txt)
+			echo "final number of vols: $numvol"
+			rm info.txt
 
 		fi
 
-		done < "$input"
-		}
 
-	# once input file is processed
-	echo "selected vols: $select"
+		
 
-	# 3dTcat to concatenate data using selected volumes
-	prefix="${file/$searchstring/$replacestring}"
-	3dTcat $file[$select] -dry -prefix $prefix -session $out_dir
+
+
+		############### concatenate REST files ###############
+
+		# define task
+		task=rest
+
+
+		# define searchstring and replace string
+		searchstring="desc-"$smooth"preproc_bold.nii.gz"
+		replacestring1="run-1_desc-"$smooth"preproc_bold.nii.gz"
+		replacestring2="run-2_desc-"$smooth"preproc_bold.nii.gz"
+
+		# define niifile
+		restfile="$subject"_task-"$task"_"$searchstring"
+
+		# define tcat prefix
+		prefix1="${restfile/$searchstring/$replacestring1}"
+		prefix2="${restfile/$searchstring/$replacestring2}"
+
+		# create run-1 (first 300 vols)
+		if [ ! -f "$prefix1" ]; then
+			echo $prefix1
+			3dTcat -prefix $prefix1 $restfile[0..299]
+		fi
+
+		# create run-2 (second 300 vols)
+		if [ ! -f "$prefix2" ]; then
+			echo $prefix2
+			3dTcat -prefix $prefix2 $restfile[300..599]
+		fi
+
+	done
 
 done

@@ -1,0 +1,14 @@
+3dISC -prefix ISC_magictrickwatching_curCor_highConf_GM -jobs 4 \
+	 -model 'grp+curCor_highConf+grCurCor_highConf+(1|Subj1)+(1|Subj2)' \
+	 -qVars   'grp,curCor_highConf,grCurCor_highConf' \
+	 -qVarCenters   'curCor_highConf,grCurCor_highConf' \
+	 -gltCode ave '1 0 0 0' \
+	 -gltCode G11vG22 '0 1 0 0' \
+	 -gltCode G11 '1 0.5 0 0' \
+	 -gltCode G22 '1 -0.5 0 0' \
+	 -gltCode curCor_highConf '0 0 1 0'  \
+	 -gltCode curCor_highConf1vcurCor_highConf2 '0 0 0 1'\
+	 -gltCode curCor_highConf1 '0 0 1 0.5'  \
+	 -gltCode curCor_highConf2 '0 0 1 -0.5'  \
+	 -mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-GM_mask.nii.gz \
+	 -dataTable @dataTable_magictrickwatching_memo.txt \

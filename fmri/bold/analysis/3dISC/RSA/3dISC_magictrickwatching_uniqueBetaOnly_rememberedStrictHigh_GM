@@ -1,0 +1,14 @@
+3dISC -prefix ISC_magictrickwatching_uniqueBetaOnly_rememberedStrictHigh_GM -jobs 4 \
+	 -model 'grp+uniqueBetaOnly_rememberedStrictHigh+grUniqueBetaOnly_rememberedStrictHigh+(1|Subj1)+(1|Subj2)' \
+	 -qVars   'grp,uniqueBetaOnly_rememberedStrictHigh,grUniqueBetaOnly_rememberedStrictHigh' \
+	 -qVarCenters   'uniqueBetaOnly_rememberedStrictHigh,grUniqueBetaOnly_rememberedStrictHigh' \
+	 -gltCode ave '1 0 0 0' \
+	 -gltCode G11vG22 '0 1 0 0' \
+	 -gltCode G11 '1 0.5 0 0' \
+	 -gltCode G22 '1 -0.5 0 0' \
+	 -gltCode uniqueBetaOnly_rememberedStrictHigh '0 0 1 0'  \
+	 -gltCode uniqueBetaOnly_rememberedStrictHigh1vuniqueBetaOnly_rememberedStrictHigh2 '0 0 0 1'\
+	 -gltCode uniqueBetaOnly_rememberedStrictHigh1 '0 0 1 0.5'  \
+	 -gltCode uniqueBetaOnly_rememberedStrictHigh2 '0 0 1 -0.5'  \
+	 -mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-GM_mask.nii.gz \
+	 -dataTable @dataTable_magictrickwatching_unique.txt \

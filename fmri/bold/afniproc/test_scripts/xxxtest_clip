@@ -1,0 +1,135 @@
+#!/bin/bash
+
+################################################################################
+# non-linear registration to MNI template (non-linear 2009c)
+################################################################################
+
+
+# define path
+DIR="/storage/shared/research/cinn/2018/MAGMOT"
+
+# change directory to BIDS folder
+BIDS_dir="$DIR"/MAGMOT_BIDS
+# change directory to the raw NIFI files
+cd $BIDS_dir
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+#subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006)
+#subjects=(sub-control001 sub-control002 sub-control003)
+#subjects=(sub-experimental005)
+subjects=(sub-control003)
+
+# define derivatives directory
+deriv_dir="$DIR"/derivatives
+
+# define which template to use and where to find them
+template=MNI152_2009_template_SSW.nii.gz
+template_path=`@FindAfniDsetPath $template`
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+
+    echo "###################################################################################"	
+    echo "@SSwarper for subject $subject"
+    echo "###################################################################################"	
+
+	# create output folder
+	out_root=$deriv_dir/afniproc
+	out_dir=$out_root/$subject/clip
+	mkdir $out_dir
+
+	# define BIDS anat folder
+	anat_dir=$DIR/MAGMOT_BIDS/"${subject}"/anat
+    anat="$subject"_rec-NORM_T1w.nii.gz
+    anat_rf="$subject"_refit.nii.gz
+
+    # copy original anatomical scan
+	cd $out_dir
+    3dcopy $anat_dir/$anat ./$anat
+
+	# define prefix
+	prefix_zp="$subject"_zp.nii.gz
+	prefix_zp_shft="$subject"_zp_shft.nii.gz
+
+    # shft vs cm
+	prefix_zp_shft_rf="$subject"_zp_shft_refit.nii.gz
+	prefix_zp_cm="$subject"_zp_cm.nii.gz
+	prefix_zp_cm_rf="$subject"_zp_cm_refit.nii.gz
+    # first cm than shft
+	prefix_zp_cm_shft="$subject"_zp_cm_shft.nii.gz
+	prefix_zp_cm_shft_rf="$subject"_zp_cm_shft_refit.nii.gz
+
+    mkdir $out_dir/"$subject"_zp_shft
+    mkdir $out_dir/"$subject"_zp_shft_move
+    mkdir $out_dir/"$subject"_zp_cd
+    mkdir $out_dir/"$subject"_zp_cd_move
+
+
+    prefix_cv="$subject"_cv.nii.gz
+    prefix_cv_shft="$subject"_cv_shft.nii.gz	
+    prefix_cv_shft_rf="$subject"_cv_refit.nii.gz	
+
+	###### 3dZeropad ###### 
+
+	# use 3dZeropad to remove neck
+	3dZeropad -I -70 -prefix $prefix_zp $anat
+    # align centers between anatomical and template
+    @Align_Centers \
+        -cm \
+        -prefix $prefix_zp_shft \
+        -dset $prefix_zp \
+        -base $template_path/$template
+	# set center of mass to spot in brain (this is what PT did here https://afni.nimh.nih.gov/afni/community/board/read.php?1,163573,163771#msg-163771)
+	3dcopy $prefix_zp $prefix_zp_cm
+	3dCM -set 0 0 0 $prefix_zp_cm
+
+    # align again after the center of mass was changed
+    @Align_Centers \
+        -cm \
+        -prefix $prefix_zp_cm_shft \
+        -dset $prefix_zp_cm \
+        -base $template_path/$template
+
+	###### @clip_volume ###### 
+
+	# use @clip_volume to remove neck
+	@clip_volume -below 20 -prefix $prefix_cv -input $anat
+    # align centers between anatomical and template
+    @Align_Centers \
+        -cm \
+        -prefix $prefix_cv_shft \
+        -dset $prefix_cv \
+        -base $template_path/$template
+
+
+	# refit to MNI for visualisation purposes: first copy files, then refit
+	3dcopy $anat $anat_rf	
+	3dcopy $prefix_zp_shft $prefix_zp_shft_rf
+	3dcopy $prefix_zp_cm $prefix_zp_cm_rf
+	3dcopy $prefix_zp_cm_shft $prefix_zp_cm_shft_rf
+	3dcopy $prefix_cv_shft $prefix_cv_shft_rf
+
+	3drefit -space MNI $anat_rf
+	3drefit -space MNI $prefix_zp_shft_rf
+	3drefit -space MNI $prefix_zp_cm_rf
+	3drefit -space MNI $prefix_zp_cm_shft_rf
+	3drefit -space MNI $prefix_cv_shft_rf
+
+	# copy template into directory for visualisation purposes
+	3dcopy $template_path/$template $template
+
+    mkdir 
+    mkdir 
+    mkdir 
+    mkdir 
+
+	@SSwarper -input sub-control003_zp_shft.nii.gz -odir $out_dir/"$subject"_zp_shft -base $template_path/$template -subid sub-control003_zp_shft
+	@SSwarper -input sub-control003_zp_cm.nii.gz -odir $out_dir/"$subject"_zp_shft_move -base $template_path/$template -subid sub-control003_zp_cm
+
+	@SSwarper -input sub-control003_zp_shft.nii.gz -odir $out_dir/"$subject"_zp_cd -base $template_path/$template -subid sub-control003_zp_shft_move -giant_move
+	@SSwarper -input sub-control003_zp_cm.nii.gz -odir $out_dir/"$subject"_zp_cd_move -base $template_path/$template -subid sub-control003_zp_cm_move -giant_move
+
+    afni &
+
+done

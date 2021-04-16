@@ -1,0 +1,139 @@
+#!/bin/bash
+
+module load afni19.3.03
+source ~/.afni.rc
+# this script runs the ISC-RSA analyses
+
+
+# define path
+# define path
+path="/storage/shared/research/cinn/2018/MAGMOT"
+deriv_dir="$path"/derivatives
+ISC_path="$deriv_dir"/ISC
+ana_root=$deriv_dir/analysis/"$task"
+ana_path="$ana_root"/3dISC
+CS_path=$ana_root/3dClustSim
+
+script_path=$path/scripts/fmri/bold/analysis/3dISC
+script_out=$script_path/RSA
+
+# Set directory
+cd $ana_path
+
+# define list of covariates and the interaction term that will be inlcuded in IS-RSA analysis
+covariates=(corr_curiosity corr_confidence corr_aboveAvgConf curBeta_aboveAvgConf curBen_aboveAvgConf curCor_aboveAvgConf corr_cuedRecallStrict curBeta_cuedRecallStrict curBen_cuedRecallStrict curCor_cuedRecallStrict corr_cuedRecallLenient curBeta_cuedRecallLenient curBen_cuedRecallLenient curCor_cuedRecallLenient corr_allConf curBeta_allConf curBen_allConf curCor_allConf corr_highConf curBeta_highConf curBen_highConf curCor_highConf corr_rememberedStrictAboveAvg curBeta_rememberedStrictAboveAvg curBen_rememberedStrictAboveAvg curCor_rememberedStrictAboveAvg corr_rememberedLenientAboveAvg curBeta_rememberedLenientAboveAvg curBen_rememberedLenientAboveAvg curCor_rememberedLenientAboveAvg corr_rememberedStrictHigh curBeta_rememberedStrictHigh curBen_rememberedStrictHigh curCor_rememberedStrictHigh corr_rememberedLenientHigh curBeta_rememberedLenientHigh  curBen_rememberedLenientHigh curCor_rememberedLenientHigh uniqueCurAboveAvgConf uniqueMemAboveAvgConf uniqueConfidence)
+
+# define list of covariates and the interaction term that will be inlcuded in IS-RSA analysis
+covariates=(corr_curiosity corr_aboveAvgConf curBeta_aboveAvgConf curBetaOnly_aboveAvgConf curBen_aboveAvgConf curCor_aboveAvgConf uniqueCur_aboveAvgConf uniqueMem_aboveAvgConf uniqueBeta_aboveAvgConf uniqueBetaOnly_aboveAvgConf uniqueBen_aboveAvgConf uniqueCor_aboveAvgConf)
+
+covariates=(uniqueCur_aboveAvgConf uniqueMem_aboveAvgConf uniqueBeta_aboveAvgConf)
+
+num_covariates=${#covariates[@]}
+
+# define ROI masks
+masks=(GM)
+#masks=(GruberVTA GruberNAcc GruberHPC) # redo with new ROI masks
+
+num_masks=${#masks[@]}
+
+
+# loop over masks to create a 3dISC for each mask
+for (( m=0; m<${num_masks}; m++)); do 
+
+
+		# cluster for effect of covariate bi-sided
+		3dClusterize                  \
+			-inset ISC_magictrickwatching_"$mask"+tlrc.      \
+			-ithr 1                    \
+			-idat 0                    \
+			-NN 1                      \
+			-bisided p=0.001           \
+			-clust_nvox 32            \
+			-pref_dat Effect_magictrickwatching_bisided.nii.gz  \
+			-pref_map Clust_magictrickwatching_bisided.nii.gz > Clust_magictrickwatching_bisided.txt
+
+		# get atlas locations of cluster
+		whereami                                                              \
+   			-tab                                                               \
+   			-coord_file Clust_"$cov"_bisided.txt'[1,2,3]'                               \
+   			> Whereami_Clust_"$cov"_bisided.txt
+
+		# cluster for group effect in covariate bi-sided
+		3dClusterize                  \
+			-inset ISC_magictrickwatching_"$mask"+tlrc.      \
+			-ithr 3                    \
+			-idat 2                    \
+			-NN 1                      \
+			-bisided p=0.001           \
+			-clust_nvox 32            \
+			-pref_dat Effect_group_magictrickwatching_bisided.nii.gz  \
+			-pref_map Clust_group_magictrickwatching_bisided.nii.gz > Clust_group_magictrickwatching_bisided.txt 
+
+        3dcalc -a Effect_group_magictrickwatching_bisided.nii.gz -expr 'posval(a)' -prefix Effect_group_magictrickwatching_positive.nii.gz
+        3dcalc -a Effect_group_magictrickwatching_bisided.nii.gz -b Effect_group_magictrickwatching_positive.nii.gz -expr 'a-b' -prefix Effect_group_magictrickwatching_negative.nii.gz
+
+
+		# get atlas locations of cluster
+		whereami                                                              \
+   			-tab                                                               \
+   			-coord_file Clust_group_magictrickwatching_bisided.txt'[1,2,3]'                               \
+   			> Whereami_Clust_group_magictrickwatching_bisided.txt
+
+
+	# loop over covariates to create a 3dISC for each of them
+    for (( v=0; v<${num_covariates}; v++)); do
+
+        # define variables
+        cov=${covariates[$v]}
+		mask=${masks[$m]}
+
+
+		# if NN = 2, clust size = 15 (p < 0.05)
+		# if NN = 1, clust size = 16 (p < 0.05)
+
+		# adding - binary writes results in mask
+		
+
+		# cluster for effect of covariate bi-sided
+		3dClusterize                  \
+			-inset ISC_magictrickwatching_"$cov"_"$mask"+tlrc.      \
+			-ithr 9                    \
+			-idat 8                    \
+			-NN 1                      \
+			-bisided p=0.001           \
+			-clust_nvox 32            \
+			-pref_dat Effect_"$cov"_bisided.nii.gz  \
+			-pref_map Clust_"$cov"_bisided.nii.gz > Clust_"$cov"_bisided.txt
+
+		# get atlas locations of cluster
+		whereami                                                              \
+   			-tab                                                               \
+   			-coord_file Clust_"$cov"_bisided.txt'[1,2,3]'                               \
+   			> Whereami_Clust_"$cov"_bisided.txt
+
+		# cluster for group effect in covariate bi-sided
+		3dClusterize                  \
+			-inset ISC_magictrickwatching_"$cov"_"$mask"+tlrc.      \
+			-ithr 11                    \
+			-idat 10                    \
+			-NN 1                      \
+			-bisided p=0.001           \
+			-clust_nvox 32            \
+			-pref_dat Effect_group_"$cov"_bisided.nii.gz  \
+			-pref_map Clust_group_"$cov"_bisided.nii.gz > Clust_group_"$cov"_bisided.txt 
+
+        3dcalc -a Effect_group_"$cov"_bisided.nii.gz -expr 'posval(a)' -prefix Effect_group_"$cov"_positive.nii.gz
+        3dcalc -a Effect_group_"$cov"_bisided.nii.gz -b Effect_group_"$cov"_positive.nii.gz -expr 'a-b' -prefix Effect_group_"$cov"_negative.nii.gz
+
+
+		# get atlas locations of cluster
+		whereami                                                              \
+   			-tab                                                               \
+   			-coord_file Clust_group_"$cov"_bisided.txt'[1,2,3]'                               \
+   			> Whereami_Clust_group_"$cov"_bisided.txt
+
+	done
+done
+
+
+

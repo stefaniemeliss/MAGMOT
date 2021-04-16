@@ -1,0 +1,62 @@
+#!/bin/bash
+source ~/.bashrc
+
+
+# Set directory
+path="/storage/shared/research/cinn/2018/MAGMOT"
+topdir="$path/derivatives/magictrickwatching/analyses/"
+scriptdir=$topdir"scripts/ISC_SME/"
+mkdir $scriptdir
+cd $scriptdir
+
+# define thresholds used to determine whether a trick has been remembered or not
+thresholds=(recallStrict recallLenient aboveAvgConf highConf allConf) # not computed yet
+thresholds=(aboveAvgConf highConf allConf) # not computed yet
+num_thresholds=${#thresholds[@]}
+
+
+# define ROI masks
+mask_dir="/storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/"
+masks=(VTA NAcc HPC Caudate GM)
+mask_files=(SNVTA_mask_func_resampled.nii.gz NAcc_mask_func_resampled.nii.gz HPC_mask_func_resampled.nii.gz Caudate_mask_func_resampled.nii.gz GM_mask_MNI152_T1_2009c_dilated_resampled.nii.gz)
+num_masks=${#masks[@]}
+
+
+# loop over masks to create a 3dISC for each mask
+for (( m=0; m<${num_masks}; m++));
+    do
+
+	# loop over covariates to create a 3dISC for each of them
+	for (( t=0; t<${num_thresholds}; t++));
+		do
+
+        # define variables
+        thresh=${thresholds[$t]}
+		mask=${masks[$m]}
+		mask_f=${mask_files[$m]}
+
+		# define model directory
+		ana_path="$path"/derivatives/magictrickwatching/analyses/ISC_SME_$thresh/
+
+		# specify 3dISC command
+		printf "3dISC -prefix ISC_SME_"$thresh"_"$mask" -jobs 4 \\" > ./3dISC_SME_"$thresh"_"$mask" #name and number of jobs
+		printf "\n\t -model '0+grp+(1|Subj1)+(1|Subj2)' \\" >> ./3dISC_SME_"$thresh"_"$mask" # model
+		printf "\n\t -gltCode ave '0.5 0 0.5' \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -gltCode G11     '1 0  0' \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -gltCode G12     '0 1 0' \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -gltCode G22     '0 0 1' \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -gltCode G11vG22 '1 0 -1' \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -gltCode G11vG12 '1 -1 0'  \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -gltCode G12vG22 '0 1 -1' \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -gltCode ave-G12 '0.5 -1 0.5'  \\" >> ./3dISC_SME_"$thresh"_"$mask" # contrasts
+		printf "\n\t -mask $mask_dir$mask_f \\" >> ./3dISC_SME_"$thresh"_"$mask" # mask
+		printf "\n\t -dataTable @dataTable_"$thresh".txt \\" >> ./3dISC_SME_"$thresh"_"$mask" # datatable
+
+	done
+done
+
+
+
+
+
+

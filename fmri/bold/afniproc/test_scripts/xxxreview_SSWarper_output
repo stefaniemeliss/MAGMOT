@@ -1,0 +1,108 @@
+#!/bin/bash
+
+################################################################################
+# non-linear registration to MNI template (non-linear 2009c)
+################################################################################
+
+# from https://afni.nimh.nih.gov/pub/dist/doc/htmldoc/programs/@SSwarper_sphx.html
+# This script has dual purposes for processing a given subject's anatomical volume:
+#    + to skull-strip the brain, and
+#    + to calculate the warp to a reference template/standard space.
+# Automatic snapshots of the registration are created, as well, to help the QC process.
+# This program cordially ties in directly with afni_proc.py, so you can run it beforehand, 
+# check the results, and then provide both the skull-stripped volume and the warps to the processing program.
+
+
+# load in AFNI module
+module load afni19.3.03
+
+# define path
+DIR="/storage/shared/research/cinn/2018/MAGMOT"
+
+# change directory to BIDS folder
+BIDS_dir="$DIR"/MAGMOT_BIDS
+# change directory to the raw NIFI files
+cd $BIDS_dir
+
+# define subjects based on folder names in the BIDS directory
+subjects=($(ls -d sub*))
+#subjects=(sub-control001 sub-control002 sub-control003 sub-experimental004 sub-experimental005 sub-experimental006)
+#subjects=(sub-control003)
+subjects=(sub-control003 sub-experimental004 sub-control019 sub-experimental018 sub-control021 sub-experimental026 sub-control027 sub-control031 sub-control035 sub-control037 sub-control043)
+
+
+# define output folder
+out_root=$DIR/derivatives/afniproc
+
+# for each subject in the subjects array
+for subject in "${subjects[@]}"; do
+
+	echo $subject
+
+	# go to folder with SSWarper output
+	out_dir=$out_root/$subject/SSwarper
+	cd $out_dir
+
+	#  define datasets
+	anatUAC=anatUAC."$subject".nii
+	anatSS=anatSS."$subject".nii
+
+	# define output file names
+	out_name=overlayUACSS.$subject
+
+
+
+	# create image overlaying T1w and second skull strip iteration
+    afni -noplugins -no_detach                               \
+         -com "OPEN_WINDOW sagittalimage opacity=4"          \
+         -com "OPEN_WINDOW axialimage opacity=4"             \
+         -com "OPEN_WINDOW coronalimage opacity=4"           \
+         -com "SWITCH_UNDERLAY $anatUAC"                          \
+         -com "SWITCH_OVERLAY $anatSS"                           \
+         -com "SEE_OVERLAY +"                                \
+         -com "SAVE_JPEG sagittalimage $out_name.sag.jpg blowup=4"     \
+         -com "SAVE_JPEG coronalimage  $out_name.cor.jpg blowup=4"     \
+         -com "SAVE_JPEG axialimage    $out_name.axi.jpg blowup=4"     \
+         #-com "QUITT"                                        \
+       $out_dir
+#note: when the last line is commented out, it is possible to i nteract with the gui and close it manually
+
+
+# note: aftre update run: -jump_to_extra_qc
+
+# this will go through the following steps (from @SSWarper -help)
+
+  #1: Uniform-ize the input dataset's intensity via 3dUnifize.
+  #     ==> anatU.sub007.nii
+
+  # anatUA.sub007.nii       = anisotropically smoothed version of the above
+
+  #2: Strip the skull with 3dSkullStrip, with mildly agressive settings.
+  #     ==> anatS.sub007.nii
+  #3: Nonlinearly warp (3dQwarp) the result from #1 to the skull-on template, driving the warping to a medium level of refinement.
+  #4: Use a slightly dilated brain mask from the template to crop off the non-brain tissue resulting from #3 (3dcalc).
+  #5: Warp the output of #4 back to original anatomical space, along with the template brain mask, 
+  #   and combine those with the output of #2 to get a better skull-stripped result in original space (3dNwarpApply and 3dcalc).
+  #     ==> anatSS.sub007.nii
+  #6  Restart the nonlinear warping, registering the output of #5 to the skull-off template brain volume (3dQwarp).
+  #     ==> anatQQ.sub007.nii (et cetera)
+  # anatQQ.sub007.nii       = skull-stripped dataset nonlinearly warped to the base template space;
+  # anatQQ.sub007.aff12.1D  = affine matrix to transform original dataset to base template space;
+  # anatQQ.sub007_WARP.nii  = incremental warp from affine transformation to nonlinearly aligned dataset;
+  #7  Use @snapshot_volreg3 to make the pretty pictures.
+  #     ==> AMsub007.jpg and MAsub007.jpg
+  # AMsub007.jpg          = 3x3 snapshot image of the anatQQ.sub007.nii dataset with the edges from the base template overlaid -- to check the alignment;
+  # MAsub007.jpg          = similar to the above, with the roles of the template and the anatomical datasets reversed.
+  # QC_anatQQ.sub007.jp   = like AM*.jpg, but 3 rows of 8 slices
+  # QC_anatSS.sub007.jpg  = check skullstripping in orig space: ulay is input dset, and olay is mask of skullstripped output (anatSS* dset)
+
+done
+ 
+
+
+
+
+
+
+
+

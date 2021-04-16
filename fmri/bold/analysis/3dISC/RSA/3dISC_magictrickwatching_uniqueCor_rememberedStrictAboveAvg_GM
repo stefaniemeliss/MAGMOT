@@ -1,0 +1,14 @@
+3dISC -prefix ISC_magictrickwatching_uniqueCor_rememberedStrictAboveAvg_GM -jobs 4 \
+	 -model 'grp+uniqueCor_rememberedStrictAboveAvg+grUniqueCor_rememberedStrictAboveAvg+(1|Subj1)+(1|Subj2)' \
+	 -qVars   'grp,uniqueCor_rememberedStrictAboveAvg,grUniqueCor_rememberedStrictAboveAvg' \
+	 -qVarCenters   'uniqueCor_rememberedStrictAboveAvg,grUniqueCor_rememberedStrictAboveAvg' \
+	 -gltCode ave '1 0 0 0' \
+	 -gltCode G11vG22 '0 1 0 0' \
+	 -gltCode G11 '1 0.5 0 0' \
+	 -gltCode G22 '1 -0.5 0 0' \
+	 -gltCode uniqueCor_rememberedStrictAboveAvg '0 0 1 0'  \
+	 -gltCode uniqueCor_rememberedStrictAboveAvg1vuniqueCor_rememberedStrictAboveAvg2 '0 0 0 1'\
+	 -gltCode uniqueCor_rememberedStrictAboveAvg1 '0 0 1 0.5'  \
+	 -gltCode uniqueCor_rememberedStrictAboveAvg2 '0 0 1 -0.5'  \
+	 -mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-GM_mask.nii.gz \
+	 -dataTable @dataTable_magictrickwatching_unique.txt \

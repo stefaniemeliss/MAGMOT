@@ -1,0 +1,14 @@
+3dISC -prefix ISC_magictrickwatching_corr_confidence_GM -jobs 4 \
+	 -model 'grp+corr_confidence+grCorr_confidence+(1|Subj1)+(1|Subj2)' \
+	 -qVars   'grp,corr_confidence,grCorr_confidence' \
+	 -qVarCenters   'corr_confidence,grCorr_confidence' \
+	 -gltCode ave '1 0 0 0' \
+	 -gltCode G11vG22 '0 1 0 0' \
+	 -gltCode G11 '1 0.5 0 0' \
+	 -gltCode G22 '1 -0.5 0 0' \
+	 -gltCode corr_confidence '0 0 1 0'  \
+	 -gltCode corr_confidence1vcorr_confidence2 '0 0 0 1'\
+	 -gltCode corr_confidence1 '0 0 1 0.5'  \
+	 -gltCode corr_confidence2 '0 0 1 -0.5'  \
+	 -mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/output/MNI_res-epi_label-GM_mask.nii.gz \
+	 -dataTable @dataTable_magictrickwatching_memo.txt \

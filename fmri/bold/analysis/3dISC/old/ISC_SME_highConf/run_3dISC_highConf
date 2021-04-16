@@ -1,0 +1,27 @@
+#/bin/bash
+
+source ~/.bashrc
+
+module load afni19
+
+# Set directory
+topdir="/storage/shared/research/cinn/2018/MAGMOT/derivatives/magictrickwatching/analyses/ISC_SME_highConf"
+#topdir="/Users/stefaniemeliss/cinn/2018/MAGMOT/derivatives/magictrickwatching/Analyses/ISC_SME_highConf"
+cd $topdir
+echo $topdir
+
+
+
+# specify 3dISC command
+3dISC -prefix ISC_SME_highConf -jobs 4                 \
+	-model  '0+grp+(1|Subj1)+(1|Subj2)'     \
+	-gltCode ave     '0.5 0 0.5'            \
+	-gltCode G11     '1 0  0'               \
+	-gltCode G12     '0 1 0'                \
+	-gltCode G22     '0 0 1'                \
+	-gltCode G11vG22 '1 0 -1'               \
+	-gltCode G11vG12 '1 -1 0'               \
+	-gltCode G12vG22 '0 1 -1'               \
+	-gltCode ave-G12 '0.5 -1 0.5'           \
+	-mask /storage/shared/research/cinn/2018/MAGMOT/derivatives/ROI_masks/MNI152_T1_2009c_Segsy/GM_mask_MNI152_T1_2009c_dilated_resampled.nii  \
+	-dataTable @dataTable_highConf         
