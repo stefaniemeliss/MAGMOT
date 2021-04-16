@@ -15,6 +15,8 @@ library(dplyr)
 library(ggplot2)
 library(ggrepel)
 library(grid)
+library(plotly)
+
 
 # function to determine outliers
 is_outlier <- function(x) {
@@ -30,9 +32,13 @@ sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add fo
 
 osfr::osf_ls_files(sub_dir, pattern = "group_bold.tsv") %>%
   osfr::osf_download(conflicts = "overwrite")
+osfr::osf_ls_files(sub_dir, pattern = "bold.csv") %>%
+  osfr::osf_download(conflicts = "overwrite")
 
 # load in dataset
 scanparam <- read.delim("group_bold.tsv")
+API_data <- read.csv("bold.csv")
+names(API_data)[names(API_data) == "X_id"] <- "bids_name"
 
 # add columns
 scanparam$subject <- gsub("_task-magictrickwatching_", "", scanparam$bids_name)
@@ -45,16 +51,16 @@ scanparam$group <- ifelse(grepl("control", scanparam$bids_name), "control", "exp
 scanparam$task <- ifelse(grepl("magictrickwatching", scanparam$bids_name), "magictrickwatching", "rest")
 
 scanparam$run <- ifelse(grepl("run-1", scanparam$bids_name), 1, 
-                   ifelse(grepl("run-2", scanparam$bids_name), 2, 3))
+                        ifelse(grepl("run-2", scanparam$bids_name), 2, 3))
 
 scanparam$BOLD <- ifelse(grepl("magictrickwatching_run-1", scanparam$bids_name), "magictrickwatching_run-1", 
-                    ifelse(grepl("magictrickwatching_run-2", scanparam$bids_name), "magictrickwatching_run-2", 
-                           ifelse(grepl("magictrickwatching_run-3", scanparam$bids_name), "magictrickwatching_run-3", 
-                                  ifelse(grepl("rest_run-1", scanparam$bids_name), "rest_run-1", 
-                                         ifelse(grepl("rest_run-2", scanparam$bids_name), "rest_run-2",
-                                                ifelse(grepl("magictrickwatching_acq-1_run-2", scanparam$bids_name), "magictrickwatching_acq-1_run-2",
-                                                       ifelse(grepl("magictrickwatching_acq-2_run-2", scanparam$bids_name), "magictrickwatching_acq-2_run-2",
-                                                              NA)))))))
+                         ifelse(grepl("magictrickwatching_run-2", scanparam$bids_name), "magictrickwatching_run-2", 
+                                ifelse(grepl("magictrickwatching_run-3", scanparam$bids_name), "magictrickwatching_run-3", 
+                                       ifelse(grepl("rest_run-1", scanparam$bids_name), "rest_run-1", 
+                                              ifelse(grepl("rest_run-2", scanparam$bids_name), "rest_run-2",
+                                                     ifelse(grepl("magictrickwatching_acq-1_run-2", scanparam$bids_name), "magictrickwatching_acq-1_run-2",
+                                                            ifelse(grepl("magictrickwatching_acq-2_run-2", scanparam$bids_name), "magictrickwatching_acq-2_run-2",
+                                                                   NA)))))))
 
 # create ID column
 scanparam$ID <- gsub("sub-control0", "", scanparam$subject)
@@ -71,6 +77,7 @@ DV_plot <- c("aor", "aqi", "dummy_trs", "dvars_nstd", "dvars_std", "dvars_vstd",
              "snr", "summary_bg_k", "summary_bg_mad", "summary_bg_mean", "summary_bg_median",
              "summary_bg_n", "summary_bg_p05", "summary_bg_p95", "summary_bg_stdv", "summary_fg_k", "summary_fg_mad", "summary_fg_mean", "summary_fg_median",
              "summary_fg_n", "summary_fg_p05", "summary_fg_p95", "summary_fg_stdv", "tsnr")
+DV_plot <- c("tsnr")
 
 # determine font sizes
 text_size <- 8
@@ -81,19 +88,37 @@ strip_text_size <- 14
 
 #### create graphs for these DVs #### 
 # a) for all scans --> histogram
-# b) per task: magictrickwatching vs rest & per group: control & experimental --> histogram
-# c) per acq: magictrickwatching_run-1 vs. magictrickwatching_run-2 vs. magictrickwatching_run-3 vs. rest_run-1 vs. rest_run-2
-# a) per subject --> spaghetti plot
+# b) comparison to API data from Esteban et al (2019)
+# c) per task: magictrickwatching vs rest & per group: control & experimental --> histogram
+# d) per acq: magictrickwatching_run-1 vs. magictrickwatching_run-2 vs. magictrickwatching_run-3 vs. rest_run-1 vs. rest_run-2
+# e) per subject --> spaghetti plot
 
 
 # loop over dependent variables to create plots 
 for (DV in DV_plot){
   
-  # create data frame and recode memory as factors
+  # create data frame
   print(DV)
   output <- scanparam
   output$value <- output[[DV]]
-  output <- output[, c("subject", "ID", "group", "task", "run", "BOLD", "acq", "value")]
+  output <- output[, c("bids_name", "subject", "ID", "group", "task", "run", "BOLD", "acq", "value")]
+  
+  # create user_data
+  user_data <- output[,c("bids_name", "value")]
+  user_data$variable <- paste0(DV)
+  user_data$source <- "MAGMOT"
+  
+  # create api_data
+  api_data <- API_data[,c("bids_name", DV)]
+  names(api_data)[names(api_data) == paste0(DV)] <- "value"
+  api_data$variable <- paste0(DV)
+  api_data$source <- "API"
+  
+  # remove outlier in api_data
+  api_data <- subset(api_data, is_outlier(api_data$value)==F)
+  
+  # combine data for API comparison
+  full_data <- rbind(user_data,api_data)
   
   # mean = red line; median = green line
   # Create a text
@@ -113,7 +138,24 @@ for (DV in DV_plot){
   all + annotation_custom(Mean) + annotation_custom(Median)
   ggsave(paste0("Hist_all_", DV, ".jpeg"))
   
-  # (b) histogram splitted by task and group
+  # (b) comparison to API data from Esteban et al (2019)
+  p <- full_data %>%
+    plot_ly(type = 'violin') %>%
+    add_trace(x = ~variable[full_data$source=="MAGMOT"], y = ~value[full_data$source=="MAGMOT"], legendgroup = 'MAGMOT', scalegroup = 'MAGMOT', name = 'MAGMOT',
+              side = 'negative', box = list(visible = T), meanline = list(visible = T), line = list(color = 'orange'), 
+              points = 'all', pointpos = -0.5, jitter = 0.1, scalemode = 'count',
+              marker = list(line = list(width = 2, color = "orange"), symbol = 'line-ns')) %>%
+    add_trace(x = ~variable[full_data$source=="API"], y = ~value[full_data$source=="API"], legendgroup = 'API', scalegroup = 'API', name = 'API',
+              side = 'positive', box = list(visible = T), meanline = list(visible = T), line = list(color = 'rgb(58,54,54)'), color = I('dark gray')) %>%
+    layout(
+      xaxis = list(title = paste("Comparison between MAGMOT data and web API data")),
+      yaxis = list(title = "value", zeroline = F)
+    )
+  p
+  #orca(p, paste0("violin_api_comparison_", DV, ".jpeg"))
+  
+  
+  # (c) histogram splitted by task and group
   # mean = red line; median = green line
   task <- ggplot(output, aes(x=value)) + 
     theme_classic() +  #scale_colour_grey() +
