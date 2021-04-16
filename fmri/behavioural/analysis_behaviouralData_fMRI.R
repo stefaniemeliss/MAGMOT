@@ -58,15 +58,19 @@ project <- osfr::osf_retrieve_node("fhqb7")
 target_dir <- osfr::osf_ls_files(project, pattern = "data") # looks at all files and directories in the project and defines the match with "data"
 sub_dir <- osfr::osf_mkdir(target_dir, path = paste0(version_official)) # add folder in OSF data dir
 
-osfr::osf_ls_files(sub_dir, pattern = ".xlsx") %>%
+osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural") %>%
   osfr::osf_download(conflicts = "overwrite")
 
 osfr::osf_ls_files(sub_dir, pattern = ".txt") %>%
   osfr::osf_download(conflicts = "overwrite")
 
 ### read in data sets ###
-dfWide <- xlsx::read.xlsx(paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
-dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
+#dfWide <- xlsx::read.xlsx(paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
+#dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1")
+
+dfWide <- read.csv(paste0("wide_MagicBehavioural_", version_official, ".csv"), stringsAsFactors = F)
+dfLong <- read.csv(paste0("long_MagicBehavioural_", version_official, ".csv"), stringsAsFactors = F)
+
 dfROI <- read.delim("ISC_ROI.txt")
 
 
