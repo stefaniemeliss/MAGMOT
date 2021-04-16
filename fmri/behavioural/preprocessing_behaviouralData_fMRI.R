@@ -1,7 +1,8 @@
-#empty work space, load libraries and functions
+# empty work space, load libraries and functions
 rm(list=ls())
 
-doISCprep <- 0
+doISCprep <- 1
+write_concat_pairs <- 0
 debug <- 1
 
 
@@ -31,6 +32,7 @@ memoryLabels <- c("cuedRecallStrict", "cuedRecallLenient",
 # define version 
 version <- "MAGMOT"
 version_official <- "fmri"
+dataset_name <- "MMC"
 
 # define whether data on VM should be overwritten
 overwrite = "no"
@@ -482,6 +484,12 @@ names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.2"] <- "comment_tas
 names(MAGMOT_post)[names(MAGMOT_post)=="comments_participant.3"] <- "comment_task3"
 names(MAGMOT_post)[names(MAGMOT_post)=="comments_experimenter.1"] <- "comment_exp"
 
+### remove ~ from comments
+MAGMOT_post$comment_task1 <- gsub("~", "", MAGMOT_post$comment_task1)
+MAGMOT_post$comment_task2 <- gsub("~", "", MAGMOT_post$comment_task2)
+MAGMOT_post$comment_task3 <- gsub("~", "", MAGMOT_post$comment_task3)
+MAGMOT_post$comment_exp <- gsub("~", "", MAGMOT_post$comment_exp)
+
 ### compute duration of post assessment
 MAGMOT_post$startPost <- as.POSIXct(MAGMOT_post$TIME_start, format = "%Y-%m-%d-%H-%M") # convert date-time format
 MAGMOT_post$endPost <- as.POSIXct(MAGMOT_post$TIME_end, format = "%Y-%m-%d-%H-%M") # convert date-time format
@@ -913,6 +921,7 @@ for (s in seq_along(subjects)){
   
   # compute scores of recognition performance
   recognition$responseConfidenceCorrectTrials <- ifelse(recognition$recognition == 1, recognition$responseConfidence, NA)
+  recognition$responseConfidenceIncorrectTrials <- ifelse(recognition$recognition == 0, recognition$responseConfidence, NA)
   recognition$confidenceGroupMeanCenteredCorrectTrials <- ifelse(recognition$recognition == 1, recognition$confidenceGroupMeanCentered, NA)
   recognition$recognitionAboveMeanConf <- ifelse(recognition$recognition == 1 & recognition$confidenceGroupMeanCentered > 0, 1, 0)
   
@@ -1173,7 +1182,7 @@ for (s in seq_along(subjects)){
   if (feedback == "yes"){
     print(paste("total Duration is", sum(BIDS_concat$duration)))
   }
-  #write.table(BIDS_concat, file=paste0(BIDSstring, "_task-magictrickwatching_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+  
   write.table(BIDS_concat, file=file.path(concatRootDir, paste0(BIDSstring, "_task-magictrickwatching_concat.tsv")), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
   
   
@@ -1345,8 +1354,9 @@ for (s in seq_along(subjects)){
     }
     
     # save the final file
-    setwd(preprocessedShareDir)
+    setwd(preprocessedDir)
     xlsx::write.xlsx(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    setwd(preprocessedShareDir)
     write.csv(dataLong, file=paste0("long_MagicBehavioural_", version_official, ".csv"), row.names = FALSE, na = "NA")   
     
     ### calculate average vid duration and process input for 3dTcat ###
@@ -1366,11 +1376,12 @@ for (s in seq_along(subjects)){
     # add those mean durations to the onset information
     input_3dTcat_all <- merge(input_3dTcat_all, mean_displayVidDuration, by.x = "stim_file", all.x = T)
     input_3dTcat_all$mock_TR <- round(input_3dTcat_all$mock)/TR # round onsets and convert seconds into volumes
+    input_3dTcat_all$mock_TR <- input_3dTcat_all$mock_TR + 1 # because the first TR starts at 0s: 1.TR = fixation, 2.-4.TR = mock, 5.TR first volume of magictrick
     
     # determine start and end volumes (--> this is used as input for 3dTcat)
     input_3dTcat_all$start_vol <- input_3dTcat_all$mock_TR - 1 # because afni starts at 0
     input_3dTcat_all$end_vol <- input_3dTcat_all$start_vol + input_3dTcat_all$mean_displayVidDuration_TR - 1 # because otherwise we would add a TR more at the end
-    
+
     # order file
     input_3dTcat_all <- input_3dTcat_all[order(input_3dTcat_all$ID, input_3dTcat_all$stim_file),]
     
@@ -1379,7 +1390,7 @@ for (s in seq_along(subjects)){
     #input_3dTcat_all <- input_3dTcat_all[order(input_3dTcat_all$ID, input_3dTcat_all$start_vol),]
     
     # save file
-    write.table(input_3dTcat_fin, file="MAGMOT_inputForConcatenation.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    write.table(input_3dTcat_fin, file=paste0(dataset_name, "_inputForConcatenation", ".tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
     ### write information about scan durations for cutting task data ###
     names(scaninfoAll) <- c("ID", "scan", "duration_run_seconds", "duration_scan_seconds")
@@ -1387,7 +1398,7 @@ for (s in seq_along(subjects)){
     scaninfoAll$duration_scan_seconds <- round(scaninfoAll$duration_scan_seconds, digits = 0)
     scaninfoAll$duration_run_TR <- scaninfoAll$duration_run_seconds/TR
     scaninfoAll$duration_scan_TR <- scaninfoAll$duration_scan_seconds/TR
-    write.table(scaninfoAll, file="MAGMOT_inputForCutting.tsv", quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
+    write.table(scaninfoAll, file=paste0(dataset_name, "_inputForCutting", ".tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
     
     ### wide format data ###
     
@@ -1443,15 +1454,16 @@ for (s in seq_along(subjects)){
     MAGMOT <- merge(MAGMOT, RSFC, by = "BIDS")
     
     # save data
-    setwd(preprocessedShareDir)
+    setwd(preprocessedDir)
     xlsx::write.xlsx(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".xlsx"), sheetName = "Sheet1", row.names = F) 
+    setwd(preprocessedShareDir)
     write.csv(MAGMOT, file=paste0("wide_MagicBehavioural_", version_official, ".csv"), row.names = FALSE, na = "NA")
     
     ### create files that for the dataset paper ###
     # demographics
     demographics <- MAGMOT[,c("ID", "BIDS", "group", "age", "DOB", "sex", "gender", "ethnicity", "english", "ageEnglishAcquisition", 
                               "education", "yearsOfEducation", "employment", "studySubject", "handedness", "vision", "health")]
-    write.csv(demographics, file=paste0( version, "_demographics", ".csv"), row.names = FALSE, na = "NA")
+    write.csv(demographics, file=paste0( dataset_name, "_demographics", ".csv"), row.names = FALSE, na = "NA")
     
     # scores
     scores <- MAGMOT[,c("ID", "BIDS", 
@@ -1469,7 +1481,7 @@ for (s in seq_along(subjects)){
                         "highConf_abs", "highConf_rel", "aboveAvgConf_abs", "aboveAvgConf_rel",
                         "rememberedStrictHigh_abs", "rememberedLenientHigh_rel", "rememberedLenientHigh_abs", "rememberedLenientHigh_rel",
                         "rememberedStrictAboveAvg_abs", "rememberedStrictAboveAvg_rel", "rememberedLenientAboveAvg_abs", "rememberedLenientAboveAvg_rel")]
-    write.csv(scores, file=paste0( version, "_scores.csv"), row.names = FALSE, na = "NA")
+    write.csv(scores, file=paste0( dataset_name, "_scores.csv"), row.names = FALSE, na = "NA")
     
     # raw_quest_data
     questionnaires <- c("inclusioncheck", "health_current", "health_ever", "screening_MRI", 
@@ -1492,15 +1504,15 @@ for (s in seq_along(subjects)){
       }
     }
     raw_quest_data <- questionnaire_raw[, c("ID", itemListALL)]
-    write.csv(raw_quest_data, file=paste0( version, "_raw_quest_data.csv"), row.names = FALSE, na = "NA")
+    write.csv(raw_quest_data, file=paste0( dataset_name, "_raw_quest_data.csv"), row.names = FALSE, na = "NA")
     
     # other information
     duration_info <- MAGMOT[,c(grepl("ID",names(MAGMOT)) | grepl("dur",names(MAGMOT)))]
     other_information <- MAGMOT[,c("ID", "BIDS", "ableToSee", "compliance", "answer_tooSlow", "curiosity_tooSlow", "sleepLastNight", "sleepAverage", "alcohol", "alcoholAmount", "rewardEffort", "rewardExpectations",
-                                   "comment_task1", "comment_task2", "comment_task3", 
+                                   "comment_task1", "comment_task2", "comment_task3", "comment_exp",
                                    "sleepBeforeMemoryTest", "sleepHours", "memoryTestKnown", "memoryIntention", "rewardBelief", "magictrickExperience", "connection", "comment_memory", "daysBetweenExpAndMemory")]
     other_information <- merge(other_information, duration_info, by = c("ID", "BIDS"))
-    write.csv(other_information, file=paste0( version, "_other_information.csv"), row.names = FALSE, na = "NA")
+    write.csv(other_information, file=paste0( dataset_name, "_other_information.csv"), row.names = FALSE, na = "NA")
     
     # experimental_data
     experimental_data <- dataLong[,c("ID", "BIDS", "group", "orderNumber", "block", "acq", "startBlock", "endBlock", 
@@ -1525,7 +1537,7 @@ for (s in seq_along(subjects)){
                                      "recognition", "recognitionAboveMeanConf", "recognitionConfLevel_4_5_6", 
                                      "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh"
     )]
-    write.csv(experimental_data, file=paste0( version, "_experimental_data.csv"), row.names = FALSE, na = "NA")
+    write.csv(experimental_data, file=paste0( dataset_name, "_experimental_data.csv"), row.names = FALSE, na = "NA")
     
     
     ### upload file to OSF
@@ -1543,14 +1555,22 @@ for (s in seq_along(subjects)){
         osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
         file_exists <- osfr::osf_ls_files(sub_dir, pattern = "MagicBehavioural")
       }
-      file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version)) # check whether file already exists
+      file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(dataset_name)) # check whether file already exists
       while (dim(file_exists)[1] > 0){ #s delete files if they exists. use while loop because only the first row will be used
         osfr::osf_rm(file_exists, recurse = T, verbose = FALSE, check = F)
-        file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(version))
+        file_exists <- osfr::osf_ls_files(sub_dir, pattern = paste(dataset_name))
       }
       
       # upload all files in the share directory
       osfr::osf_upload(sub_dir, path = ".", recurse = TRUE, conflicts = "overwrite")
+      
+      # upload files for dataset paper
+      mmc_data <- osfr::osf_retrieve_node("eyzwb")
+      mmc_files <- list.files(pattern = glob2rx("MMC*.csv"))
+      for (mmc in mmc_files){
+        osfr::osf_upload(mmc_data, mmc, conflicts = "overwrite")
+      }
+      
     }
     
     #################### as a last step, create the files we need for concatenation ####################
@@ -1574,7 +1594,7 @@ for (s in seq_along(subjects)){
       
       # get a list with all subject BIDS strings
       subjectsCorr <- levels(dataLong$BIDS)
-      subjectsToCorrelate <- subjectsCorr
+      subjectsToCorrelate <- subjectsCorr[-1]
       
       N <- 0.5*length(subjectsCorr)*length(subjectsToCorrelate)
       
@@ -1684,7 +1704,7 @@ for (s in seq_along(subjects)){
                                          ifelse(grepl("cont", subjectsCorr[s]) & grepl("exp", subjectsToCorrelate[ss]), "G12", 
                                                 ifelse(grepl("exp", subjectsCorr[s]) & grepl("exp", subjectsToCorrelate[ss]), "G22",NA )))
             
-            dataTable_ISC[x,4] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
+            dataTable_ISC[x,4] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_task-magictrickwatching_z.nii.gz")
             if(x < N) {
               dataTable_ISC[x,5] <- '\\' #add back slash at end of the row
             }
@@ -1741,7 +1761,7 @@ for (s in seq_along(subjects)){
             # add file name and back slashs
             nextCol <- corCol + 2 # looks at current number of columns in object and adds 1
             
-            dataTable_ISC_dummy[x,nextCol] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_magictrickwatching_z.nii.gz")
+            dataTable_ISC_dummy[x,nextCol] <- paste0("ISC_",subjectsCorr[s],subjectsToCorrelate[ss],"_task-magictrickwatching_z.nii.gz")
             if(x < N) {
               dataTable_ISC_dummy[x,nextCol+1] <- '\\' #add back slash at end of the row
             }
@@ -1760,6 +1780,8 @@ for (s in seq_along(subjects)){
               behavParc <- events[,grep("behavParcel", colnames(events))] #picks all columns relating to behavioural parcellation
               names(behavParc) <- paste0(names(behavParc), "_",subjectsCorr[s],subjectsToCorrelate[ss])
               SME_events <- merge(SME_events, behavParc, by = "row.names")
+              
+              ## THIS IS WHERE row.names in the output files is coming from!! ##
               
               xx <- 2
               # loop over all memory labels to create SME tables
@@ -1783,7 +1805,6 @@ for (s in seq_along(subjects)){
                     concatPairDir <- file.path(concatRootDir, paste0(subjectsCorr[s],subjectsToCorrelate[ss]))
                     ifelse(!dir.exists(concatPairDir), dir.create(concatPairDir), FALSE)
                     setwd(concatPairDir)
-                    write.table(SME_events_outcome, file = paste0(subjectsCorr[s], subjectsToCorrelate[ss], "_", pair[p], "_", SME_outcome[o], "_", memoryLabels[mem], "_SME_concat.tsv"), quote=FALSE, sep="\t", row.names = FALSE, na = "n/a")
                     
                     # for the first subject in each for
                     if (p == 1){
