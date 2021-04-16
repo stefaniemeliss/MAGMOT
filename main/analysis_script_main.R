@@ -67,19 +67,14 @@ dfLong <- xlsx::read.xlsx(paste0("long_MagicBehavioural_", version_official, ".x
 
 ########## 1. get descriptives for curiosity and memory for whole sample as well as for each group individually ########## 
 
-workspace <- list.files(path = file.path(codedDir), pattern = "_CP.csv") # check whether the data is coded yet or not
 
-if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
-  dependentVariables <- c("curiosity", "curiosityRT", "decisionRT",
-                          "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
-                          "confidence", "confidenceCorrectTrials")
-} else {
-  dependentVariables <- c("curiosity", "curiosityRT", "decisionRT",
-                          "cuedRecallStrict", "cuedRecallLenient", 
-                          "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
-                          "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
-                          "confidence", "confidenceCorrectTrials")
-}
+
+dependentVariables <- c("curiosity", "curiosityRT", "decisionRT",
+                        "cuedRecallStrict", "cuedRecallLenient", 
+                        "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+                        "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
+                        "confidence", "confidenceCorrectTrials")
+
 
 
 ### get descriptives ###
@@ -154,15 +149,12 @@ rm(dfMeans, meansPerTrick, indicesPerTrick, indicesPerTrickMean)
 
 ########## 3. Compute lmer model predicting memory performance using curiosity as a continous variable and group effect coded ########## 
 
-if(length(workspace) == 0) { # if data is not coded yet, only look at recognition performance
-  dependentVariables <- c("recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
-                          "confidence", "confidenceCorrectTrials")
-} else {
-  dependentVariables <- c("cuedRecallStrict", "cuedRecallLenient", 
-                          "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
-                          "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
-                          "confidence", "confidenceCorrectTrials")
-}
+
+dependentVariables <- c("cuedRecallStrict", "cuedRecallLenient", 
+                        "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf",
+                        "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh",
+                        "confidence", "confidenceCorrectTrials")
+
 
 for (DV in 1:length(dependentVariables)){
   
@@ -490,7 +482,7 @@ outg + geom_bar(stat="identity", position="dodge") + geom_errorbar(aes(ymin=mean
   theme_classic() + coord_cartesian(ylim = c(0, 7)) +
   theme(legend.position="bottom") +
   scale_x_discrete(limits=c("task compliance","too many magic tricks","problems internet", "video display")) +
-ggsave("postMainByGroup2.jpeg")
+  ggsave("postMainByGroup2.jpeg")
 
 rm(outg, output, rating)
 
@@ -548,7 +540,7 @@ for (mem in 1:length(memoryLevels)) { # benefits
 # for all dependent variables compute two-sample t-test and calculate effect size
 for(DV in 1:length(DV_wide)) {
   
-    # compute t-test for group difference
+  # compute t-test for group difference
   ttest <- t.test(dfWide[,DV_wide[DV]]~dfWide$group)
   t.stats <- as.data.frame(t(round(c(ttest$statistic, ttest$p.value), digits = 3)))
   names(t.stats) <- c("tValue", "pValue(t)")
