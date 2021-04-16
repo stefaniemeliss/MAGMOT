@@ -1,6 +1,9 @@
 ### this script contains the code used for the dataset paper 
 
-#### setups ####
+################################################################################################
+############################################ SETUPS ############################################
+################################################################################################
+
 #empty work space, load libraries and functions
 rm(list=ls())
 
@@ -17,6 +20,11 @@ devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/funct
 devtools::source_url("https://github.com/stefaniemeliss/MAGMOT/blob/master/functions/rbindcolumns.R?raw=TRUE")
 
 library(dplyr)
+library(lme4)
+library(ggplot2)
+library(ggrepel)
+library(data.table)
+
 
 # define version --> double-check whether this is necessary or not
 version <- "MAGMOT"
@@ -29,6 +37,64 @@ memoryLevels <- c("cuedRecallStrict", "cuedRecallLenient",
 memoryLabels <- c("cuedRecallStrict", "cuedRecallLenient", 
                   "allConf", "highConf", "aboveAvgConf", 
                   "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
+
+# define TR
+TR <- 2
+
+# define geom and function for split violin plot
+# from https://stackoverflow.com/questions/35717353/split-violin-plot-with-ggplot2 (written by jan-glx)
+GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
+                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
+                             data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+                             grp <- data[1, "group"]
+                             newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+                             newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+                             newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+                             
+                             if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+                               stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+                                                                         1))
+                               quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+                               aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+                               aesthetics$alpha <- rep(1, nrow(quantiles))
+                               both <- cbind(quantiles, aesthetics)
+                               quantile_grob <- GeomPath$draw_panel(both, ...)
+                               ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+                             }
+                             else {
+                               ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+                             }
+                           })
+
+geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
+                              draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
+                              show.legend = NA, inherit.aes = TRUE) {
+  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
+}
+
+# define summary function showing mean +/- SD
+data_summary <- function(x) { # mean + sd
+  m <- mean(x)
+  ymin <- m-sd(x)
+  ymax <- m+sd(x)
+  return(c(y=m,ymin=ymin,ymax=ymax))
+}
+
+data_summary <- function(x) { # median + mad
+  m <- median(x)
+  ymin <- m-mad(x)
+  ymax <- m+mad(x)
+  return(c(y=m,ymin=ymin,ymax=ymax))
+}
+
+data_summary <- function(x) { # median + mad
+  m <- median(x)
+  ymin <- median(x)
+  ymax <- median(x)
+  return(c(y=m,ymin=ymin,ymax=ymax))
+}
 
 
 ### downlaod data sets from OSF ###
@@ -68,37 +134,15 @@ marker <- read.csv("~/Dropbox/Reading/PhD/Magictricks/stimuli/marker_magictrickf
 memory_test <- read.csv("recognition_memory_test_incl_deviations_in_pilot.csv", stringsAsFactors = F)
 memory_test <- memory_test[,c("stimID", "Recognition.option.1", "Recognition.option.2", "Recognition.option.3", "Recognition.option.4", "Different.wording.in.pilot")]
 
+
+#################################################################################################
+############################################ METHODS ############################################
+#################################################################################################
+
+
 ########## 1. Look at demographics of the sample ########## 
 
-# aim:  descriptive statistics (Elaborate each by group if you have more than one group)
-# - Age (mean, SD, range)
-# - Sex assigned at birth (absolute count or relative frequencies)
-# - Race & ethnicity
-#   - White - British
-#   - Other White
-#   - Asian or Asian British - Bangladeshi
-#   - Asian or Asian British - Indian
-#   - Asian or Asian British - Pakistani
-#   - Asian or Asian British - Chinese
-#   - Other Asian background
-#   - Black or Black British - Carribbean
-#   - Other Black background
-#   - Mixed - White and Asian
-#   - Mixed - White and Black African
-#   - Mixed - White and Black Carribbean
-#   - Other Mixed background
-#   - Other Ethnic background
-#   - Not known
-#   - Information refused
-# - Education (highest completed), SES
-#   - Primary school
-#   - GCSEs or equivalent
-#   - A-Levels or equivalent
-#   - University undergraduate program
-#   - University post-graduate program
-#   - Doctoral degree
-#   - How many years of education have you received, including primary school? (12 = HS diploma, 15 = Bachelor's degree)
-
+# SECTION PARTICIPANTS AND DESIGN + TABLE 1 #
 
 # age
 psych::describe(dfWide$age)
@@ -118,7 +162,8 @@ BAME <- plyr::count(dfWide, vars = c("ethnicity_BAME","group"))
 
 # education
 dfWide$yearsOfEducation_num <- ifelse(dfWide$yearsOfEducation == "17 years", 17,
-                                  ifelse(dfWide$yearsOfEducation == "20 (18.5 excluding time as phd student)", 20, as.numeric(as.character(dfWide$yearsOfEducation))))
+                                      ifelse(dfWide$yearsOfEducation == "20 (18.5 excluding time as phd student)", 20, 
+                                             as.numeric(as.character(dfWide$yearsOfEducation))))
 
 psych::describe(dfWide$yearsOfEducation_num)
 edu <- psych::describeBy(dfWide[,"yearsOfEducation_num"], group=dfWide$group)
@@ -139,85 +184,66 @@ nback <- psych::describeBy(dfWide[,"nback_accurary"], group=dfWide$group)
 nback <- as.data.frame(rbind(nback$cont, nback$exp))
 nback$mot <- rep(c("cont","exp"), each = 1)
 
-
 # CREATE DEMOGRAPHICS TABLE FOR PAPER (i.e. Table 1)
 demogs <- data.frame() # 1. col: variable, 2. col = control, 3. col = experimental
 i = 0
 varCol <- 1
 contCol <- 2
 expCol <- 3
+testCol <- 4
 
 i = i+1
 demogs[i,varCol] <- "Age"
 demogs[i,contCol] <- paste0(age$mean[1], " (", round(age$sd[1], 2), ")") # control group
 demogs[i,expCol] <- paste0(age$mean[2], " (", round(age$sd[2], 2), ")") # experimental group
+ttest <- t.test(dfWide$age ~ dfWide$group)
+demogs[i,testCol] <- paste0("t(",round(ttest$parameter, digits = 3), ") = ", round(ttest$statistic, digits = 3), ", p = ", round(ttest$p.value, digits = 3))
 
 # this currently produces error, but this is due to missing data in sex
 i = i+1
 demogs[i,varCol] <- "Sex assigned at birth (% female)"
 demogs[i,contCol] <- paste0(sex$freq[sex$sex == "female" & sex$group == "cont"]/N_per_group$freq[N_per_group$group == "cont"]*100) # control group
 demogs[i,expCol] <- paste0(sex$freq[sex$sex == "female" & sex$group == "exp"]/N_per_group$freq[N_per_group$group == "exp"]*100) # experimental group
+chisqtest <- chisq.test(table(dfWide$sex, dfWide$group))
+demogs[i,testCol] <- paste0("Chi-Square(",round(chisqtest$parameter, digits = 3), ") = ", round(chisqtest$statistic, digits = 3), ", p = ", round(chisqtest$p.value, digits = 3))
 
 i = i+1
 demogs[i,varCol] <- "Ethnicity (% BAME)"
 demogs[i,contCol] <- paste0(BAME$freq[BAME$ethnicity_BAME == "BAME" & BAME$group == "cont"]/N_per_group$freq[N_per_group$group == "cont"]*100) # control group
 demogs[i,expCol] <- paste0(BAME$freq[BAME$ethnicity_BAME == "BAME" & BAME$group == "exp"]/N_per_group$freq[N_per_group$group == "exp"]*100) # experimental group
+chisqtest <- chisq.test(table(dfWide$ethnicity_BAME, dfWide$group))
+demogs[i,testCol] <- paste0("Chi-Square(",round(chisqtest$parameter, digits = 3), ") = ", round(chisqtest$statistic, digits = 3), ", p = ", round(chisqtest$p.value, digits = 3))
 
 i = i+1
 demogs[i,varCol] <- "Years of Education"
 demogs[i,contCol] <- paste0(edu$mean[1], " (", round(edu$sd[1], 2), ")") # control group
 demogs[i,expCol] <- paste0(edu$mean[2], " (", round(edu$sd[2], 2), ")") # experimental group
+ttest <- t.test(dfWide$yearsOfEducation_num ~ dfWide$group)
+demogs[i,testCol] <- paste0("t(",round(ttest$parameter, digits = 3), ") = ", round(ttest$statistic, digits = 3), ", p = ", round(ttest$p.value, digits = 3))
 
 i = i+1
 demogs[i,varCol] <- "Corsi span"
 demogs[i,contCol] <- paste0(corsi$mean[1], " (", round(corsi$sd[1], 2), ")") # control group
 demogs[i,expCol] <- paste0(corsi$mean[2], " (", round(corsi$sd[2], 2), ")") # experimental group
+ttest <- t.test(dfWide$corsiSpan ~ dfWide$group)
+demogs[i,testCol] <- paste0("t(",round(ttest$parameter, digits = 3), ") = ", round(ttest$statistic, digits = 3), ", p = ", round(ttest$p.value, digits = 3))
 
 i = i+1
 demogs[i,varCol] <- "n-back (% accuracy)"
 demogs[i,contCol] <- paste0(round(nback$mean[1],2), " (", round(nback$sd[1], 2), ")") # control group
 demogs[i,expCol] <- paste0(round(nback$mean[2],2), " (", round(nback$sd[2], 2), ")") # experimental group
+ttest <- t.test(dfWide$nback_accurary ~ dfWide$group)
+demogs[i,testCol] <- paste0("t(",round(ttest$parameter, digits = 3), ") = ", round(ttest$statistic, digits = 3), ", p = ", round(ttest$p.value, digits = 3))
 
 
-names(demogs) <- c("", "Control Group", "Experimental Group")
+names(demogs) <- c("", "Control Group", "Experimental Group", "Statistics group comparison")
 
 # save demogs
 xlsx::write.xlsx(demogs, file=filename_tables, sheetName = "Table_1", append = T, row.names = F) # note: row.names contain variables
 
-########## 2. Determine average testing lengths etc. ########## 
+########## 2. Descriptives of magic tricks ########## 
 
-# duration of task blocks 
-psych::describe(dfWide$durInMins_firstBlock)
-psych::describe(dfWide$durInMins_secondBlock)
-psych::describe(dfWide$durInMins_thirdBlock)
-
-# duration of whole experiment
-psych::describe(dfWide$durInMins)
-
-block_durInMins <- c(dfWide$durInMins_firstBlock, dfWide$durInMins_secondBlock, dfWide$durInMins_thirdBlock)
-psych::describe(block_durInMins)
-
-block_durInSecs <- c(dfWide$durInSecs_firstBlock, dfWide$durInSecs_secondBlock, dfWide$durInSecs_thirdBlock)
-psych::describe(block_durInSecs)
-
-# time between experiment and memory tests
-psych::describe(dfWide$daysBetweenExpAndMemory)
-
-# average trial length
-psych::describe(dfLong$durationTrial)
-
-# duration of memory assessment
-psych::describe(dfWide$durMemory)
-
-### information used in trial structure figure - actual presentation times
-psych::describe(dfLong$displayVidDuration) # stimulus presentation (this is the actual magic trick + 6 seconds mock video)
-psych::describe(dfLong$displayBlankDuration) # blank between end of magic trick video and start of fixation
-psych::describe(dfLong$fixationPostVidDuration) # fixation between magic trick and estimate rating
-psych::describe(dfLong$rtAnswer) # reaction time estimate rating
-psych::describe(dfLong$rtCuriosity) # reaction time estimate rating
-psych::describe(dfLong$fixationPostCuriosityDuration) # fixation between curiosity rating and next magic trick
-
-########## 3. Descriptives of magic tricks ########## 
+# SECTION MATERIALS
 
 # determine the IDs of all stimuli used
 stim_exp <- as.character(unique(dfLong$stimID))
@@ -250,25 +276,767 @@ stim_all <- merge(stim_all, duration, by.x = c("stimID", "experiment"))
 # combine with memory test information
 stim_all <- merge(stim_all, memory_test, by.x = c("stimID"), all.x = T)
 
-
 # look at average video length
 psych::describe(stim_all$vidFileDuration_withoutMock)
 psych::describe(stim_all$vidFileDuration)
 
 # look at average video length of tricks used in experiment only
 psych::describe(stim_all$vidFileDuration_withoutMock[stim_all$experiment == "experiment"])
-psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"])
+psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"]) # this is reported in the manuscript
 
 vidFileDuration <- stim_all$vidFileDuration[stim_all$experiment == "experiment"]
 
+########## 3. Determine average testing lengths etc. ########## 
 
-### information used in trial structure figure - intended presentation times
-psych::describe(stim_all$vidFileDuration[stim_all$experiment == "experiment"]) # stimulus presentation (this is the actual magic trick + 6 seconds mock video)
-psych::describe(dfLong$displayBlankDuration) # blank between end of magic trick video and start of fixation
-psych::describe(dfLong$jitterVideo_trial[dfLong$ID == 1]) # jitter between magic trick and estimate rating (constant across subjects)
-psych::describe(dfLong$rtAnswer) # reaction time estimate rating
-psych::describe(dfLong$rtCuriosity) # reaction time estimate rating
-psych::describe(dfLong$jitterRating_trial[dfLong$ID == 1]) # jitter between curiosity rating and next magic trick (constant across subjects)
+# SECTION TASKS AND MEASUREMENTS
+
+# duration of each trial
+psych::describe(dfLong$durationTrial) # reported in manuscript
+
+# duration jitters (jitter was held constant, so looking at one subject is sufficient)
+psych::describe(dfLong$jitterVideo_trial[dfLong$BIDS == "sub-control003"]) # after video
+psych::describe(dfLong$jitterRating_trial[dfLong$BIDS == "sub-control003"]) # after rating
+
+# duration blank screen
+psych::describe(dfLong$displayBlankDuration)
+
+
+# SECTION EXPERIMENTAL PROCEDURE
+
+# duration pre-scanning online session
+psych::describe(dfWide$durPre)
+
+# duration of task blocks separately for each block
+psych::describe(dfWide$durInMins_firstBlock)
+psych::describe(dfWide$durInMins_secondBlock)
+psych::describe(dfWide$durInMins_thirdBlock)
+
+# duration of task blocks across all blocks
+block_durInMins <- c(dfWide$durInMins_firstBlock, dfWide$durInMins_secondBlock, dfWide$durInMins_thirdBlock)
+psych::describe(block_durInMins)
+
+block_durInSecs <- c(dfWide$durInSecs_firstBlock, dfWide$durInSecs_secondBlock, dfWide$durInSecs_thirdBlock)
+psych::describe(block_durInSecs)
+
+# duration of whole experiment
+psych::describe(dfWide$durInMins)
+
+# SECTION FMRI ACQUISITION
+
+# transform dur in secs into TR
+dfWide$durInTR_firstBlock <- round(dfWide$durInSecs_firstBlock/TR)
+dfWide$durInTR_secondBlock <- round(dfWide$durInSecs_secondBlock/TR)
+dfWide$durInTR_thirdBlock <- round(dfWide$durInSecs_thirdBlock/TR)
+
+# duration of task blocks in volumes
+psych::describe(dfWide$durInTR_firstBlock)
+psych::describe(dfWide$durInTR_secondBlock)
+psych::describe(dfWide$durInTR_thirdBlock)
+
+# time between experiment and memory tests
+psych::describe(dfWide$daysBetweenExpAndMemory)
+
+# duration of memory assessment
+psych::describe(dfWide$durMemory)
+
+########## 4. duration of magic tricks in seconds vs TR ########## 
+
+# SECTION INTERSUBJECT CORRELATION #
+
+# transform long data into wide data
+displayVidDuration <- reshape::cast(dfLong, ID~stimID,value="displayVidDuration")
+vidFileDuration  <- reshape::cast(stim_all, ~stimID,value="vidFileDuration")
+rownames(vidFileDuration) <- "vidFileDuration"
+
+# compute mean, sd, min, max and range for the display duration of each magic trick
+mean_displayVidDuration <- mapply(mean, displayVidDuration[-1])
+sd_displayVidDuration <- mapply(sd, displayVidDuration[-1])
+min_displayVidDuration <- mapply(min, displayVidDuration[-1])
+max_displayVidDuration <- mapply(max, displayVidDuration[-1])
+range_displayVidDuration <- max_displayVidDuration - min_displayVidDuration
+
+# put all information into one data frame
+descript_displayVidDuration <- rbind(mean_displayVidDuration, sd_displayVidDuration)
+descript_displayVidDuration <- rbind(descript_displayVidDuration, min_displayVidDuration)
+descript_displayVidDuration <- rbind(descript_displayVidDuration, max_displayVidDuration)
+descript_displayVidDuration <- rbind(descript_displayVidDuration, range_displayVidDuration)
+
+# merge this with actual file length and transpose
+descript_displayVidDuration <- as.data.frame(descript_displayVidDuration)
+descript_displayVidDuration <- rbind.match.columns(descript_displayVidDuration, vidFileDuration)
+descript_displayVidDuration <- as.data.frame(t(descript_displayVidDuration))
+
+# convert mean, min & max duration into volumes
+descript_displayVidDuration$mean_displayVidDuration_TR <- ceiling(round(descript_displayVidDuration$mean_displayVidDuration, digits = 0)/TR)
+descript_displayVidDuration$min_displayVidDuration_TR <- ceiling(round(descript_displayVidDuration$min_displayVidDuration, digits = 0)/TR)
+descript_displayVidDuration$max_displayVidDuration_TR <- ceiling(round(descript_displayVidDuration$max_displayVidDuration, digits = 0)/TR)
+
+# determine differences between mean, min & max duration volumes 
+sum(descript_displayVidDuration$mean_displayVidDuration_TR != descript_displayVidDuration$min_displayVidDuration_TR) # 1
+sum(descript_displayVidDuration$mean_displayVidDuration_TR != descript_displayVidDuration$max_displayVidDuration_TR) # 4
+
+# non-systematic variation in stimulus presentation
+psych::describe(descript_displayVidDuration$sd_displayVidDuration) # included in paper
+
+# save data structure for TR and seconds
+displayVidDuration <- reshape::cast(dfLong, ID~stimID,value="displayVidDuration")
+displayVidDuration_TR <- ceiling(round(displayVidDuration[-1], digits = 0)/TR) # convert seconds into TR
+displayVidDuration_s <- round(displayVidDuration[-1], digits = 5)
+
+# make sure that row and column names are the same
+names(displayVidDuration_TR) == row.names(descript_displayVidDuration)
+names(displayVidDuration_s) == row.names(descript_displayVidDuration)
+
+# compare converted TRs to mean TR used for concatenation for all 36 in 50 subjects
+for (s in 1:dim(dfWide)[1]) { 
+  
+  if (s == 1){
+    # compare converted TRs (row in displayVidDuration_TR) to mean TR used for concatenation FOR FIRST SUBJECT
+    sum_TR_dev <- sum(displayVidDuration_TR[paste0(s),] != descript_displayVidDuration$mean_displayVidDuration_TR)
+    # compute absolute difference between avg display of tricks and actual display FOR FIRST SUBJECT
+    abs_diff <- c(abs(descript_displayVidDuration$mean_displayVidDuration - displayVidDuration_s[paste0(s),]))
+  } else {
+    # compare converted TRs (row in displayVidDuration_TR) to mean TR used for concatenation FOR SUBJECT and append
+    temp_sum_TR_dev <- sum(displayVidDuration_TR[paste0(s),] != descript_displayVidDuration$mean_displayVidDuration_TR)
+    sum_TR_dev <- sum_TR_dev + temp_sum_TR_dev
+    # compute absolute difference between avg display of tricks and actual display FOR SUBJECT and append
+    temp_abs_diff <- c(abs(descript_displayVidDuration$mean_displayVidDuration - displayVidDuration_s[paste0(s),]))
+    abs_diff <- c(abs_diff, temp_abs_diff)
+    
+    # remove temp files
+    rm(temp_sum_TR_dev, temp_abs_diff)
+  }
+}  
+# print output over all 1800 trials (included in paper)
+print(sum_TR_dev)
+print(sum_TR_dev/dim(dfLong)[1]*100) # deviation in number of volumes
+
+psych::describe(unlist(abs_diff)) # deviation in seconds
+hist(unlist(abs_diff))
+
+
+##############################################################################################################
+############################################ TECHNICAL VALIDATION ############################################
+##############################################################################################################
+
+
+########## 5. manipulation check ########## 
+
+# SECTION MANIPULATION CHECK #
+
+# rewardEffort: I tried hard to increase my reward. 
+psych::describe(dfWide$rewardEffort)
+# rewardBelief: Did you believe that you would receive a bonus payment based on your performance?
+# Please answer the following statement ONLY IF you have been offered additional £0.80 bonus per correct answer. If you have not been offered additional bonus, please select "not applicable."
+dfWide$rewardBelief_score <- ifelse(dfWide$rewardBelief == "Not applicable", NA,
+                                    ifelse(dfWide$rewardBelief == "Definitely agree ", 6,
+                                           ifelse(dfWide$rewardBelief == "Somehow agree", 5,
+                                                  ifelse(dfWide$rewardBelief == "Slightly agree", 4,
+                                                         ifelse(dfWide$rewardBelief == "Slightly disagree", 3,
+                                                                ifelse(dfWide$rewardBelief == "Somehow disagree", 2,
+                                                                       ifelse(dfWide$rewardBelief == "Definitely disagree", 1, 0)))))))
+
+psych::describe(dfWide$rewardBelief_score)
+
+# rewardExpectations: How much additional bonus for correct answers do you expect?
+dfWide$rewardExpectations_num <- ifelse(is.na(dfWide$rewardExpectations) == T, NA,
+                                        ifelse(dfWide$rewardExpectations == "5 answers", 5*.8,
+                                               ifelse(dfWide$rewardExpectations == "none", 0,
+                                                      ifelse(dfWide$rewardExpectations == "4 POUNDS", 4,
+                                                             ifelse(dfWide$rewardExpectations == "8 pounds", 8,
+                                                                    ifelse(dfWide$rewardExpectations == "6 or 7? Iâ€™m not really sure.  ", 6.5,
+                                                                           ifelse(dfWide$rewardExpectations == "Not much", NA,
+                                                                                  ifelse(dfWide$rewardExpectations == "not sure", NA,
+                                                                                         as.numeric(dfWide$rewardExpectations
+                                                                                         )))))))))
+
+psych::describe(dfWide$rewardExpectations_num)
+
+# memoryTestKnown: When watching the magic tricks, I was aware that my memory of them will be tested later.
+dfWide$memoryTestKnown_score <- ifelse(dfWide$memoryTestKnown == "Definitely agree ", 6,
+                                       ifelse(dfWide$memoryTestKnown == "Somehow agree", 5,
+                                              ifelse(dfWide$memoryTestKnown == "Slightly agree", 4,
+                                                     ifelse(dfWide$memoryTestKnown == "Slightly disagree", 3,
+                                                            ifelse(dfWide$memoryTestKnown == "Somehow disagree", 2,
+                                                                   ifelse(dfWide$memoryTestKnown == "Definitely disagree", 1, 0))))))
+
+psych::describe(dfWide$memoryTestKnown_score)
+
+# memoryIntention: When watching the magic tricks, I tried to encode them.
+dfWide$memoryIntention_score <- ifelse(dfWide$memoryIntention == "Definitely agree ", 6,
+                                       ifelse(dfWide$memoryIntention == "Somehow agree", 5,
+                                              ifelse(dfWide$memoryIntention == "Slightly agree", 4,
+                                                     ifelse(dfWide$memoryIntention == "Slightly disagree", 3,
+                                                            ifelse(dfWide$memoryIntention == "Somehow disagree", 2,
+                                                                   ifelse(dfWide$memoryIntention == "Definitely disagree", 1, 0))))))
+
+psych::describe(dfWide$memoryIntention_score)
+
+
+########## 6. Check stimulus timing ########## 
+
+# SECTION TIMING + TABLE 2 #
+
+dfLong <- merge(dfLong, stim_all, by = c("stimID", "vidFileName"))
+timings <- data.frame() # 1. col: variable, 2. col = control, 3. col = experimental
+varCol <- 1
+contCol <- 2
+expCol <- 3
+ttestCol <- 4
+index_actual <- (c("displayVidDuration", "fixationPostVidDuration", "fixationPostAnswerDuration", "fixationPostCuriosityDuration"))
+index_intended <- (c("vidFileDuration", "jitterVideo_trial", "betweenRatingFixation", "jitterRating_trial"))
+name <- c("Stimulus display duration", "Fixation after stimulus display", "Fixation between ratings", "Fixation after ratings")
+
+# create Table 2
+for (i in 1:length(index_intended)){
+  
+  # calculate difference between intended and observed display durations and convert to mili seconds
+  dfLong$diff <- dfLong[[index_actual[i]]] - dfLong[[index_intended[i]]]
+  dfLong$diff <- dfLong$diff * 1000
+  
+  # calculate descriptives of difference
+  output <- psych::describeBy(dfLong$diff, group = dfLong$group) # stimulus presentation (this is the actual magic trick + 6 seconds mock video)
+  output <- as.data.frame(rbind(output$cont, output$exp))
+  output$group <- rep(c("control","experimental"), each = 1)
+  output$vars <- name[i]
+  
+  # put the information into timing dataframe
+  timings[i,varCol] <- output$vars[1]
+  timings[i,contCol] <- paste0(round(output$mean[1], digits = 3), " (", round(output$sd[1], digits = 3), ")",  " [", round(output$min[1], digits = 3),"; ", round(output$max[1], digits = 3),"]") # control group
+  timings[i,expCol] <- paste0(round(output$mean[2], digits = 3), " (", round(output$sd[2], digits = 3), ")",  " [", round(output$min[2], digits = 3),"; ", round(output$max[2], digits = 3),"]") # control group
+  
+  # conduct t-test
+  ttest <- t.test(dfLong$diff ~ dfLong$group)
+  timings[i,ttestCol] <- paste0("t(",round(ttest$parameter, digits = 3), ") = ", round(ttest$statistic, digits = 3), ", p = ", round(ttest$p.value, digits = 3))
+  
+}
+
+names(timings) <- c("Trial component", "Mean control group (SD) [min; max]", "Mean experimental group (SD) [min; max]", "Result Welch Two Sample t-Test")
+
+xlsx::write.xlsx(timings, file=filename_tables, sheetName = "Table_2", append = T, row.names = F) # note: row.names contain variables
+
+########## 7. Check encoding ########## 
+
+# SECTION ENCODING PERFORMANCE + TABLE 3 #
+
+# compute mean of subject mean
+dvlist_rel <- names(dfWide)[grepl("rel", names(dfWide))]
+dvlist_abs <- names(dfWide)[grepl("abs", names(dfWide))]
+
+dvname <- c("Cued recall (strict)", "Cued recall (lenient)", 
+            "Recognition (all confidence level)", "Recognition (confidence > 3)", "Recognition (confidence > mean-centered confidence)", 
+            "Remembered (strict | > mean-centered confidence)", "Remembered (lenient | > mean-centered confidence)", "Remembered (strict | > 3)", "Remembered (lenient | > mean-centered confidence)")
+
+encoding <- data.frame()
+varCol <- 1
+descCol_abs <- 2
+descCol_rel <- 3
+testCol <- 4
+
+# create Table 3
+for (DV in 1:length(dvlist_abs)){
+  print(dvlist_abs[DV])
+  #wide <- reshape::cast(dfLong, ID~stimID,value=paste0(dvlist[DV]))
+  #mean_per_subj <- rowMeans(wide[-1])
+  #print(psych::describe(mean_per_subj))
+  print(psych::describe(dfWide[,c(dvlist_abs[DV])]))
+  
+  # compute descriptives
+  output_abs <- psych::describe(dfWide[,c(dvlist_abs[DV])])
+  output_rel <- psych::describe(dfWide[,c(dvlist_rel[DV])]*100)
+  
+  # test significance
+  if (grepl("Conf", dvlist_abs[DV])){
+    mu <- .25
+  } else {
+    mu <- 0
+  }
+  test <- t.test(dfWide[,c(dvlist_rel[DV])], alternative = "greater", mu = mu)
+  print(test)
+  
+  pval <- ifelse(test$p.value < 0.001, 0.001, test$p.value)
+  
+  
+  # put data into table
+  encoding[DV, varCol] <- dvname[DV]
+  encoding[DV, descCol_abs] <-  paste0(round(output_abs$mean, digits = 3), " (", round(output_abs$sd, digits = 3), ")",  " [", round(output_abs$min, digits = 3),"; ", round(output_abs$max, digits = 3),"]") # control group
+  encoding[DV, descCol_rel] <-  paste0(round(output_rel$mean, digits = 3), "% (", round(output_rel$sd, digits = 3), "%)",  " [", round(output_rel$min, digits = 3),"%; ", round(output_rel$max, digits = 3),"%]") # control group
+  encoding[DV, testCol] <- paste0("t(", test$parameter,") = ", round(test$statistic, digits = 3), ", p < ", pval)
+  
+}
+
+
+names(encoding) <- c("", "Mean absolute encoding performance (SD) [min; max]","Mean relative encoding performance (SD) [min; max]", "Test statistics")
+
+xlsx::write.xlsx(encoding, file=filename_tables, sheetName = "Table_3", append = T, row.names = F) # note: row.names contain variables
+
+
+########## 8. variance decomposition ########## 
+
+# SECTION VARIANCE DECOMPOSTION + TABLE 4 #
+
+dvlist <- c("responseCuriosity", "responseConfidence", "cuedRecallStrict", "cuedRecallLenient", 
+            "recognition", "recognitionConfLevel_4_5_6", "recognitionAboveMeanConf", 
+            "rememberedStrictAboveAvg", "rememberedLenientAboveAvg", "rememberedStrictHigh", "rememberedLenientHigh")
+dvname <- c("Curiosity", "Confidence", "Cued recall (strict)", "Cued recall (lenient)", 
+            "Recognition (all confidence level)", "Recognition (confidence > 3)", "Recognition (confidence > mean-centered confidence)", 
+            "Remembered (strict | > mean-centered confidence)", "Remembered (lenient | > mean-centered confidence)", "Remembered (strict | > 3)", "Remembered (lenient | > mean-centered confidence)")
+
+vardecom <- data.frame()
+varCol <- 1
+descCol <- 2
+descCol_subj <- 3
+subjCol <- 4
+stimCol <- 5
+interCol <- 6
+
+# for each of the memory levels. apply variance decomposition
+# note that accoring to goldstein (2002), we can use a LME as an approximation for GLME
+
+# create table 4
+for (DV in 1:length(dvlist)){
+  # define model based on scaling of variable
+  LMEmodel <- lmer(dfLong[, dvlist[DV]] ~ (1|ID)+(1|stimID), data = dfLong)
+  
+  # access variance components
+  out_sV <- as.data.frame(VarCorr(LMEmodel))[,4]
+  
+  # compute mean of subject mean
+  wide <- reshape::cast(dfLong, ID~stimID,value=paste0(dvlist[DV]))
+  mean_per_subj <- rowMeans(wide[-1])
+  rm(wide)
+  
+  # put data into table
+  vardecom[DV, varCol] <- dvname[DV]
+  vardecom[DV, descCol] <- paste0(round(mean(mean_per_subj), digits = 3), " (", round(sd(mean_per_subj), digits = 3), ")")
+  vardecom[DV, descCol_subj] <- paste0(round(mean(dfLong[, dvlist[DV]], na.rm = T), digits = 3), " (", round(sd(dfLong[, dvlist[DV]], na.rm = T), digits = 3), ")")
+  vardecom[DV, subjCol] <- paste0(round(out_sV[1]/sum(out_sV)*100, digits = 2), "%")
+  vardecom[DV, stimCol] <- paste0(round(out_sV[2]/sum(out_sV)*100, digits = 2), "%")
+  vardecom[DV, interCol] <- paste0(round(out_sV[3]/sum(out_sV)*100, digits = 2), "%")
+  
+}
+
+# add header
+names(vardecom) <- c("", "mean (SD)", "Subject variance", "Stimulus variance", "Subject x stimulus variance")
+names(vardecom) <- c("", "mean all trials (SD)","mean summarised over subjects (SD)", "Subject variance", "Stimulus variance", "Subject x stimulus variance")
+
+xlsx::write.xlsx(vardecom, file=filename_tables, sheetName = "Table_4", append = T, row.names = F) # note: row.names contain variables
+
+########## 9. imaging data quality assessments ########## 
+
+# SECTION MRIQC #
+
+# html markdown created using 7_markdown_MRIQC_output.Rmd
+
+# SECTION pyfMRIqc 
+
+# html markdown created using 5_markdown_pyfMRIqc_output.Rmd
+
+########## 10. brain coverage ########## 
+
+# SECTION BRAIN COVERAGE #
+
+# download file from preliminary AFNI processing
+osfr::osf_ls_files(sub_dir, pattern = "extents.txt") %>%
+  osfr::osf_download(conflicts = "overwrite")
+
+# read in file
+extents <- read.table("extents.txt", header = T, stringsAsFactors = F)
+
+# create new variables
+extents$file <- gsub("brain_", "", extents$scan)
+extents$file <- gsub("epi_", "", extents$file)
+
+extents$source <- ifelse(grepl("brain", extents$scan) == T, "brain",
+                         ifelse(grepl("epi", extents$scan) == T, "epi", NA))
+
+extents$group <- ifelse(grepl("control", extents$scan)== T, "control", 
+                        ifelse(grepl("experimental", extents$scan)== T, "experimental", NA))
+
+extents$Task <- ifelse(grepl("magictrickwatching", extents$scan)== T, "Magictrick watching", 
+                       ifelse(grepl("rest", extents$scan)== T, "Resting-state", NA))
+
+extents$ID <- gsub("_task.*", "", extents$file)
+
+extents$ID_f <- as.factor(extents$ID)
+
+extents$id_number <- gsub("sub-control0", "", extents$ID)
+extents$id_number <- gsub("sub-experimental0", "", extents$id_number)
+
+extents$order_number <- recode(extents$id_number, 
+                               "01" = "01", "02" = "02", "03" = "03", "07" = "04", "09" = "05",  
+                               "11" = "06", "13" = "07", "15" = "08", "17" = "09", "19" = "10",  
+                               "21" = "11", "23" = "12", "25" = "13", "27" = "14", "29" = "15",  
+                               "31" = "16", "33" = "17", "35" = "18", "37" = "19", "39" = "20",  
+                               "41" = "21", "43" = "22", "45" = "23", "47" = "24", "49" = "25",  
+                               "04" = "01", "05" = "02", "06" = "03", "08" = "04", "10" = "05",  
+                               "12" = "06", "14" = "07", "16" = "08", "18" = "09", "20" = "10",  
+                               "22" = "11", "24" = "12", "26" = "13", "28" = "14", "30" = "15",  
+                               "32" = "16", "34" = "17", "36" = "18", "38" = "19", "40" = "20",  
+                               "42" = "21", "44" = "22", "46" = "23", "48" = "24", "50" = "25")
+
+# check whether extents of brain is constant within each subject
+sd <- dplyr::filter(extents, source == "brain") %>%
+  dplyr::group_by(ID_f) %>%
+  dplyr::summarise(sd_xmin = sd(xmin), sd_xmax = sd(xmax), sd_ymin = sd(ymin),
+                   sd_ymax = sd(ymax), sd_zmin = sd(zmin), sd_zmax = sd(zmax), n = n())
+sum(sd[,2:7])
+
+# calculate slices covered in x, y, and z direction
+extents <- dplyr::mutate(extents, xslice = xmax - xmin, yslice = ymax - ymin, zslice = zmax - zmin)
+
+# transfer data into wide format
+xslice <- reshape::cast(extents, file ~ source, value = "xslice")
+names(xslice) <- c("scan", "x_brain", "x_epi")
+yslice <- reshape::cast(extents, file ~ source, value = "yslice")
+names(yslice) <- c("scan", "y_brain", "y_epi")
+zslice <- reshape::cast(extents, file ~ source, value = "zslice")
+names(zslice) <- c("scan", "z_brain", "z_epi")
+
+# combine dfs
+slices <- merge(xslice, yslice, by = "scan")
+slices <- merge(slices, zslice, by = "scan")
+rm(xslice, yslice, zslice)
+
+# calculate deviation between epi coverage and brain coverage
+slices <- dplyr::mutate(slices, x_diff = x_brain - x_epi, y_diff = y_brain - y_epi, z_diff = z_brain - z_epi)
+
+# determine percentage covered
+slices <- dplyr::mutate(slices, x_perc = x_epi / x_brain, y_perc = y_epi / y_brain, z_perc = z_epi / z_brain)
+
+# quantify extent of overlap in z direction over scans
+extents_scan <- slices[,c(grepl("scan",names(slices)) | grepl("id",names(slices)) | grepl("diff",names(slices)) | grepl("perc",names(slices)))]
+names(extents_scan)[grepl("diff",names(extents_scan))] <- c("slice_diff_x", "slice_diff_y", "slice_diff_z")
+names(extents_scan)[grepl("perc",names(extents_scan))] <- c("slice_perc_x", "slice_perc_y", "slice_perc_z")
+extents_scan$ID <- gsub("_task.*", "", extents_scan$scan)
+
+psych::describe(extents_scan$slice_perc_z*100)
+psych::describe(extents_scan$slice_diff_z)
+
+sum(extents_scan$slice_diff_z==1)/dim(extents_scan)[1]
+sum(extents_scan$slice_diff_z==0)/dim(extents_scan)[1]
+sum(extents_scan$slice_diff_z==0)/dim(extents_scan)[1] + sum(extents_scan$slice_diff_z==1)/dim(extents_scan)[1]
+
+# quantify extent of overlap in z direction over subjects
+extents_subj <- extents_scan %>% 
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(slice_perc_z_mean_subj = mean(slice_perc_z), slice_perc_z_sd_subj = sd(slice_perc_z), 
+                   slice_perc_z_min_subj = min(slice_perc_z), slice_perc_z_max_subj = max(slice_perc_z), 
+                   slice_diff_z_mean_subj = mean(slice_diff_z), slice_diff_z_sd_subj = sd(slice_diff_z), 
+                   slice_diff_z_min_subj = min(slice_diff_z), slice_diff_z_max_subj = max(slice_diff_z))
+
+psych::describe(extents_subj$slice_perc_z_mean_subj*100)
+psych::describe(extents_subj$slice_diff_z_mean_subj)
+
+# create variables
+slices$group <- ifelse(grepl("control", slices$scan) == T, "control",
+                       ifelse(grepl("experimental", slices$scan) == T, "experimental",NA))
+slices$acq <- ifelse(grepl("task-magictrickwatching_run-1", slices$scan) == T, 2,
+                          ifelse(grepl("task-magictrickwatching_run-2", slices$scan) == T, 3,
+                                 ifelse(grepl("task-magictrickwatching_run-3", slices$scan) == T, 4,
+                                        ifelse(grepl("task-rest_run-1", slices$scan) == T, 1,
+                                               ifelse(grepl("task-rest_run-2", slices$scan) == T, 5,
+                                                      ifelse(grepl("task-magictrickwatching_acq-1_run-2", slices$scan) == T, 3,
+                                                             ifelse(grepl("task-magictrickwatching_acq-2_run-2", slices$scan) == T, 3, NA)))))))
+
+# look at mean for each cell
+perc <- slices %>%
+  dplyr::group_by(group, as.factor(acq)) %>%
+  dplyr::summarise(x_mean = mean(x_perc), x_sd = sd(x_perc), x_min = min(x_perc), x_max = max(x_perc),
+                   y_mean = mean(y_perc), y_sd = sd(y_perc), y_min = min(y_perc), y_max = max(y_perc),
+                   z_mean = mean(z_perc), z_sd = sd(z_perc), z_min = min(z_perc), z_max = max(z_perc))
+
+diff <- slices %>%
+  dplyr::group_by(group, as.factor(acq)) %>%
+  dplyr::summarise(x_mean = mean(x_diff), x_sd = sd(x_diff), x_min = min(x_diff), x_max = max(x_diff),
+                   y_mean = mean(y_diff), y_sd = sd(y_diff), y_min = min(y_diff), y_max = max(y_diff),
+                   z_mean = mean(z_diff), z_sd = sd(z_diff), z_min = min(z_diff), z_max = max(z_diff))
+
+# CREATE TABLE 5 #
+
+coverage <- data.frame()
+acqCol <- 1
+nameCol <- 2
+conCol <- 3
+expCol <- 4
+ttestCol <- 5
+#stimCol <- 5
+#interCol <- 6
+
+acq_name <- c("Pre-learning rest", "Magic trick task block 1", "Magic trick task block 2", 
+                  "Magic trick task block 3", "Post-learing rest")
+
+for (acq in 1:length(unique(slices$acq))){
+  
+  # put data into table
+  coverage[acq, acqCol] <- paste(acq)
+  coverage[acq, nameCol] <- paste0(acq_name[acq])
+  coverage[acq, conCol] <- paste0(round(diff$z_mean[diff$group == "control" & diff$`as.factor(acq)` == acq], digits = 2), 
+                                  " (", round(diff$z_sd[diff$group == "control" & diff$`as.factor(acq)` == acq], digits = 2), ")",
+                                  " [", diff$z_max[diff$group == "control" & diff$`as.factor(acq)` == acq],"]")
+  coverage[acq, expCol] <- paste0(round(diff$z_mean[diff$group == "experimental" & diff$`as.factor(acq)` == acq], digits = 2), 
+                                  " (", round(diff$z_sd[diff$group == "experimental" & diff$`as.factor(acq)` == acq], digits = 2), ")",
+                                  " [", diff$z_max[diff$group == "experimental" & diff$`as.factor(acq)` == acq],"]")
+  
+  # conduct t-test
+  subset <- slices[slices$acq == acq, ]
+  ttest <- t.test(subset$z_diff ~ subset$group)
+  coverage[acq,ttestCol] <- paste0("t(",round(ttest$parameter, digits = 3), ") = ", round(ttest$statistic, digits = 3), ", p = ", round(ttest$p.value, digits = 3))
+  
+  # rm not needed stuff
+  rm(subset, ttest)
+
+}
+
+# rename columns
+names(coverage) <- c("", "Scan", "Mean control group (SD) [max]", "Mean experimental group (SD) [max]", "Result Welch Two Sample t-Test" )
+
+# write file
+xlsx::write.xlsx(coverage, file=filename_tables, sheetName = "Table_5", append = T, row.names = F, showNA = F) # note: row.names contain variables
+
+
+# transfer data back into long format for plotting
+slices_long <- reshape::melt(slices, id.vars = c("file", "id", "group", "acq"), measure.vars = c("x_diff", "y_diff", "z_diff"))
+
+# create variables
+slices_long$id <- gsub("_task.*", "", slices_long$file)
+slices_long$acq <- ifelse(grepl("task-magictrickwatching_run-1", slices_long$file) == T, 2,
+                          ifelse(grepl("task-magictrickwatching_run-2", slices_long$file) == T, 3,
+                                 ifelse(grepl("task-magictrickwatching_run-3", slices_long$file) == T, 4,
+                                        ifelse(grepl("task-rest_run-1", slices_long$file) == T, 1,
+                                               ifelse(grepl("task-rest_run-2", slices_long$file) == T, 5,
+                                                      ifelse(grepl("task-magictrickwatching_acq-1_run-2", slices_long$file) == T, 3,
+                                                             ifelse(grepl("task-magictrickwatching_acq-2_run-2", slices_long$file) == T, 3, NA)))))))
+
+# create spaghetti plot
+gg_spag <- ggplot(data = slices_long, aes( x = acq, y = value, colour = factor(id)) ) +
+  geom_line() +
+  facet_grid(variable ~. )
+gg_spag
+
+# create histogram
+gg_hist <- ggplot(data = slices_long, aes( x  = value) ) +
+  geom_histogram() +
+  facet_grid(variable ~ acq )
+gg_hist
+
+########## 11. subject motion ########## 
+
+# SECTION SUBJECT MOTION #
+
+# download file from preliminary AFNI processing
+
+# download all files from preliminary AFNI processing
+osfr::osf_ls_files(sub_dir, pattern = "motion.txt") %>%
+  osfr::osf_download(conflicts = "overwrite")
+
+# read in file
+motion <- read.table("motion.txt", header = T, stringsAsFactors = F)
+
+# add columns (group, task, id)
+motion$group <- ifelse(grepl("control", motion$scan)== T, "control", 
+                       ifelse(grepl("experimental", motion$scan)== T, "experimental", NA))
+
+motion$Task <- ifelse(grepl("magictrickwatching", motion$scan)== T, "Magictrick watching", 
+                      ifelse(grepl("rest", motion$scan)== T, "Resting-state", NA))
+
+motion$scan <- gsub("motion.", "", motion$scan)
+
+motion$ID <- gsub("_task.*", "", motion$scan)
+
+motion$id_number <- gsub("sub-control0", "", motion$ID)
+motion$id_number <- gsub("sub-experimental0", "", motion$id_number)
+
+motion$order_number <- recode(motion$id_number, 
+                              "01" = "01", "02" = "02", "03" = "03", "07" = "04", "09" = "05",  
+                              "11" = "06", "13" = "07", "15" = "08", "17" = "09", "19" = "10",  
+                              "21" = "11", "23" = "12", "25" = "13", "27" = "14", "29" = "15",  
+                              "31" = "16", "33" = "17", "35" = "18", "37" = "19", "39" = "20",  
+                              "41" = "21", "43" = "22", "45" = "23", "47" = "24", "49" = "25",  
+                              "04" = "01", "05" = "02", "06" = "03", "08" = "04", "10" = "05",  
+                              "12" = "06", "14" = "07", "16" = "08", "18" = "09", "20" = "10",  
+                              "22" = "11", "24" = "12", "26" = "13", "28" = "14", "30" = "15",  
+                              "32" = "16", "34" = "17", "36" = "18", "38" = "19", "40" = "20",  
+                              "42" = "21", "44" = "22", "46" = "23", "48" = "24", "50" = "25")
+
+# transfer roll, pitch & yaw from degrees to radians
+motion$pitch <- motion$pitch * pi / 180.0
+motion$roll <- motion$roll * pi / 180.0
+motion$yaw <- motion$yaw * pi / 180.0
+
+# transfer roll, pitch & yaw to mm assuming 5cm head radius
+motion$pitch <- motion$pitch * 50
+motion$roll <- motion$roll * 50
+motion$yaw <- motion$yaw * 50
+
+# write loop to compute motion derivatives for each scan
+scans <- unique(motion$scan)
+#scans <- scans[1:5]
+
+for (i in seq_along(scans)){
+  
+  # subset data to match the current scan
+  subset <- subset(motion, motion$scan == scans[i])
+  
+  # replace data with lagged difference (from row 2:end)
+  subset[2:dim(subset)[1],2:7] <- diff(as.matrix(subset[,2:7]))
+  # replace row 1 with zeroes
+  subset[1,2:7] <- 0
+  
+  # make values absolute
+  subset[,2:7] <- abs(subset[,2:7])
+  
+  # compute Framewise displacement (FD, )
+  subset$fd <- rowSums(subset[,2:7])
+  
+  # combine to new data frame
+  if (i == 1){
+    relmotion <- subset
+  } else {
+    relmotion <- rbind(relmotion, subset)
+  }
+  
+}
+
+# quantify framewise displacement over scans
+fd_scan <- relmotion %>%
+  dplyr::group_by(ID, scan) %>%
+  dplyr::summarise(fd_mean_scan = mean(fd), fd_sd_scan = sd(fd), fd_med_scan = median(fd), fd_mad_scan = mad(fd),
+                   fd_min_scan = min(fd), fd_max_scan = max(fd), volumes_scan = n())
+psych::describe(fd_scan$fd_mean_scan)
+
+# quantify framewise displacement over subjects
+fd_subj <- fd_scan %>%
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(fd_mean_subj = mean(fd_mean_scan), fd_sd_subj = sd(fd_mean_scan), 
+                   #fd_med_subj = median(fd_med_scan), fd_mad_subj = mad(fd_med_scan),
+                   fd_min_subj = min(fd_mean_scan), fd_max_subj = max(fd_mean_scan), number_scans = n())
+psych::describe(fd_subj$fd_mean_subj)
+
+# CREATE FIGURE 4a #
+
+# create column with id for annotation
+relmotion$annotation <- ifelse(relmotion$fd == 0 & grepl("magictrickwatching_run-1", relmotion$scan) == T, relmotion$id_number, "")
+
+# define size of y coordinate
+y_mot <- max(relmotion$fd)*1.2
+
+# ggplot command
+gg_relmot <- ggplot(relmotion, aes(order_number, fd, fill = Task, label = annotation)) + 
+  geom_hline(yintercept=0.5, linetype="dashed", color = "gray") +
+  geom_split_violin() + 
+  theme_bw() + 
+  facet_grid(group ~ .) + 
+  stat_summary(fun.data=data_summary, geom = "crossbar", width = 0.25, fatten = 1, show.legend = F, position = position_dodge(width = .25)) +
+  scale_fill_grey(start = 0.5, end = .9) +
+  #ggtitle("Plot of framewise displacement within each subject by group and task") +
+  xlab("Subject number (within group)") + ylab("Framewise displacement (mm)") + 
+  theme(legend.position="none") +
+  coord_cartesian(ylim = c(0, y_mot)) +
+  geom_label_repel(aes(label = annotation, fill = group), size = 3, nudge_y = y_mot, direction = "y", hjust = 0.5, segment.size = 0.2, segment.color = 'transparent', fill = "lightgray")
+gg_relmot
+
+
+########## 12. temporal signal-to-noise ratio ########## 
+
+# SECTION tSNR #
+
+# download file from preliminary AFNI processing
+osfr::osf_ls_files(sub_dir, pattern = "TSNR.txt") %>%
+  osfr::osf_download(conflicts = "overwrite")
+
+# read in file
+tsnr <- fread("TSNR.txt")
+
+# add columns (group, task, id)
+tsnr$scan <- gsub("values.TSNR.", "", tsnr$scan)
+tsnr[, c('group'):=1]
+tsnr$group <- ifelse(grepl("control", tsnr$scan)== T, "control", 
+                     ifelse(grepl("experimental", tsnr$scan)== T, "experimental", NA))
+tsnr[, c('Task'):=1]
+tsnr$Task <- ifelse(grepl("magictrickwatching", tsnr$scan)== T, "Magictrick watching", 
+                    ifelse(grepl("rest", tsnr$scan)== T, "Resting-state", NA))
+tsnr[, c('ID'):=1]
+tsnr$ID <- gsub("_task.*", "", tsnr$scan)
+
+tsnr[, c('id_number'):=1]
+tsnr$id_number <- gsub("sub-control0", "", tsnr$ID)
+tsnr$id_number <- gsub("sub-experimental0", "", tsnr$id_number)
+#tsnr$id_number <- gsub("0", "", tsnr$id_number)
+
+tsnr[, c('order_number'):=1]
+tsnr$order_number <- recode(tsnr$id_number, 
+                            "01" = "01", "02" = "02", "03" = "03", "07" = "04", "09" = "05",  
+                            "11" = "06", "13" = "07", "15" = "08", "17" = "09", "19" = "10",  
+                            "21" = "11", "23" = "12", "25" = "13", "27" = "14", "29" = "15",  
+                            "31" = "16", "33" = "17", "35" = "18", "37" = "19", "39" = "20",  
+                            "41" = "21", "43" = "22", "45" = "23", "47" = "24", "49" = "25",  
+                            "04" = "01", "05" = "02", "06" = "03", "08" = "04", "10" = "05",  
+                            "12" = "06", "14" = "07", "16" = "08", "18" = "09", "20" = "10",  
+                            "22" = "11", "24" = "12", "26" = "13", "28" = "14", "30" = "15",  
+                            "32" = "16", "34" = "17", "36" = "18", "38" = "19", "40" = "20",  
+                            "42" = "21", "44" = "22", "46" = "23", "48" = "24", "50" = "25")
+
+tsnr[, c('observation'):=1]
+tsnr$observation <- with(tsnr, ave(TSNR, ID, FUN= function(x) rev(seq_along(x))))
+sum(tsnr$observation == 1)
+
+# quantify tsnr over scans
+tsnr_scan <- tsnr %>%
+  dplyr::group_by(ID, scan) %>%
+  dplyr::summarise(tsnr_mean_scan = mean(TSNR), tsnr_sd_scan = sd(TSNR), tsnr_med_scan = median(TSNR), tsnr_mad_scan = mad(TSNR),
+                   tsnr_min_scan = min(TSNR), tsnr_max_scan = max(TSNR), voxels_tsnr_mask = n())
+psych::describe(tsnr_scan$tsnr_mean_scan)
+
+# quantify tsnr over subjects
+tsnr_subj <- tsnr_scan %>%
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(tsnr_mean_subj = mean(tsnr_mean_scan), tsnr_sd_subj = sd(tsnr_mean_scan), 
+                   tsnr_min_subj = min(tsnr_mean_scan), tsnr_max_subj = max(tsnr_mean_scan))
+psych::describe(tsnr_subj$tsnr_mean_subj)
+
+# CREATE FIGURE 4b #
+
+# create column with id for annotation
+tsnr$annotation <- ifelse(tsnr$observation == 1, tsnr$id_number, "")
+
+# define size of y coordinate
+y_tsnr <- max(tsnr$TSNR)*1.2
+
+# ggplot command
+gg_tsnr <- ggplot(tsnr, aes(order_number, TSNR, fill = Task, label = annotation)) + 
+  geom_split_violin() + 
+  theme_bw() + 
+  facet_grid(group ~ .) + 
+  stat_summary(fun.data=data_summary, geom = "crossbar", width = 0.25,fatten = 1, show.legend = F, position = position_dodge(width = .25)) +
+  #stat_summary(fun.data=data_summary, size = 0.1, position = position_dodge(0.5), show.legend = FALSE) + 
+  scale_fill_grey(start = 0.5, end = .9) +
+  #ggtitle("Plot of framewise displacement within each subject by group and task") +
+  xlab("Subject number (within group)") + ylab("tSNR  values (voxels inside mask)") + 
+  theme(legend.position="none") +
+  coord_cartesian(ylim = c(0, y_tsnr)) +
+  geom_label_repel(aes(label = annotation, fill = group), size = 3, nudge_y = y_tsnr, direction = "y", hjust = 0.5, segment.size = 0.2, segment.color = 'transparent', fill = "lightgray")
+gg_tsnr
+
+# CREATE FIGURE 4 #
+
+# combione plots for motion and tSNR with a shared legend
+ggpubr::ggarrange(gg_relmot, gg_tsnr, nrow = 2, labels = c("a", "b"), common.legend = T)
+ggsave("Figure4.jpeg", width = 25, height = 30, unit = "cm")
+
+# combine data from brain coverage, motion, and tSNR
+all_scan <- merge(extents_scan, fd_scan, by = c("ID", "scan"))
+all_scan <- merge(all_scan, tsnr_scan, by = c("ID", "scan"))
+
+all_subj <- merge(extents_subj, fd_subj, by = c("ID"))
+all_subj <- merge(all_subj, tsnr_subj, by = c("ID"))
+
+
+temp <-  slices[,c(grepl("file",names(slices)) | grepl("diff",names(slices)) | grepl("perc",names(slices)))]
+temp$task <- ifelse(grepl("magictrickwatching", temp$file)== T, "mtw", 
+                       ifelse(grepl("rest", temp$file)== T, "rest", NA))
+
+########## LAST. Create Online-only Tables ########## 
 
 # CREATE STIMULI TABLE FOR PAPER (i.e. Online-only Table 1)
 
@@ -281,15 +1049,15 @@ stim_all <- merge(stim_all, marker, by = "stimID", all.x = T)
 # select relevant columns
 stim_all$duration <- paste0(stim_all$vidFileDuration, " (", stim_all$vidFileDuration_withoutMock, ")")
 stim_info <- stim_all[,c("experiment", "stimID", "Name", "Credit", #"vidFileName", "duration", "cue",
-                        "Phenomena Category", "Materials", "Description", 
-                        "Recognition.option.1", "Recognition.option.2", "Recognition.option.3", "Recognition.option.4", "Different.wording.in.pilot" )]
+                         "Phenomena Category", "Materials", "Description", 
+                         "Recognition.option.1", "Recognition.option.2", "Recognition.option.3", "Recognition.option.4", "Different.wording.in.pilot" )]
 # order by file name
 stim_info <- stim_info[order(stim_info$experiment, stim_info$stimID),] 
 
 # rename columns
 names(stim_info) <- c("Occurance", "Stimulus ID", "Name", "Credit", #"Video file name", "Video duration (without mock video)", "Cue image file name",
-                     "Phenomena category", "Materials", "Description", 
-                     "Recognition option 1", "Recognition option 2", "Recognition option 3", "Recognition option 4", "Different wording in pilot study")
+                      "Phenomena category", "Materials", "Description", 
+                      "Recognition option 1", "Recognition option 2", "Recognition option 3", "Recognition option 4", "Different wording in pilot study")
 
 # write file
 xlsx::write.xlsx(stim_info, file=filename_tables, sheetName = "Online-only Table_1", append = T, row.names = F, showNA = F) # note: row.names contain variables
@@ -384,49 +1152,97 @@ names(marker_long) <- c("Stimulus ID", "Video file name", "Video duration (witho
 # write file
 xlsx::write.xlsx(marker_long, file=filename_tables, sheetName = "Online-only Table_2", append = T, row.names = F, showNA = F) # note: row.names contain variables
 
+# CREATE VARIABLE DICTIONARY FOR PAPER (i.e. Online-only Table 1)
 
-### DURATION OF MAGIC TRICKs
-# transform long data into wide data
-displayVidDuration <- reshape::cast(dfLong, ID~stimID,value="displayVidDuration")
-vidFileDuration  <- reshape::cast(stim_all, ~stimID,value="vidFileDuration")
-rownames(vidFileDuration) <- "vidFileDuration"
+exp_data <- read.csv(paste0(version, "_experimental_data.csv"))
 
-# compute mean, sd, min, max and range for the display duration of each magic trick
-mean_displayVidDuration <- mapply(mean, displayVidDuration[-1])
-sd_displayVidDuration <- mapply(sd, displayVidDuration[-1])
-min_displayVidDuration <- mapply(min, displayVidDuration[-1])
-max_displayVidDuration <- mapply(max, displayVidDuration[-1])
-range_displayVidDuration <- max_displayVidDuration - min_displayVidDuration
+Variable <- names(exp_data)
 
-# put all information into one data frame
-descript_displayVidDuration <- rbind(mean_displayVidDuration, sd_displayVidDuration)
-descript_displayVidDuration <- rbind(descript_displayVidDuration, min_displayVidDuration)
-descript_displayVidDuration <- rbind(descript_displayVidDuration, max_displayVidDuration)
-descript_displayVidDuration <- rbind(descript_displayVidDuration, range_displayVidDuration)
+Explanation <- c(
+  "subject ID",
+  "BIDS identifier",
+  "group: exp = experimental, cont = control",
+  "number of trial order task",
+  "task block",
+  "acquisition within block",
+  "time stamp (in secs) start of block",
+  "time stamp (in secs) end of block",
+  "half of the flip interval applied as timing correction (in secs) in PTB script",
+  "intended jitter interval (in secs) after magic trick display",
+  "intended jitter interval (in secs) after curiosity rating",
+  "magic trick stimulus ID",
+  "file name of magic trick video",
+  "trial number in magic trick task",
+  "time stamp (in secs) start of trial",
+  "time stamp (in secs) end of trial",
+  "duration of trial (in secs)",
+  "duration of initial fixation at start of each block",
+  "time stamp (in secs) of magic trick onset; collected before the video was opened",
+  "time stamp (in secs) of magic trick offset; collected after the video was closed",
+  "observed display duration (in secs) of magic trick",
+  "duration of blank presentation (in secs) between end of magic trick and onset of fixation",
+  "time stamp (in secs) of onset of fixation after magic trick display",
+  "duration (in secs) of display of fixation after magic trick display",
+  "time stamp (in secs) of onset of estimate rating",
+  "duration (in secs) of display of estimate rating",
+  "response time window for estimate rating",
+  "response given in estimate rating",
+  "time stamp (in secs) of response in estimate rating",
+  "time stamp (in secs) of estimate rating being displayed in white ink",
+  "response time for estimate rating",
+  "1 if time stamp response estimate > response time window for estimate rating - 3 * timing correction; else 0; subject sum score in other_information.csv ('answer_tooSlow')",
+  "time stamp (in secs) of onset of fixation after estimate rating",
+  "duration (in secs) of display of fixation after estimate rating",
+  "intended duration (in secs) for fixation after estimate rating",
+  "time stamp (in secs) of onset of curiosity rating",
+  "duration (in secs) of display of curiosity rating",
+  "response time window for curiosity rating",
+  "response given in curiosity rating",
+  "time stamp (in secs) of response in curiosity rating",
+  "time stamp (in secs) of curiosity rating being displayed in white ink",
+  "response time for curiosity rating",
+  "number that was highlighted in red at the beginning of the curiosity rating",
+  "number of button presses to move the number to the left and right in the curiosity rating",
+  "time stamp (in secs) of onset of fixation after curiosity rating",
+  "duration (in secs) of display of fixation after curiosity rating",
+  "1 if time stamp response curiosity > response time window for curiosity rating - 3 * timing correction; else 0; subject sum score in other_information.csv ('curiosity_tooSlow')",
+  "time stamp (in secs) of offset of mock video",
+  "time stamp (in secs) of cue image presentation",
+  "time stamp (in secs) of first moment of surprise",
+  "time stamp (in secs) of second moment of surprise",
+  "time stamp (in secs) of third moment of surprise",
+  "time stamp (in secs) of fourth moment of surprise",
+  "time stamp (in secs) of fifth moment of surprise",
+  "time stamp (in secs) of sixth moment of surprise",
+  "time stamp (in secs) of seventh moment of surprise",
+  "time stamp (in secs) of first additional marker for moment of surprise",
+  "time stamp (in secs) of second additional marker for moment of surprise",
+  "trial number in recall block of memory task",
+  "response given in cued recall block of memory task",
+  "dummy coding of cued recall performance according to strict criteria: 1 if recalled; else 0; subject sum score and percentage out of 36 trials in scores.csv ('cuedRecallStrict_abs and cuedRecallStrict_rel')",
+  "dummy coding of cued recall performance according to lenient criteria: 1 if recalled; else 0 subject sum score and percentage out of 36 trials in scores.csv ('cuedRecallLenient_abs and cuedRecallLenient_rel')",
+  "1 if cued recall response required further discussion during coding; else 0",
+  "comments related to flagging",
+  "trial number in recognition block of memory task",
+  "response selected in recognition block of memory task",
+  "response time for recognition response",
+  "response given in confidence rating",
+  "response time for response response",
+  "dummy coding of recogntion (regardless of confidence): 1 if correct answer chosen; else 0; subject sum score and percentage out of 36 trials in scores.csv ('allConf_abs and allConf_rel",
+  "1 if recognition = 1 & mean-centered confidence > 0; else 0; subject sum score and percentage out of 36 trials in scores.csv ('aboveAvgConf_abs and aboveAvgConf_rel",
+  "1 if recognition = 1 & confidence > 3; else 0; subject sum score and percentage out of 36 trials in scores.csv ('highConf_abs and highConf_rel",
+  "1 if cuedRecallStrict = 1 or recognitionAboveMeanConf = 1; else 0; subject sum score and percentage out of 36 trials in scores.csv ('rememberedStrictAboveAvg_abs and rememberedStrictAboveAvg_rel",
+  "1 if cuedRecallLenient = 1 or recognitionAboveMeanConf = 1; else 0; subject sum score and percentage out of 36 trials in scores.csv ('rememberedLenientAboveAvg_abs and rememberedLenientAboveAvg_rel",
+  "1 if cuedRecallStrict = 1 or recognitionConfLevel_4_5_6 = 1; else 0; subject sum score and percentage out of 36 trials in scores.csv ('rememberedStrictHigh_abs and rememberedStrictHigh_rel",
+  "1 if cuedRecallLenient = 1 or recognitionConfLevel_4_5_6 = 1; else 0; subject sum score and percentage out of 36 trials in scores.csv ('rememberedLenientHigh_abs and rememberedLenientHigh_rel"
+)
 
-# merge this with actual file length
-descript_displayVidDuration <- as.data.frame(descript_displayVidDuration)
-descript_displayVidDuration <- rbind.match.columns(descript_displayVidDuration, vidFileDuration)
-descript_displayVidDuration <- as.data.frame(t(descript_displayVidDuration))
+vardict <- data.frame(Variable, Explanation)
 
-# compute difference between vidFileDurattion and displayVidDuration
-descript_displayVidDuration$diff_file_mean <- descript_displayVidDuration$mean_displayVidDuration - descript_displayVidDuration$vidFileDuration
-descript_displayVidDuration$diff_file_min <- descript_displayVidDuration$min_displayVidDuration - descript_displayVidDuration$vidFileDuration
-descript_displayVidDuration$diff_file_max <- descript_displayVidDuration$max_displayVidDuration - descript_displayVidDuration$vidFileDuration
+xlsx::write.xlsx(vardict, file=filename_tables, sheetName = "Online-only Table_3", append = T, row.names = F, showNA = F) # note: row.names contain variables
 
-descript_displayVidDuration$diff_mean_min <- descript_displayVidDuration$mean_displayVidDuration - descript_displayVidDuration$min_displayVidDuration
-descript_displayVidDuration$diff_mean_max <- descript_displayVidDuration$max_displayVidDuration - descript_displayVidDuration$mean_displayVidDuration
 
-psych::describe(descript_displayVidDuration$diff_file_mean)
-psych::describe(descript_displayVidDuration$diff_file_min)
-psych::describe(descript_displayVidDuration$diff_file_max)
 
-psych::describe(descript_displayVidDuration$diff_mean_min)
-psych::describe(descript_displayVidDuration$diff_mean_max)
-
-# latencies
-psych::describe(dfLong$fixationPostVidDuration - dfLong$jitterVideo_trial) # fixation after video
-psych::describe(dfLong$fixationPostCuriosityDuration - dfLong$jitterRating_trial) # fixation after curiosity rating
 
 
 
