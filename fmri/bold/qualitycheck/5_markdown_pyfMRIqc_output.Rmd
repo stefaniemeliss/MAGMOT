@@ -1,7 +1,7 @@
 ---
 title: "Summary pyfMRIqc output"
 author: "Stef Meliss"
-date: "29/06/2020"
+date: "24/02/2021"
 output: html_document
 ---
 
@@ -65,17 +65,17 @@ DV_plot <- c("Mean", "Mean_(mask)", "SD", "SD_(mask)",
              "threshold_1", "fraction_1") 
 
 definitions <- c(
-  "Mean voxel (all voxels) intensity over time using **all** voxels. The tool also provides a 2D png image (axial slices) as output for the mean voxel intensity. It can be used to see if there is any general signal loss.",
+  "Mean signal (unmasked), i.e. mean voxel (all voxels) intensity over time using **all** voxels. The tool also provides a 2D png image (axial slices) as output for the mean voxel intensity. It can be used to see if there is any general signal loss.",
   
-  "Mean voxel intensity over time using **voxels inside the brain mask** only.",
+  "Mean signal (masked), i.e. mean voxel intensity over time using **voxels inside the brain mask** only.",
   
-  "Standard deviation of voxel intensity over time using **all** voxels. The tool additionally outputs a 2D png image (axial slices). By default, the grey matter, brain stem and blood vessels have the highest variability of BOLD signal. Therefore, these tissue types have higher values and are brighter in this image. Sudden or unexpected signal changes such as artefacts, signal changes, motion etc. in one or a few volumes will increase the variance and therefore will be detectable in these images.",
+  "Standard deviation of mean signal (unmasked), i.e. of voxel intensity over time using **all** voxels. The tool additionally outputs a 2D png image (axial slices). By default, the grey matter, brain stem and blood vessels have the highest variability of BOLD signal. Therefore, these tissue types have higher values and are brighter in this image. Sudden or unexpected signal changes such as artefacts, signal changes, motion etc. in one or a few volumes will increase the variance and therefore will be detectable in these images.",
   
-  "Standard deviation of voxel intensity over time using **voxels inside the brain mask** only.",
+  "Standard deviation of mean signal (masked), i.e. of voxel intensity over time using **voxels inside the brain mask** only.",
   
-  "Mean values of voxel for SNR (I assume this is the mean voxel intensity over time of the voxels outside the brain mask and below SNR threshold, i.e. noise). ",
+  "Mean values of voxel for SNR (these are the voxels highlighted in green on the masks image, so that this is the mean voxel intensity over time of the voxels outside the brain mask and below SNR threshold, i.e. noise).",
   
-  "Standard deviation of voxel for SNR (I assume this is the tandard deviation of voxel intensity over time of the voxels outside the brain mask and below SNR threshold, i.e. noise).",
+  "Standard deviation of voxel for SNR (these are the voxels highlighted in green on the masks image, so that this is the standard deviation of voxel intensity over time of the voxels outside the brain mask and below SNR threshold, i.e. noise).",
   
   "Lowest slice SNR value (within the brain mask). The slice SNRs measures the time course SNR averaged across each slice. The higher the SNR, the smaller the relative fluctuations and more stable is the signal over repeated measurements.",
   
@@ -95,7 +95,7 @@ definitions <- c(
   
   "Volumes captures the number of volumes each scan has and has been determined using AFNI's *3dinfo*. Because the magictricks vary in length and were displayed pseudo-randomly across blocks, the number of volumes shows somw variation.",
   
-  "Using the method described above, this parameter shows the absolute number of volumes above the motion limit of 0.2. Framewise Displacement (sum of relative movements across all 6 parameters) with a threshold of 2mm has been used in MRIQC",
+  "Using the method described above, this parameter shows the absolute number of volumes above the motion limit of 0.2. This is the default for Framewise Displacement (sum of relative movements across all 6 parameters) in MRIQC, however, the Euclidian distance used here is slightly different from that and can only be seen as a proxy.",
   
   "Using the method described above, this parameter shows the percentage of volumes above the motion limit of 0.2.",
   
@@ -114,7 +114,7 @@ definitions <- c(
 interpretation <- c(
   "Mean voxel intensity across all voxels is fairly normally distributed across the sample as well as within each task and group. The mean and SD are also comparable. The outliers sub-control003 and sub-experimental014 have been screened in more detail, but the mean image does not suggest any signal loss for either of them. sub-experimental014 has a large head which could have contributed to high mean values. The spaghetti plot suggests that the mean voxel intensity across time is similar across scans, so that there is no evidence scanner issues during the course of an experiment. This is also reflected by a low mean and SD of the subjectwise SD, i.e. the SD of the values for each subject.",
   
-  "Results observed in the mean voxel intensity across all voxels are mirrored in the mean voxel intensity within the brain mask. When only looking at brain voxels, the mean intensity is substantially higher as expected and dis not affected by task or group. Again, the values are fairly constant across the duration of each experiment. This is also reflected by a low mean and SD of the subjectwise SD, i.e. the SD of the values for each subject.",
+  "Results observed in the mean voxel intensity across all voxels are mirrored in the mean voxel intensity within the brain mask. When only looking at brain voxels, the mean intensity increases and is not affected by task or group. Again, the values are fairly constant across the duration of each experiment. This is also reflected by a low mean and SD of the subjectwise SD, i.e. the SD of the values for each subject.",
   
   "The SD of voxel intensity across time for all voxels follows a normal distribution and does not differ across tasks and groups. The values are constant across scans for each subject, reflected by low mean and SD of the subjectwise SD. Again, sub-control003 and sub-experimental014 are outliers, but examining their variance images does not flag up potential artefacts.",
   
@@ -168,10 +168,8 @@ strip_text_size <- 12
 
 ```
 
-This markdown summarises the output from pyfMRIqc (https://github.com/DrMichaelLindner/pyfMRIqc), a tool develeoped by Michael Lindner & Brendan Williams. This toolbox takes a 4D timeseries and computes different QC parameters.  
-
-I used the raw nifti files (as they came out of the scanner), but concatenated them so that the time series only includes volumes covering the task. This was necessary because we had to stop the scanner manually at the end of the task.  
-
+This markdown summarises the output from pyfMRIqc (https://github.com/DrMichaelLindner/pyfMRIqc), a tool develeoped by Michael Lindner & Brendan Williams. The toolbox takes 4D timeseries and computes different QC parameters. Raw nifti files were used as imput, however, the time series acquired during the magic trick watching task was cut so that it only includes volumes covering the task. This was necessary because the scanner was stopped manually at the end of the task.  
+  
 All images share the following scan paramters: 
 
 * Slice Resolution: 64x64
@@ -180,12 +178,12 @@ All images share the following scan paramters:
 * TR = 2000ms
 * Num Volumes: rest = 300 (each), magictricks = 1140 (in total)  
 
-Additionally, I used a mask for the SNR calculations. The mask was created was each timeseries specifially using AFNI's *3dAutomask*. 25 was used as SNR threshold, i.e. percentage of voxel with the lowest values (outside the mask) for SNR calculation (scalar value). SNR is calculated as mean voxel intensity over time (within the brain mask) divided by standard deviation of the mean of noise. Mean noise is defined as average of the 25% (i.e. SNR threshold) of voxel having the lowest mean intensity (outside the brain mask). The SNR provides an estimate of the reliability (~ reproducibility) of fMRI data and serves as a general goodness measure.
+Additionally, a mask was used for signal-to-noise (SNR) calculations. The mask was created for each timeseries seperately using AFNI's *3dAutomask* and 25 was used as SNR threshold, i.e. percentage of voxel with the lowest values (outside the mask) for SNR calculation (scalar value). SNR is calculated as mean voxel intensity over time (within the brain mask) divided by standard deviation (SD) of the mean of noise. Mean noise is defined as average of the 25% (i.e. SNR threshold) of voxel having the lowest mean intensity (outside the brain mask). The SNR provides an estimate of the reliability (~ reproducibility) of fMRI data and serves as a general goodness measure.
 
 Motion parameters have been calculated using AFNI's *3dvolreg*. This file containes the absolute motion relative to the first volume. Relative motion was then calculated with pyfMRIqc. 
 
 
-In total, there are the following **output parameters**:
+In total, there are the following **output metrics**:
 
 * Mean
 * Mean_(mask)
@@ -201,9 +199,9 @@ In total, there are the following **output parameters**:
 * Max_relative_Movement
 * Relative_movements_(>0.1mm)
 * Relative_movements_(>0.5mm)
-* Relative_movements_(>voxelsize) - There was no relative movement > voxelsize, the output was hence omitted.
+* Relative_movements_(>voxelsize) - **There was no relative movement > voxelsize, the output was hence omitted.**
 
-I have added the following parameters now to further investigate the motion issues:
+Additionally, the following parameters were added to further investigate motion:
 
 * volumes  
 * threshold_02  
@@ -216,7 +214,7 @@ I have added the following parameters now to further investigate the motion issu
 * fraction_1  
 
 threshold/fraction capture the absolute/relative **number of volumes** above a given threshold. pyfMRIqc, in comparison, captures the number of movements across all 6 motion parameters that exceed a given threshold. To determine number/percentage of volumes affected by motion above a certain threshold, AFNI's *1d_tool.py -infile $motionfile_prefix -derivative -demean -collapse_cols euclidean_norm -verb 0 -show_censor_count -moderate_mask 0 THRESHOLD* was used.  
-  
+
 This program uses the motion file $motionfile_prefix created using *3dvolreg*, computes the temporal derivative of each vector (done as first backward difference): "Take the backward differences at each time point.  For each index > 0, value[index] = value[index] - value[index-1], and value[0] = 0", that is, it calculates the relative motion and demeans that. Additionally, the columns (i.e. the 6 motion parameters) are then collapsed using "euclidean_norm" method (sqrt(sum squares)). This combines rotations (in degrees) with shifts (in mm) as if they had the same weight:
 
 "Note that assuming rotations are about the center of mass (which should produce a minimum average distance), then the average arc length (averaged over the brain mask) of a voxel rotated by 1 degree (about the CM) is the following (for the given datasets):  
@@ -224,27 +222,32 @@ TT_N27+tlrc:        0.967 mm (average radius = 55.43 mm)
 MNIa_caez_N27+tlrc: 1.042 mm (average radius = 59.69 mm)  
 MNI_avg152T1+tlrc:  1.088 mm (average radius = 62.32 mm)  
 The point of these numbers is to suggest that equating degrees and mm should be fine. The average distance caused by a 1 degree rotation is very close to 1 mm (in an adult human)."  
-[Please note at this point that both pyfMRIqc & MRIQC assume a 50mm head radius in their translation from radians to mm.]  
+[Please note at this point that pyfMRIqc assumes a 50mm head radius in their translation from radians to mm.]  
+
+The Euclidean norm of the relative motion is then compared against the defined THRESHOLDS (i.e. 0.2, 0.3, 0.5 and 1) and outliers (in volumes) are counted, i.e. if >= limit or <= limit, result is 1.  
   
-The Euclidean norm of the relative motion is then compared against the defined THRESHOLDS (i.e. 0.2, 0.3, 0.5 and 1) and outliers (in volumes) are counted, i.e. if >= limit or <= limit, result is 1.
-  
-  
-Below, each of these parameters will be defined. Additionally, for each of these parameters, **four graphs** have been created to explore them in the sample:  
+Below, each of these metrics will be defined and interpreted. Additionally, for each of these metrics, **four graphs** have been created to explore them in the sample:  
 
 a) Histogram for all scans  
+Data from control and experimental group is shown in dark and light gray, respectively. Moreover, mean and median are added using vertical lines in red and green and their values together with their variance (standard deviation (SD) and median absolute deviation (MAD)) are annotated in the corresponding colour.  
 b) Histogram divided by group (control vs experimental) and task (magictricks vs rest)  
+Similar to the histogram for all scans, mean and median and respective measures of variance are highlighted seperatly for each cell. Additionally, effects for group and task are tested inference-statistically using a linear mixed-effects model predicting the given metric using task and group while specifying random intercepts for subject and acquisition (metrics ~ group + task + (1 | ID) + (1 | acqusition)).  
 c) Boxplot for each acquisition (magictricks_run-1 vs. magictricks_run-2 vs. magictricks_run-3 vs. rest_run-1 vs. rest_run-2)  
-In the boxplot, outliers are determined as: value < quantile(value, 0.25) - 1.5 * IQR(value) | value > quantile(value, 0.75) + 1.5 * IQR(value). If a value was an outlier, it was labeled using subject ID. The labels are printed in black if this subject belongs to the control group and in grey if the subject belongs to the experimental group.
-d) Spaghettiplot highlighting the timecourse of each of these parameters for each subject  
-In the spaghetti plot, a subject was labeled if any of the values over time were larger than mean(value) + 1SD(value). Please note that the line for subject 16 makes a little dip for magictricks_run-2. This is because the scanner had to be stopped during the second block, so there are two acqusitions (both covering approximately half of the block).
-
-
+In the boxplots, outliers are determined as: value < quantile(value, 0.25) - 1.5 * IQR(value) | value > quantile(value, 0.75) + 1.5 * IQR(value). If a value is regarded as outlier, it is using the subject's ID. The labels are printed in black if this subject belongs to the control group and in grey if the subject belongs to the experimental group.
+d) Spaghettiplot highlighting the time course across the experiment of each of these metrics for each subject  
+In the spaghetti plot, a subject is labeled if any of the values over time were larger than mean(value) + 1SD(value). Please note that the line for subject 16 makes a little dip for magictricks_run-2. This is because the scanner had to be stopped during the second block, so there are two acqusitions (both covering approximately half of the block). To provide summary statistics, the IQM was standardised across the sample before computing mean, standard deviation, and range within each subject.  
 
 
 ```{r plots, echo=FALSE, message=FALSE, warning=FALSE,  fig.align = "center", out.width = '100%', fig.width = 11, results="asis"}
 i <- 0
 # loop over dependent variables to create plots 
 for (DV in DV_plot){
+  
+  # create data frame
+  output <- subset(scanparam, scanparam$param == paste0(DV))
+  
+  # compute LMER model
+  model <- lme4::lmer(value ~ group + task + (1 | ID) + (1 | acq), data = output)
   
   i <- i + 1
   # print out DV to Markdown
@@ -255,14 +258,11 @@ for (DV in DV_plot){
   cat("  \n Interpretation:", interpretation[i])
   cat("  \n")
   
-  # create data frame and recode memory as factors
-  output <- subset(scanparam, scanparam$param == paste0(DV))
-  
   # mean = red line; median = green line
   # Create a text
   Mean <- grobTree(textGrob(paste0("Mean = ", round(mean(output$value),2), " (SD = ", round(sd(output$value),2),")"), x=0.6,  y=0.9, hjust=0,
                             gp=gpar(col="red", fontsize=13, fontface="italic")))
-  Median <- grobTree(textGrob(paste("Median =", round(median(output$value),2)), x=0.6,  y=0.85, hjust=0,
+  Median <- grobTree(textGrob(paste0("Median = ", round(median(output$value),3), " (MAD = ", round(mad(output$value),3),")"), x=0.6,  y=0.85, hjust=0,
                               gp=gpar(col="green", fontsize=13, fontface="italic")))
   # (a) histogram for all 250 scans
   all <- ggplot(output, aes(x=value, col = group, fill = group)) + 
@@ -273,7 +273,7 @@ for (DV in DV_plot){
     labs(x=paste(DV), y="Frequency", title = "Histogram all scans") +
     theme(axis.text=element_text(size=axis_text_size), axis.title=element_text(size=axis_title_size, face="bold"), title=element_text(size =title_size, face="bold"), strip.text = element_text(size = strip_text_size)) 
   
-  
+  # combine graph and annotations
   all <- all + annotation_custom(Mean) + annotation_custom(Median)
   cat("  \n")
   print(all)
@@ -290,20 +290,31 @@ for (DV in DV_plot){
     theme(axis.text=element_text(size=axis_text_size), axis.title=element_text(size=axis_title_size, face="bold"), title=element_text(size =title_size, face="bold"), strip.text = element_text(size = strip_text_size)) +
     facet_grid(group ~ task)
   # add mean and median as values
-  xpos <- 0.5*(min(output$value) + max(output$value))
+  #xpos <- 0.6*(min(output$value) + max(output$value))
+  #xpos <- 0.8*max(output$value)
+  xpos <- ggplot_build(task)$layout$panel_scales_x[[1]]$range$range
+  xrange <- max(xpos) - min(xpos)
+  xpos <-  min(xpos) + .7 *xrange
   ypos1 <- max(ggplot_build(task)$data[[1]]$count) - sd(ggplot_build(task)$data[[1]]$count)
   ypos2 <- ypos1 - 0.5*sd(ggplot_build(task)$data[[1]]$count)
   ypos3 <- ypos2 - 0.5*sd(ggplot_build(task)$data[[1]]$count)
+  ypos4 <- ypos3 - 0.5*sd(ggplot_build(task)$data[[1]]$count)
   task <- task +
-    geom_text(data = plyr::ddply(output, c("task", "group"), summarize, mean = round(mean(value, na.rm = T), 2)),
+    geom_text(data = plyr::ddply(output, c("task", "group"), summarize, mean = round(mean(value, na.rm = T), 3)),
               aes(label=paste("Mean =", mean), x = xpos, y = ypos1), vjust = 0, hjust = 0, col='red') +
-    geom_text(data = plyr::ddply(output, c("task", "group"), summarize, sd = round(sd(value, na.rm = T), 2)),
+    geom_text(data = plyr::ddply(output, c("task", "group"), summarize, sd = round(sd(value, na.rm = T), 3)),
               aes(label=paste0("(SD = ", sd, ")"), x = xpos, y = ypos2), vjust = 0, hjust = 0, col='red') +
-    geom_text(data = plyr::ddply(output, c("task", "group"), summarize, median = round(median(value, na.rm = T), 2)),
-              aes(label=paste("Median =", median), x = xpos, y = ypos3), vjust = 0, hjust = 0, col='green')
+    geom_text(data = plyr::ddply(output, c("task", "group"), summarize, median = round(median(value, na.rm = T), 3)),
+              aes(label=paste("Median =", median), x = xpos, y = ypos3), vjust = 0, hjust = 0, col='green') +
+    geom_text(data = plyr::ddply(output, c("task", "group"), summarize, mad = round(mad(value, na.rm = T), 3)),
+              aes(label=paste0("(MAD = ", mad, ")"), x = xpos, y = ypos4), vjust = 0, hjust = 0, col='green')
   cat("  \n")
   print(task)
+  
+  cat("Output of Linear Mixed Effects model predicting QC metrics using group and task specifying random intercepts for subject and BOLD acquisition  \n")
+  cat(sjPlot::tab_model(model, digits.p = 5)$knitr,"\n--------\n")  
   cat("  \n")
+  
   
   # create label for outliers in boxplot
   # outlier = x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x)
@@ -339,30 +350,34 @@ for (DV in DV_plot){
   cat("  \n")
   
   # calculate the mean value and SD of the parameter for each subject
-  mean_per_subject <- plyr::ddply(output, "subject", summarize, mean = mean(value, na.rm = T))
-  sd_per_subject <- plyr::ddply(output, "subject", summarize, sd = sd(value, na.rm = T))
-  # merge both data frames
-  per_subject <- merge(mean_per_subject, sd_per_subject)
-  # calculate mean and SD of subjectwise mean and SD
-  mean_subjectmean <- round(mean(per_subject$mean), 4)
-  sd_subjectmean <- round(sd(per_subject$mean), 4)
-  mean_subjectsd <- round(mean(per_subject$sd), 4)
-  sd_subjectsd <- round(sd(per_subject$sd), 4)
-  
-  # print to markdown
-  cat("  \n")
-  cat("  \n Mean of subject-wise mean:", mean_subjectmean)
-  cat("  \n SD of subject-wise mean:", sd_subjectmean)
-  cat("  \n Mean of subject-wise SD:", mean_subjectsd)
-  cat("  \n SD of subject-wise SD:", sd_subjectsd)
-  cat("  \n")
+  output$value_z <- scale(output$value, center = T, scale = T)
+  per_subject <- plyr::ddply(output, "subject", summarize, mean = mean(value_z, na.rm = T), sd = sd(value_z, na.rm = T), min = min(value_z, na.rm = T), max = max(value_z, na.rm = T), range = max-min)
 
+  # calculate subject-wise summary statistics
+  mean <- psych::describe(per_subject$mean)
+  mean$vars <- "Subject-wise mean"
+  row.names(mean) <- NULL
+  sd <- psych::describe(per_subject$sd)
+  sd$vars <- "Subject-wise SD"
+  row.names(sd) <- NULL
+  range <- psych::describe(per_subject$range)
+  range$vars <- "Subject-wise range"
+  row.names(range) <- NULL
+
+  # combine dataframes
+  sum <- rbind(mean, sd)
+  sum <- rbind(sum, range)
   
+  if (i == 1){
+    sd$vars <- paste("Subject-wise SD", DV)
+    sd_all <- sd
+  } else {
+    sd$vars <- paste("Subject-wise SD", DV)
+    sd_all <- rbind(sd_all, sd)
+  }
+
+  # print to markdown
+  print(knitr::kable(sum, caption = paste("Subject-wise summary statistics of standardised", DV) ))
+  cat('\n\n<!-- -->\n\n')
 }
 ```
-
-In total, there are (at least) the following subjects standing out in terms of their motion. I copied their Dropbox directory in case you would like to have a look at them yourself. 
-
-* sub-control037 (https://www.dropbox.com/sh/t81d1uqsa97hhmc/AAAbfKwcz62rhZ7EPxhrT-SGa?dl=0)  
-* sub-control045 (https://www.dropbox.com/sh/kkahfdy5fx8ariq/AAAln-EfJGbGOljzZC9RvSzYa?dl=0)  
-* sub-experimental016 (https://www.dropbox.com/sh/cy1vld4t7avc63a/AAAoG-RROsgnLmkbbhVWUFlna?dl=0)  
